@@ -1,0 +1,11 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.exe.debug.95359239/PATH/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.debug.95359239/PATH/operation=replace
+environment/project/cdt.managedbuild.config.gnu.exe.debug.95359239/PATH/value=/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin\:/usr/lib/lightdm/lightdm\:/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/usr/games\:/opt/cross/bin
+environment/project/cdt.managedbuild.config.gnu.exe.debug.95359239/append=true
+environment/project/cdt.managedbuild.config.gnu.exe.debug.95359239/appendContributed=true
+environment/project/cdt.managedbuild.config.gnu.exe.release.1375151613/PATH/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.release.1375151613/PATH/operation=replace
+environment/project/cdt.managedbuild.config.gnu.exe.release.1375151613/PATH/value=/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin\:/usr/lib/lightdm/lightdm\:/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/usr/games\:/opt/cross/bin
+environment/project/cdt.managedbuild.config.gnu.exe.release.1375151613/append=true
+environment/project/cdt.managedbuild.config.gnu.exe.release.1375151613/appendContributed=true
