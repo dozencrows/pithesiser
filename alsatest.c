@@ -141,7 +141,6 @@ exit_error:
 
 bool setup_wav_hwparams(WavFile* p_wav, snd_pcm_t *playback_handle, snd_pcm_hw_params_t* p_hw_params)
 {
-	bool result = false;
 	unsigned int rate=44100;
 	int dir=0;
 	snd_pcm_format_t format;
@@ -217,11 +216,9 @@ bool setup_wav_hwparams(WavFile* p_wav, snd_pcm_t *playback_handle, snd_pcm_hw_p
 	return true;
 }
 
-main (int argc, char *argv[])
+int alsatest_main (int argc, char *argv[])
 {
-	int i;
 	int err;
-	short buf[128];
 	snd_pcm_t *playback_handle;
 	snd_pcm_hw_params_t *hw_params;
 	WavFile* p_wavdata;
@@ -276,14 +273,6 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-/*	for (i = 0; i < 10; ++i) {
-		if ((err = snd_pcm_writei (playback_handle, buf, 128)) != 128) {
-			fprintf (stderr, "write to audio interface failed (%s)\n",
-				 snd_strerror (err));
-			exit (1);
-		}
-	}
-*/
 	int frame_bytes = p_wavdata->fmt_body.byte_p_spl;
 	snd_pcm_uframes_t num_frames_left = p_wavdata->data_header.length / frame_bytes;
 	u_char* p_data = p_wavdata->sample_data;
@@ -307,6 +296,6 @@ main (int argc, char *argv[])
 	snd_pcm_drain (playback_handle);
 	snd_pcm_close (playback_handle);
 	free(p_wavdata);
-	exit (0);
+	return 0;
 }
 
