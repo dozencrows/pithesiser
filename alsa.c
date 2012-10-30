@@ -46,11 +46,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <alsa/asoundlib.h>
+#include <pthread.h>
+#include <semaphore.h>
 
-#define SAMPLE_RATE		44100
-#define CHANNEL_COUNT	2
-#define SAMPLE_FORMAT	SND_PCM_FORMAT_S16_LE
-#define SAMPLE_ACCESS	SND_PCM_ACCESS_RW_INTERLEAVED
+#include "alsa.h"
 
 #define AUDIO_BUFFER_COUNT	2
 #define PERIOD_COUNT		AUDIO_BUFFER_COUNT
@@ -63,12 +62,26 @@ snd_pcm_uframes_t		buffer_size_frames;
 int						sample_bit_count;
 snd_async_handler_t*	async_handler;
 
-int		next_audible_buffer = 0;
-void*	audio_buffer[AUDIO_BUFFER_COUNT] = { NULL, NULL };
+int				next_audible_buffer = 0;
+int				periods_output = 0;
+int				xruns_count = 0;
+void*			audio_buffer[AUDIO_BUFFER_COUNT] = { NULL, NULL };
+pthread_mutex_t	audio_lock[AUDIO_BUFFER_COUNT] = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER };
+
+pthread_t	audio_thread_handle;
+sem_t		audio_output_semaphore;
 
 static void alsa_error(const char* message, int error_code)
 {
 	fprintf(stderr, message, snd_strerror(error_code));
+
+	snd_pcm_status_t* pcm_status;
+
+	snd_pcm_status_alloca(&pcm_status);
+	if (snd_pcm_status(playback_handle, pcm_status) == 0)
+	{
+		fprintf(stderr, "status: %s", snd_pcm_state_name(snd_pcm_status_get_state(pcm_status)));
+	}
 }
 
 static void create_audio_buffers()
@@ -85,27 +98,28 @@ static void create_audio_buffers()
 	next_audible_buffer = 0;
 }
 
-static void async_callback(snd_async_handler_t* ahandler)
+static void* audio_thread()
 {
-    snd_pcm_t* handle = snd_async_handler_get_pcm(ahandler);
-    snd_pcm_sframes_t avail;
-    int err;
+	int error = 0;
 
-    printf("audio cb\n");
+	while (error >= 0)
+	{
+		//printf("audio write %d...", next_audible_buffer);
+		pthread_mutex_lock(&audio_lock[next_audible_buffer]);
+		while ((error = snd_pcm_writei(playback_handle, audio_buffer[next_audible_buffer], period_size_frames)) == -EPIPE)
+		{
+			xruns_count++;
+			snd_pcm_prepare(playback_handle);
+			//printf("xrun...");
+		}
+		//printf("written.\n");
+		pthread_mutex_unlock(&audio_lock[next_audible_buffer]);
+		next_audible_buffer = (next_audible_buffer + 1) % AUDIO_BUFFER_COUNT;
+		periods_output++;
+		sem_post(&audio_output_semaphore);
+	}
 
-    avail = snd_pcm_avail_update(handle);
-    if (avail >= period_size_frames) {
-		err = snd_pcm_writei(handle, audio_buffer[next_audible_buffer], period_size_frames);
-	    next_audible_buffer++;
-		if (err < 0) {
-				alsa_error("Write error: %s\n", err);
-				exit(EXIT_FAILURE);
-		}
-		if (err != period_size_frames) {
-				printf("Write error: written %i expected %li\n", err, period_size_frames);
-				exit(EXIT_FAILURE);
-		}
-    }
+	return NULL;
 }
 
 int alsa_initialise(const char* device_name)
@@ -209,35 +223,7 @@ int alsa_initialise(const char* device_name)
 		return -1;
 	}
 
-	if ((error = snd_async_add_pcm_handler(&async_handler, playback_handle, async_callback, NULL)) < 0)
-	{
-		alsa_error("async handler setup failed error (%s)\n", error);
-		return -1;
-	}
-
-	for (int i = 0; i < 1; i++)
-	{
-		snd_pcm_sframes_t avail = snd_pcm_avail(playback_handle);
-		if (avail < 0) {
-			alsa_error("initial write error (%s)\n", avail);
-			return -1;
-		}
-		if (avail >= period_size_frames) {
-			if ((error = snd_pcm_writei(playback_handle, audio_buffer[i], period_size_frames)) < 0)
-			{
-				alsa_error("initial write error (%s)\n", error);
-				return -1;
-			}
-		}
-	}
-
-//	error = snd_pcm_start(playback_handle);
-//	if (error < 0)
-//	{
-//		alsa_error("Start error: %s\n", error);
-//		return -1;
-//	}
-
+	pthread_create(&audio_thread_handle, NULL, audio_thread, NULL);
 	return 0;
 }
 
@@ -245,6 +231,7 @@ void alsa_deinitialise()
 {
 	snd_pcm_drain(playback_handle);
 	snd_pcm_close(playback_handle);
+	pthread_join(audio_thread_handle, NULL);
 
 	for (int i = 0; i < AUDIO_BUFFER_COUNT; i++)
 	{
@@ -254,4 +241,37 @@ void alsa_deinitialise()
 			audio_buffer[i] = NULL;
 		}
 	}
+}
+
+void alsa_sync_with_audio_output()
+{
+	sem_wait(&audio_output_semaphore);
+}
+
+int alsa_get_samples_output()
+{
+	return periods_output * period_size_frames;
+}
+
+int alsa_get_xruns_count()
+{
+	return xruns_count;
+}
+
+int alsa_lock_next_write_buffer()
+{
+	int buffer_index = (next_audible_buffer + 1) % AUDIO_BUFFER_COUNT;
+	pthread_mutex_lock(&audio_lock[buffer_index]);
+	return buffer_index;
+}
+
+void alsa_unlock_buffer(int buffer_index)
+{
+	pthread_mutex_unlock(&audio_lock[buffer_index]);
+}
+
+void alsa_get_buffer_params(int buffer_index, void** data, int* sample_count)
+{
+	*data = audio_buffer[buffer_index];
+	*sample_count = period_size_frames;
 }
