@@ -19,7 +19,7 @@
 
 void generate_wave(void* data, int sample_count, float* wave_phase, float frequency)
 {
-	static float max_phase = 2.0f * (float)M_PI;
+	static float max_phase = M_PI * 2.0f;
 	float phase_step = max_phase * frequency / SAMPLE_RATE;
 
 	float phase = *wave_phase;
