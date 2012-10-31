@@ -12,38 +12,11 @@
 #include <stdio.h>
 #include "alsa.h"
 #include "midi.h"
+#include "oscillator.h"
 
 #define DURATION_SECONDS	5
 #define MIN_FREQUENCY		440.0f
 #define MAX_FREQUENCY		880.0f
-
-int samples_generated = 0;
-
-void generate_wave(void* data, int sample_count, float* wave_phase, float frequency)
-{
-	static float max_phase = M_PI * 2.0f;
-	float phase_step = max_phase * frequency / SAMPLE_RATE;
-
-	float phase = *wave_phase;
-	short* sample_ptr = (short*) data;
-
-	samples_generated += sample_count;
-
-	while (sample_count > 0)
-	{
-		short value = sinf(phase) * SHRT_MAX;
-		*sample_ptr++ = value;
-		*sample_ptr++ = value;
-		phase += phase_step;
-		if (phase > max_phase)
-		{
-			phase -= max_phase;
-		}
-		sample_count--;
-	}
-
-	*wave_phase = phase;
-}
 
 int main()
 {
@@ -58,10 +31,22 @@ int main()
 	}
 
 	int elapsed_samples = 0;
-	float wave_phase = 0.0f;
+
+	oscillator_t oscillator;
+
+	osc_init(&oscillator);
+
 	while ((elapsed_samples = alsa_get_samples_output()) < SAMPLE_RATE * DURATION_SECONDS)
-	//while (1)
 	{
+		if (midi_get_controller_value(0, 14) < 63)
+		{
+			oscillator.waveform = WAVE_SINE;
+		}
+		else
+		{
+			oscillator.waveform = WAVE_SAW;
+		}
+
 		alsa_sync_with_audio_output();
 		int write_buffer_index = alsa_lock_next_write_buffer();
 		void* buffer_data;
@@ -69,14 +54,14 @@ int main()
 		alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
 
 		float freq_control = (float) midi_get_controller_value(0, 2) / MIDI_MAX_CONTROLLER_VALUE;
-		float frequency = MIN_FREQUENCY + (MAX_FREQUENCY - MIN_FREQUENCY) * freq_control;
-		generate_wave(buffer_data, buffer_samples, &wave_phase, frequency);
+		oscillator.frequency = MIN_FREQUENCY + (MAX_FREQUENCY - MIN_FREQUENCY) * freq_control;
+		osc_output(&oscillator, buffer_samples, buffer_data);
 		alsa_unlock_buffer(write_buffer_index);
 	}
 
 	alsa_deinitialise();
 	midi_deinitialise();
 
-	printf("Done: %d samples output, %d samples generated, %d xruns\n", elapsed_samples, samples_generated, alsa_get_xruns_count());
+	printf("Done: %d samples output, %d xruns\n", elapsed_samples, alsa_get_xruns_count());
 	return 0;
 }
