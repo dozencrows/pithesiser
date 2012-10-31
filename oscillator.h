@@ -24,11 +24,13 @@ typedef enum
 typedef struct
 {
 	waveform_type_t		waveform;
-	float				frequency;
+	int					frequency;
 	u_int32_t			phase_accumulator;
+	int32_t				level;
 } oscillator_t;
 
 extern void osc_init(oscillator_t* osc);
 extern void osc_output(oscillator_t* osc, int sample_count, void *sample_data);
+extern void osc_mix_output(oscillator_t* osc, int sample_count, void *sample_data);
 
 #endif /* OSCILLATOR_H_ */

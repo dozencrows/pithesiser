@@ -17,7 +17,7 @@
 typedef struct
 {
 	int			sample_count;
-	float		frequency;
+	int			frequency;
 	u_int32_t	phase_limit;
 	int16_t		*samples;
 } waveform_t;
@@ -68,8 +68,10 @@ void osc_init(oscillator_t* osc)
 		wavetable_initialised = 1;
 	}
 
-	osc->waveform 	= WAVE_SINE;
-	osc->frequency	= 440.0f;
+	osc->waveform 			= WAVE_SINE;
+	osc->frequency			= 440;
+	osc->phase_accumulator 	= 0;
+	osc->level 				= SHRT_MAX;
 }
 
 void osc_output(oscillator_t* osc, int sample_count, void *sample_data)
@@ -90,14 +92,64 @@ void osc_output(oscillator_t* osc, int sample_count, void *sample_data)
 	if (waveform != NULL)
 	{
 		u_int32_t 	phase_step = ((u_int32_t)osc->frequency << FIXED_PRECISION) / (u_int32_t) waveform->frequency;
-
-		int16_t *sample_ptr = (int16_t*) sample_data;
+		int16_t 	*sample_ptr = (int16_t*) sample_data;
 
 		while (sample_count > 0)
 		{
 			u_int32_t wave_index = osc->phase_accumulator >> FIXED_PRECISION;
-			*sample_ptr++ = waveform->samples[wave_index];
-			*sample_ptr++ = waveform->samples[wave_index];
+			int32_t signal = ((int32_t) waveform->samples[wave_index]) * osc->level / SHRT_MAX;
+			*sample_ptr++ = (int16_t)signal;
+			*sample_ptr++ = (int16_t)signal;
+			osc->phase_accumulator += phase_step;
+			if (osc->phase_accumulator > waveform->phase_limit)
+			{
+				osc->phase_accumulator -= waveform->phase_limit;
+			}
+
+			sample_count--;
+		}
+	}
+}
+
+void osc_mix_output(oscillator_t* osc, int sample_count, void *sample_data)
+{
+	waveform_t *waveform = NULL;
+
+	switch (osc->waveform)
+	{
+		case WAVE_SINE:
+			waveform = &sine_wave;
+			break;
+
+		case WAVE_SAW:
+			waveform = &saw_wave;
+			break;
+	}
+
+	if (waveform != NULL)
+	{
+		u_int32_t 	phase_step = ((u_int32_t)osc->frequency << FIXED_PRECISION) / (u_int32_t) waveform->frequency;
+		int16_t 	*sample_ptr = (int16_t*) sample_data;
+
+		while (sample_count > 0)
+		{
+			u_int32_t wave_index = osc->phase_accumulator >> FIXED_PRECISION;
+			int32_t original = (int32_t)*sample_ptr;
+			int32_t signal = ((int32_t) waveform->samples[wave_index]) * osc->level / SHRT_MAX;
+			int32_t mixed_sample = original + signal;
+
+			mixed_sample = (mixed_sample * 75) / 100;
+			if (mixed_sample < -SHRT_MAX)
+			{
+				mixed_sample = -SHRT_MAX;
+			}
+			else if (mixed_sample > SHRT_MAX)
+			{
+				mixed_sample = SHRT_MAX;
+			}
+
+			*sample_ptr++ = (int16_t)mixed_sample;
+			*sample_ptr++ = (int16_t)mixed_sample;
 			osc->phase_accumulator += phase_step;
 			if (osc->phase_accumulator > waveform->phase_limit)
 			{
