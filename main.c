@@ -15,8 +15,8 @@
 #include "midi.h"
 #include "oscillator.h"
 
-#define MIN_FREQUENCY			440.0f
-#define MAX_FREQUENCY			880.0f
+#define MIN_FREQUENCY			55.0f
+#define MAX_FREQUENCY			1760.0f
 #define MIDI_CONTROL_CHANNEL	0
 #define EXIT_CONTROLLER			0x2e
 
