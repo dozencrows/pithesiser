@@ -13,7 +13,9 @@
 #define SAMPLE_FORMAT	SND_PCM_FORMAT_S16_LE
 #define SAMPLE_ACCESS	SND_PCM_ACCESS_RW_INTERLEAVED
 
-extern int alsa_initialise(const char* device_name);
+#define PERIOD_SIZE_MIN	-1
+
+extern int alsa_initialise(const char* device_name, int period_size);
 extern void alsa_deinitialise();
 
 extern int alsa_get_samples_output();

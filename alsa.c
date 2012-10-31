@@ -122,7 +122,7 @@ static void* audio_thread()
 	return NULL;
 }
 
-int alsa_initialise(const char* device_name)
+int alsa_initialise(const char* device_name, int period_size)
 {
 	int error;
 	snd_pcm_hw_params_t* hw_params;
@@ -130,6 +130,8 @@ int alsa_initialise(const char* device_name)
 
     snd_pcm_hw_params_alloca(&hw_params);
     snd_pcm_sw_params_alloca(&sw_params);
+
+    sem_init(&audio_output_semaphore, 0, 0);
 
     if ((error = snd_pcm_open (&playback_handle, device_name, SND_PCM_STREAM_PLAYBACK, 0)) < 0)
     {
@@ -162,17 +164,28 @@ int alsa_initialise(const char* device_name)
 	unsigned int sample_rate = SAMPLE_RATE;
 	int dir = 0;
 
-	if ((error = snd_pcm_hw_params_set_rate_near(playback_handle, hw_params, &sample_rate, &dir)) < 0)
+	if ((error = snd_pcm_hw_params_set_rate(playback_handle, hw_params, SAMPLE_RATE, dir)) < 0)
 	{
 		alsa_error("cannot set sample rate (%s)\n", error);
 		return -1;
 	}
 
-	dir = 0;
-	if ((error = snd_pcm_hw_params_set_period_size_first(playback_handle, hw_params, &period_size_frames, &dir)) < 0)
+	if (period_size == PERIOD_SIZE_MIN)
 	{
-		alsa_error("cannot set & get min period size (%s)\n", error);
-		return -1;
+		if ((error = snd_pcm_hw_params_set_period_size_first(playback_handle, hw_params, &period_size_frames, &dir)) < 0)
+		{
+			alsa_error("cannot set & get min period size (%s)\n", error);
+			return -1;
+		}
+	}
+	else
+	{
+		period_size_frames = period_size;
+		if ((error = snd_pcm_hw_params_set_period_size_near(playback_handle, hw_params, &period_size_frames, &dir)) < 0)
+		{
+			alsa_error("cannot set & get desired period size (%s)\n", error);
+			return -1;
+		}
 	}
 
 	period_count = PERIOD_COUNT;
@@ -198,7 +211,7 @@ int alsa_initialise(const char* device_name)
 		return -1;
 	}
 
-    error = snd_pcm_sw_params_set_start_threshold(playback_handle, sw_params, buffer_size_frames);
+    error = snd_pcm_sw_params_set_start_threshold(playback_handle, sw_params, period_size_frames);
     if (error < 0) {
     	alsa_error("Unable to set start threshold mode for playback: %s\n", error);
     	return -1;

@@ -13,9 +13,11 @@
 #include "alsa.h"
 #include "midi.h"
 
-#define DURATION_SECONDS	10
+#define DURATION_SECONDS	5
 #define MIN_FREQUENCY		440.0f
 #define MAX_FREQUENCY		880.0f
+
+int samples_generated = 0;
 
 void generate_wave(void* data, int sample_count, float* wave_phase, float frequency)
 {
@@ -24,6 +26,8 @@ void generate_wave(void* data, int sample_count, float* wave_phase, float freque
 
 	float phase = *wave_phase;
 	short* sample_ptr = (short*) data;
+
+	samples_generated += sample_count;
 
 	while (sample_count > 0)
 	{
@@ -43,8 +47,7 @@ void generate_wave(void* data, int sample_count, float* wave_phase, float freque
 
 int main()
 {
-	//alsa_initialise("hw:0");
-	if (alsa_initialise("hw:1") < 0)
+	if (alsa_initialise("hw:1", 128) < 0)
 	{
 		exit(EXIT_FAILURE);
 	}
@@ -74,6 +77,6 @@ int main()
 	alsa_deinitialise();
 	midi_deinitialise();
 
-	printf("Done: %d samples, %d xruns\n", elapsed_samples, alsa_get_xruns_count());
+	printf("Done: %d samples output, %d samples generated, %d xruns\n", elapsed_samples, samples_generated, alsa_get_xruns_count());
 	return 0;
 }
