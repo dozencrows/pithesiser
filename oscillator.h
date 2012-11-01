@@ -14,20 +14,9 @@
 #define OSCILLATOR_H_
 
 #include <sys/types.h>
+#include "waveform.h"
 
-typedef enum
-{
-	WAVE_FIRST = 0,
-
-	WAVETABLE_SINE = 0,
-	WAVETABLE_SAW,
-	WAVETABLE_SINE_LINEAR,
-	WAVETABLE_SAW_LINEAR,
-
-	WAVE_LAST = WAVETABLE_SAW_LINEAR
-} waveform_type_t;
-
-typedef struct
+typedef struct oscillator_t
 {
 	waveform_type_t		waveform;
 	int					frequency;

@@ -13,6 +13,7 @@
 #include <memory.h>
 #include "alsa.h"
 #include "midi.h"
+#include "waveform.h"
 #include "oscillator.h"
 
 #define MIN_FREQUENCY			55.0f
@@ -49,6 +50,8 @@ int main()
 	{
 		exit(EXIT_FAILURE);
 	}
+
+	waveform_initialise();
 
 	int elapsed_samples = 0;
 
