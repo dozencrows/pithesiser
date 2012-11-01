@@ -15,11 +15,11 @@
 
 typedef struct
 {
-	int			sample_count;
-	int			frequency;
-	u_int32_t	phase_limit;
-	int16_t		*samples;
-	int16_t		*linear_deltas;
+	int		sample_count;
+	int		frequency;
+	int32_t	phase_limit;
+	int16_t	*samples;
+	int16_t	*linear_deltas;
 } waveform_t;
 
 static int wavetable_initialised = 0;
@@ -32,16 +32,16 @@ static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* 
 
 	if (waveform != NULL)
 	{
-		u_int32_t 	phase_step = ((u_int32_t)osc->frequency << FIXED_PRECISION) / (u_int32_t) waveform->frequency;
-		int16_t 	*sample_ptr = (int16_t*) sample_data;
+		int32_t phase_step = ((int32_t)osc->frequency << FIXED_PRECISION) / (int32_t)waveform->frequency;
+		int16_t *sample_ptr = (int16_t*) sample_data;
 
 		while (sample_count > 0)
 		{
-			u_int32_t wave_index = osc->phase_accumulator >> FIXED_PRECISION;
+			int wave_index = osc->phase_accumulator >> FIXED_PRECISION;
 			int32_t signal = waveform->samples[wave_index];
 			if (generator->flags & GENFLAG_LINEAR_INTERP)
 			{
-				signal += (((int32_t) waveform->linear_deltas[wave_index]) * ((int32_t)osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION;
+				signal += (((int32_t) waveform->linear_deltas[wave_index]) * (osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION;
 			}
 			signal = (signal * osc->level) / SHRT_MAX;
 			*sample_ptr++ = (int16_t)signal;
@@ -63,8 +63,8 @@ static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator
 
 	if (waveform != NULL)
 	{
-		u_int32_t 	phase_step = ((u_int32_t)osc->frequency << FIXED_PRECISION) / (u_int32_t) waveform->frequency;
-		int16_t 	*sample_ptr = (int16_t*) sample_data;
+		int32_t phase_step = ((int32_t)osc->frequency << FIXED_PRECISION) / (int32_t) waveform->frequency;
+		int16_t *sample_ptr = (int16_t*) sample_data;
 
 		while (sample_count > 0)
 		{
@@ -73,7 +73,7 @@ static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator
 			int32_t signal = waveform->samples[wave_index];
 			if (generator->flags & GENFLAG_LINEAR_INTERP)
 			{
-				signal += (((int32_t) waveform->linear_deltas[wave_index]) * ((int32_t)osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION;
+				signal += (((int32_t) waveform->linear_deltas[wave_index]) * (osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION;
 			}
 			signal = (signal * osc->level) / SHRT_MAX;
 			int32_t mixed_sample = original + signal;

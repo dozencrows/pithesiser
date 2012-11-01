@@ -20,7 +20,7 @@ typedef struct oscillator_t
 {
 	waveform_type_t		waveform;
 	int					frequency;
-	u_int32_t			phase_accumulator;
+	int32_t				phase_accumulator;
 	int32_t				level;
 } oscillator_t;
 
