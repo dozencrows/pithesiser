@@ -79,13 +79,16 @@ int main()
 			float level_control = (float) midi_get_controller_value(voice[i].midi_channel, voice[i].level_controller) / MIDI_MAX_CONTROLLER_VALUE;
 			oscillator[i].level = SHRT_MAX * level_control;
 
-			if (midi_get_controller_value(voice[i].midi_channel, voice[i].wave_controller) < 63)
+			if (midi_get_controller_changed(voice[i].midi_channel, voice[i].wave_controller))
 			{
-				oscillator[i].waveform = WAVE_SINE;
-			}
-			else
-			{
-				oscillator[i].waveform = WAVE_SAW;
+				if (midi_get_controller_value(voice[i].midi_channel, voice[i].wave_controller) > 63)
+				{
+					oscillator[i].waveform++;
+					if (oscillator[i].waveform > WAVE_LAST)
+					{
+						oscillator[i].waveform = WAVE_FIRST;
+					}
+				}
 			}
 
 			float freq_control = (float) midi_get_controller_value(voice[i].midi_channel, voice[i].pitch_controller) / MIDI_MAX_CONTROLLER_VALUE;

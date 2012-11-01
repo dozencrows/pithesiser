@@ -30,6 +30,7 @@ typedef struct
 	int		channel;
 	int		controller_count;
 	char*	controller_data;
+	char*	controller_flag;
 } channel_data;
 
 channel_data channels[CHANNEL_COUNT] =
@@ -77,8 +78,10 @@ static void* midi_thread()
 			int channel_index = control_byte & 0x0f;
 			channel_data* channel = &channels[channel_index];
 
-			if (control_data[0] < channel->controller_count) {
-				channel->controller_data[control_data[0]] = control_data[1];
+			int control_index = control_data[0];
+			if (control_index < channel->controller_count) {
+				channel->controller_data[control_index] = control_data[1];
+				channel->controller_flag[control_index] = 1;
 			}
 		}
 	}
@@ -91,6 +94,7 @@ int midi_initialise(const char* device_name)
 	for (int i = 0; i < CHANNEL_COUNT; i++)
 	{
 		channels[i].controller_data = (char*) calloc(channels[i].controller_count, 1);
+		channels[i].controller_flag = (char*) calloc(channels[i].controller_count, 1);
 	}
 
 	midi_handle = open(device_name, O_RDONLY);
@@ -103,6 +107,24 @@ int midi_initialise(const char* device_name)
 	pthread_create(&midi_thread_handle, NULL, midi_thread, NULL);
 
 	return 0;
+}
+
+int midi_get_controller_changed(int channel_index, int controller_index)
+{
+	int controller_changed = 0;
+
+	if (channel_index >= 0 && channel_index < CHANNEL_COUNT)
+	{
+		channel_data* channel = &channels[channel_index];
+
+		if (controller_index >= 0 && controller_index < channel->controller_count)
+		{
+			controller_changed = channel->controller_flag[controller_index];
+			channel->controller_flag[controller_index] = 0;
+		}
+	}
+
+	return controller_changed;
 }
 
 int midi_get_controller_value(int channel_index, int controller_index)

@@ -17,8 +17,14 @@
 
 typedef enum
 {
-	WAVE_SINE,
-	WAVE_SAW
+	WAVE_FIRST = 0,
+
+	WAVETABLE_SINE = 0,
+	WAVETABLE_SAW,
+	WAVETABLE_SINE_LINEAR,
+	WAVETABLE_SAW_LINEAR,
+
+	WAVE_LAST = WAVETABLE_SAW_LINEAR
 } waveform_type_t;
 
 typedef struct
