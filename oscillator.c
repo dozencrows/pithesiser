@@ -3,16 +3,6 @@
  *
  *  Created on: 31 Oct 2012
  *      Author: ntuckett
- *
- * Ideas to try:
- * 	* Phil Atkin's sine approximation - not as a table lookup
- * 	* Cubic interpolation with table lookup
- * 	* Phase Distortion control (simple linear)
- * 	* Better framework for flexible oscillator construction/configuration
- *    Ideas:
- *      * Function ptrs: e.g. for wavetable vs calculated forms
- *      * Macros for common operations: e.g. phase accumulator reading, wavetable lookup, phase accumulator update, mixing
- *      * "Bulk" evaluation entrypoint for a set of voices; handles mixing automatically
  */
 #include <stdlib.h>
 #include <limits.h>

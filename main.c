@@ -3,6 +3,25 @@
  *
  *  Created on: 29 Oct 2012
  *      Author: ntuckett
+ *
+ * Ideas to try:
+ *  * Float based implementation (wavetable & procedural)
+ *  * Investigate pitch difference between integer wavetable & procedural
+ *  * Generate bandlimited saw wave
+ * 	* Cubic interpolation with table lookup
+ * 	* Phase Distortion control (simple linear)
+ * 	* Better framework for flexible oscillator construction/configuration
+ *    Ideas:
+ *      * Macros for common operations: e.g. phase accumulator reading, wavetable lookup, phase accumulator update, mixing
+ *      * "Bulk" evaluation entrypoint for a set of voices; handles mixing automatically
+ *  * Modulation tools:
+ *    * Envelope generator
+ *    * Amplitude modulation
+ *    * Frequency modulation
+ *    * LFOs
+ *  * Paired oscillators: modulation, mixing
+ *  * Noise channel
+ *  * Filtering
  */
 
 #include <unistd.h>
@@ -87,6 +106,7 @@ int main()
 				if (midi_get_controller_value(voice[i].midi_channel, voice[i].wave_controller) > 63)
 				{
 					oscillator[i].waveform++;
+					oscillator[i].phase_accumulator = 0;
 					if (oscillator[i].waveform > WAVE_LAST)
 					{
 						oscillator[i].waveform = WAVE_FIRST;

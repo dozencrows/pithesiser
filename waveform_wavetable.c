@@ -11,7 +11,7 @@
 #include "oscillator.h"
 
 #define WAVETABLE_SAMPLE_RATE		44100.0f
-#define WAVETABLE_BASE_FREQUENCY	110.25f
+#define WAVETABLE_BASE_FREQUENCY	110.0f
 
 typedef struct
 {
@@ -122,7 +122,7 @@ static void generate_sine(waveform_t *waveform, float sample_rate, float frequen
 
 	waveform->frequency = frequency;
 	waveform->sample_count = max_phase / phase_step;
-	waveform->phase_limit = (u_int32_t)waveform->sample_count << FIXED_PRECISION;
+	waveform->phase_limit = waveform->sample_count << FIXED_PRECISION;
 	waveform->samples = malloc(waveform->sample_count * sizeof(waveform->samples[0]));
 
 	for (int i = 0; i < waveform->sample_count; i++)
@@ -140,7 +140,7 @@ static void generate_saw(waveform_t *waveform, float sample_rate, float frequenc
 
 	waveform->frequency = frequency;
 	waveform->sample_count = 1.0f / phase_step;
-	waveform->phase_limit = (u_int32_t)waveform->sample_count << FIXED_PRECISION;
+	waveform->phase_limit = waveform->sample_count << FIXED_PRECISION;
 	waveform->samples = malloc(waveform->sample_count * sizeof(waveform->samples[0]));
 
 	for (int i = 0; i < waveform->sample_count; i++)
