@@ -21,7 +21,8 @@
 
 static void procedural_sine_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	int32_t	phase_step = (PHASE_LIMIT / SAMPLE_RATE) * osc->frequency;
+	// Note can't have osc frequency gtr than 8191 otherwise overflows
+	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)
@@ -59,7 +60,8 @@ static void procedural_sine_output(waveform_generator_def_t *generator, oscillat
 
 static void procedural_sine_mix_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	int32_t	phase_step = (PHASE_LIMIT / SAMPLE_RATE) * osc->frequency;
+	// Note can't have osc frequency gtr than 8191 otherwise overflows
+	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)
@@ -125,7 +127,8 @@ static void procedural_sine_mix_output(waveform_generator_def_t *generator, osci
 
 static void procedural_saw_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	int32_t	phase_step = (PHASE_LIMIT / SAMPLE_RATE) * osc->frequency;
+	// Note can't have osc frequency gtr than 8191 otherwise overflows
+	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)
@@ -147,7 +150,8 @@ static void procedural_saw_output(waveform_generator_def_t *generator, oscillato
 
 static void procedural_saw_mix_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	int32_t	phase_step = (PHASE_LIMIT / SAMPLE_RATE) * osc->frequency;
+	// Note can't have osc frequency gtr than 8191 otherwise overflows
+	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)

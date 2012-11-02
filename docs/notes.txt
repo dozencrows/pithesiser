@@ -1,0 +1,45 @@
+Raspberry Pi Synth Project
+==========================
+
+Ideas to try
+============
+ * Investigate pitch difference between integer wavetable & procedural (wavetable is higher pitch)
+ * Better naming for oscillators & generators
+ * Design overall synth structure
+ * Float based implementation (wavetable & procedural)
+   * Rationales:
+     * See if it produces output closer to sine for the approximate sine procedural
+     * See if it produces less aliased output for saw wave (wavetable or procedural)
+ * Generate bandlimited saw wave
+ * Cubic interpolation with table lookup
+ * Phase Distortion control (simple linear)
+ * Better framework for flexible oscillator construction/configuration, e.g.
+     * Macros for common operations: e.g. phase accumulator reading, wavetable lookup, phase accumulator update, mixing
+     * "Bulk" evaluation entrypoint for a set of voices; handles mixing automatically
+ * Modulation tools:
+   * Envelope generator
+   * Amplitude modulation
+   * Frequency modulation
+   * LFOs
+ * Paired oscillators: modulation, mixing
+ * Noise channel
+ * Filtering
+ * Proper pitched note playback
+
+Pitch Difference Issue
+----------------------
+* Procedural generated waveform is pitching lower than wavetable waveform.
+* Areas to check:
+  * phase step calculation for wavetable waveform.
+  * phase step calculation for procedural waveform.
+* Ideas to try:
+  * Increase fractional precision of fixed point form: try 1.13.18.
+  * Floating point implementation of generators & oscillators.
+* Checked math for wave table generation; found minor rounding error (up to 1 sample out) - not really going to
+  make a difference.
+* Checked wavetable vs procedural phase step calculations:
+  * Normalised against sample rate and maximum phase values.
+  * Noticed that normalised procedural phase step < wavetable phase step - consistent with pitch difference.
+  * Checked procedural phase step calculation - getting rounding error due to fixed point calculation order.
+    * Corrected order, and now pitches match.
+ 

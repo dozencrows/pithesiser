@@ -121,13 +121,15 @@ static void generate_sine(waveform_t *waveform, float sample_rate, float frequen
 	float phase_step = max_phase * frequency / sample_rate;
 
 	waveform->frequency = frequency;
-	waveform->sample_count = max_phase / phase_step;
+	waveform->sample_count = roundf(max_phase / phase_step);
 	waveform->phase_limit = waveform->sample_count << FIXED_PRECISION;
 	waveform->samples = malloc(waveform->sample_count * sizeof(waveform->samples[0]));
 
+	float phase;
+
 	for (int i = 0; i < waveform->sample_count; i++)
 	{
-		float phase = i * phase_step;
+		phase = i * phase_step;
 		waveform->samples[i] = sinf(phase) * SHRT_MAX;
 	}
 
@@ -139,7 +141,7 @@ static void generate_saw(waveform_t *waveform, float sample_rate, float frequenc
 	float phase_step = frequency / sample_rate;
 
 	waveform->frequency = frequency;
-	waveform->sample_count = 1.0f / phase_step;
+	waveform->sample_count = roundf(1.0f / phase_step);
 	waveform->phase_limit = waveform->sample_count << FIXED_PRECISION;
 	waveform->samples = malloc(waveform->sample_count * sizeof(waveform->samples[0]));
 
