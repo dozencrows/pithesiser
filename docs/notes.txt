@@ -3,18 +3,16 @@ Raspberry Pi Synth Project
 
 Ideas to try
 ============
+ * Implementation of "whole synth" (see overall structure notes below)
+ * Multi-wave wavetable support 
  * Profiling of waveform generation loops
  * Better naming for oscillators & generators
- * Design overall synth structure
  * Float based implementation (wavetable & procedural)
    * Rationales:
      * See if it produces output closer to sine for the approximate sine procedural
      * See if it produces less aliased output for saw wave (wavetable or procedural)
- * Generate bandlimited saw wave
  * Cubic interpolation with table lookup
  * Phase Distortion control (simple linear)
- * Better framework for flexible oscillator construction/configuration/update, e.g.
-     * "Bulk" evaluation entrypoint for a set of voices; handles mixing automatically
  * Modulation tools:
    * Envelope generator
    * Amplitude modulation
@@ -42,3 +40,74 @@ Pitch Difference Issue
   * Checked procedural phase step calculation - getting rounding error due to fixed point calculation order.
     * Corrected order, and now pitches match.
  
+Overall Structure - first iteration
+-----------------------------------
+Per voice:
+	2 x oscillator: waveform shape, phase, amplitude & relative pitch
+	4 x envelope generator: ADSR params, one per oscillator, one for noise, one for filter
+	1 x filter: cutoff, resonance
+	
+Global:
+	2 x LFO: waveform shape, amplitude, pitch, phase, where output connects (OSC A/B: pitch, amplitude)
+	1 x Noise: type of noise
+
+Processing: per time slice (128 samples @ 44Khz, i.e. ~3ms)
+	* Global processing:
+		* Generate slice's worth of noise samples
+		* Calculate current value of each LFO based on mid-point of time slice 
+		  (low freq: assume constant for timeslice, i.e. max freq is 333hz)
+	* Per voice processing:
+		* voice has a base pitch (note) and phase (since triggered)
+		* voice has two oscillators that need mixing with noise
+		* For each oscillator:
+			* Calculate setup:
+				* frequency: base_pitch + osc_relative_pitch + optional_lfo 
+				* level: osc_amplitude * optional_lfo
+				* phase: base_phase + osc_phase
+			* Generate sample data:
+				* From setup parameters applied to waveform.
+				* Amplitude shaped by envelope generator updated in step.
+				* First oscillator writes to buffer directly.
+				* Second oscillator is mixed to buffer.
+		* Mix noise samples to buffer, amplitude shaped by envelope generator updated in step. 
+		* Iterate over buffer, applying filter shaped by envelope generator updated in step.	
+	* Mix each voice buffer into output buffer.
+	
+Common concepts:
+ * Sample buffer
+ * Envelope generator
+ * Waveform
+ * Oscillator
+ 
+Common operations:
+ * Generate samples from waveform into buffer
+ * Mix buffer into other buffer
+
+What needs to be done to achieve this:
+* Add more waveform shapes (square, triangle, pulse)
+* Implement voice relative oscillators
+* Implement LFOs
+* Implement envelope generators
+* Implement noise generation
+* Implement filtering
+* Implement generic buffer mixing
+* Data-driven mechanism for configuring (i.e. patches)
+* UI for displaying & editing patch settings
+* Extend MIDI handling to read note on/off for voice triggering
+
+Useful info:
+* Filters:
+  * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=185
+  * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=29
+* Noise generation:
+  * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=216
+  * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=217
+
+Bandlimited Waves
+-----------------
+Tried out bandlimited saw wave by summing sine waves (see http://www.musicdsp.org/files/waveforms.txt and
+http://hackmeopen.com/2010/11/bandlimited-wavetable-synthesis) - seemed to reduce aliasing a bit, but not
+a lot because of wide range of playback frequencies.
+
+Aliasing reduced further by creating wavetable of higher pitched note; however this made lower pitches
+"duller".

@@ -26,6 +26,7 @@ typedef struct
 static int wavetable_initialised = 0;
 static waveform_t sine_wave;
 static waveform_t saw_wave;
+static waveform_t saw_wave_bandlimited;
 
 #define WT_CALC_PHASE_STEP(phase_step, osc, waveform) 	int32_t phase_step = ((int32_t)osc->frequency << FIXED_PRECISION) / (int32_t)waveform->frequency;
 
@@ -116,7 +117,7 @@ static void generate_sine(waveform_t *waveform, float sample_rate, float frequen
 	for (int i = 0; i < waveform->sample_count; i++)
 	{
 		phase = i * phase_step;
-		waveform->samples[i] = sinf(phase) * SHRT_MAX;
+		waveform->samples[i] = roundf(sinf(phase) * SHRT_MAX);
 	}
 
 	generate_deltas(waveform);
@@ -134,7 +135,49 @@ static void generate_saw(waveform_t *waveform, float sample_rate, float frequenc
 	for (int i = 0; i < waveform->sample_count; i++)
 	{
 		float phase = i * phase_step;
-		waveform->samples[i] = (1.0f - phase * 2.0f) * SHRT_MAX;
+		waveform->samples[i] = roundf((1.0f - phase * 2.0f) * SHRT_MAX);
+	}
+
+	generate_deltas(waveform);
+}
+
+static void generate_saw_bandlimited(waveform_t *waveform, float sample_rate, float frequency)
+{
+	int partials = (WAVETABLE_SAMPLE_RATE / 2) / frequency;
+
+	waveform->frequency = frequency;
+	waveform->sample_count = roundf(sample_rate / frequency);
+	waveform->phase_limit = waveform->sample_count << FIXED_PRECISION;
+	waveform->samples = malloc(waveform->sample_count * sizeof(waveform->samples[0]));
+
+	float sample_max = 0.0f;
+	float* sample_buffer = (float*)alloca(waveform->sample_count * sizeof(float));
+	float gibbs_constant = M_PI / (2 * (float)partials);
+
+	for (int i = 0; i < waveform->sample_count; i++)
+	{
+		float sample = 0.0f;
+		float phase = 2.0f * M_PI * (float)i / waveform->sample_count;
+
+		for (int s = 1; s <= partials; s++)
+		{
+			float gibbs = cos((float)(s-1) * gibbs_constant);
+			gibbs *= gibbs;
+			sample += gibbs * (1/(float)s) * sin((float)s * phase);
+		}
+
+		sample_buffer[i] = sample;
+		if (sample > sample_max)
+		{
+			sample_max = sample;
+		}
+	}
+
+	float sample_normaliser = 1.0f / sample_max;
+	for (int i = 0; i < waveform->sample_count; i++)
+	{
+		float sample = sample_buffer[i] * sample_normaliser;
+		waveform->samples[i] = roundf(sample * SHRT_MAX);
 	}
 
 	generate_deltas(waveform);
@@ -146,6 +189,7 @@ void init_wavetables()
 	{
 		generate_sine(&sine_wave, WAVETABLE_SAMPLE_RATE, WAVETABLE_BASE_FREQUENCY);
 		generate_saw(&saw_wave, WAVETABLE_SAMPLE_RATE, WAVETABLE_BASE_FREQUENCY);
+		generate_saw_bandlimited(&saw_wave_bandlimited, WAVETABLE_SAMPLE_RATE, WAVETABLE_BASE_FREQUENCY * 4);
 		wavetable_initialised = 1;
 	}
 }
@@ -173,6 +217,15 @@ void init_wavetable_generator(waveform_type_t waveform_type, waveform_generator_
 
 		case WAVETABLE_SAW:
 			waveform = &saw_wave;
+			break;
+
+		case WAVETABLE_SAW_LINEAR_BL:
+			flags = GENFLAG_LINEAR_INTERP;
+			waveform = &saw_wave_bandlimited;
+			break;
+
+		case WAVETABLE_SAW_BL:
+			waveform = &saw_wave_bandlimited;
 			break;
 
 		default:

@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <math.h>
 #include "oscillator.h"
+#include "waveform_internal.h"
 
 void osc_init(oscillator_t* osc)
 {
