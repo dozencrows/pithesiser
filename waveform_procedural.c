@@ -11,12 +11,10 @@
 #include "oscillator.h"
 
 #define SAMPLE_RATE			44100
-#define PHASE_
-#define PHASE_LIMIT			0x00040000
-#define PHASE_HALF_LIMIT	(PHASE_LIMIT >> 1)
+#define PHASE_LIMIT			(4 * FIXED_ONE)
+#define PHASE_HALF_LIMIT	(2 * FIXED_ONE)
 
-// Note can't have osc frequency gtr than 8191 otherwise overflows
-#define PR_CALC_PHASE_STEP(osc, phase_step)	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE
+#define PR_CALC_PHASE_STEP(osc, phase_step)	int32_t	phase_step = ((int64_t)PHASE_LIMIT * (int64_t)osc->frequency) / SAMPLE_RATE
 
 // Formulae (input is phase, t):
 // 	0  to 2: 1 - (1-t)^2

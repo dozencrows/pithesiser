@@ -3,6 +3,7 @@ Raspberry Pi Synth Project
 
 Ideas to try
 ============
+ * Profiling of waveform generation loops
  * Better naming for oscillators & generators
  * Design overall synth structure
  * Float based implementation (wavetable & procedural)
