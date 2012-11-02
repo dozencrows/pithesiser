@@ -6,6 +6,7 @@
  */
 
 #include "waveform.h"
+#include "waveform_internal.h"
 #include "waveform_wavetable.h"
 #include "waveform_procedural.h"
 

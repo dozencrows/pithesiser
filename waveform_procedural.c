@@ -7,7 +7,7 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include "waveform.h"
+#include "waveform_procedural.h"
 #include "oscillator.h"
 
 #define SAMPLE_RATE			44100
@@ -15,173 +15,120 @@
 #define PHASE_LIMIT			0x00040000
 #define PHASE_HALF_LIMIT	(PHASE_LIMIT >> 1)
 
+// Note can't have osc frequency gtr than 8191 otherwise overflows
+#define PR_CALC_PHASE_STEP(osc, phase_step)	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE
+
 // Formulae (input is phase, t):
 // 	0  to 2: 1 - (1-t)^2
 // 	2> to 4: (1-(t-2))^2 - 1
+#define PR_CALC_SINE_POSITIVE(osc, sample)	int32_t sample = FIXED_ONE - osc->phase_accumulator; \
+											sample = ((int64_t)sample * (int64_t)sample) >> FIXED_PRECISION; \
+											sample = (FIXED_ONE - sample) * SHRT_MAX >> FIXED_PRECISION
+
+#define PR_CALC_SINE_NEGATIVE(osc, sample)	int32_t sample = FIXED_ONE - (osc->phase_accumulator - PHASE_HALF_LIMIT); \
+											sample = ((int64_t)sample * (int64_t)sample) >> FIXED_PRECISION; \
+											sample = (sample - FIXED_ONE) * SHRT_MAX >> FIXED_PRECISION
+
+#define PR_CALC_SAW(osc, sample)			int32_t sample = FIXED_ONE - (osc->phase_accumulator >> 1);	\
+											sample = (sample * SHRT_MAX) >> FIXED_PRECISION;
+
+#define PR_ADVANCE_PHASE(osc, phase_step)	osc->phase_accumulator += phase_step
+
+#define PR_LOOP_PHASE(osc)					if (osc->phase_accumulator >= PHASE_LIMIT) \
+												osc->phase_accumulator -= PHASE_LIMIT
 
 static void procedural_sine_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	// Note can't have osc frequency gtr than 8191 otherwise overflows
-	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
+	PR_CALC_PHASE_STEP(osc, phase_step);
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)
 	{
 		while (osc->phase_accumulator < PHASE_HALF_LIMIT && sample_count > 0)
 		{
-			int32_t signal = FIXED_ONE - osc->phase_accumulator;
-			signal = ((int64_t)signal * (int64_t)signal) >> FIXED_PRECISION;
-			signal = (FIXED_ONE - signal) * SHRT_MAX >> FIXED_PRECISION;
-			signal = (signal * osc->level) / SHRT_MAX;
-			*sample_ptr++ = (int16_t)signal;
-			*sample_ptr++ = (int16_t)signal;
-			osc->phase_accumulator += phase_step;
+			PR_CALC_SINE_POSITIVE(osc, sample);
+			SCALE_AMPLITUDE(osc, sample)
+			STORE_SAMPLE(sample, sample_ptr);
+			PR_ADVANCE_PHASE(osc, phase_step);
 			sample_count--;
 		}
 
 		while (osc->phase_accumulator < PHASE_LIMIT && sample_count > 0)
 		{
-			int32_t signal = FIXED_ONE - (osc->phase_accumulator - PHASE_HALF_LIMIT);
-			signal = ((int64_t)signal * (int64_t)signal) >> FIXED_PRECISION;
-			signal = (signal - FIXED_ONE) * SHRT_MAX >> FIXED_PRECISION;
-			signal = (signal * osc->level) / SHRT_MAX;
-			*sample_ptr++ = (int16_t)signal;
-			*sample_ptr++ = (int16_t)signal;
-			osc->phase_accumulator += phase_step;
+			PR_CALC_SINE_NEGATIVE(osc, sample);
+			SCALE_AMPLITUDE(osc, sample)
+			STORE_SAMPLE(sample, sample_ptr);
+			PR_ADVANCE_PHASE(osc, phase_step);
 			sample_count--;
 		}
 
-		if (osc->phase_accumulator >= PHASE_LIMIT)
-		{
-			osc->phase_accumulator -= PHASE_LIMIT;
-		}
+		PR_LOOP_PHASE(osc);
 	}
 }
 
 static void procedural_sine_mix_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	// Note can't have osc frequency gtr than 8191 otherwise overflows
-	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
+	PR_CALC_PHASE_STEP(osc, phase_step);
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)
 	{
 		while (osc->phase_accumulator < PHASE_HALF_LIMIT && sample_count > 0)
 		{
-			int32_t signal = FIXED_ONE - osc->phase_accumulator;
-			signal = ((int64_t)signal * (int64_t)signal) >> FIXED_PRECISION;
-			signal = (FIXED_ONE - signal) * SHRT_MAX >> FIXED_PRECISION;
-			signal = (signal * osc->level) / SHRT_MAX;
-
-			int32_t original = (int32_t)*sample_ptr;
-			int32_t mixed_sample = original + signal;
-
-			mixed_sample = (mixed_sample * 75) / 100;
-			if (mixed_sample < -SHRT_MAX)
-			{
-				mixed_sample = -SHRT_MAX;
-			}
-			else if (mixed_sample > SHRT_MAX)
-			{
-				mixed_sample = SHRT_MAX;
-			}
-
-			*sample_ptr++ = (int16_t)mixed_sample;
-			*sample_ptr++ = (int16_t)mixed_sample;
-			osc->phase_accumulator += phase_step;
+			PR_CALC_SINE_POSITIVE(osc, sample);
+			SCALE_AMPLITUDE(osc, sample)
+			MIX((int32_t)*sample_ptr, sample, mixed);
+			STORE_SAMPLE(mixed, sample_ptr);
+			PR_ADVANCE_PHASE(osc, phase_step);
 			sample_count--;
 		}
 
 		while (osc->phase_accumulator < PHASE_LIMIT && sample_count > 0)
 		{
-			int32_t signal = FIXED_ONE - (osc->phase_accumulator - PHASE_HALF_LIMIT);
-			signal = ((int64_t)signal * (int64_t)signal) >> FIXED_PRECISION;
-			signal = (signal - FIXED_ONE) * SHRT_MAX >> FIXED_PRECISION;
-			signal = (signal * osc->level) / SHRT_MAX;
-
-			int32_t original = (int32_t)*sample_ptr;
-			int32_t mixed_sample = original + signal;
-
-			mixed_sample = (mixed_sample * 75) / 100;
-			if (mixed_sample < -SHRT_MAX)
-			{
-				mixed_sample = -SHRT_MAX;
-			}
-			else if (mixed_sample > SHRT_MAX)
-			{
-				mixed_sample = SHRT_MAX;
-			}
-
-			*sample_ptr++ = (int16_t)mixed_sample;
-			*sample_ptr++ = (int16_t)mixed_sample;
-			osc->phase_accumulator += phase_step;
+			PR_CALC_SINE_NEGATIVE(osc, sample);
+			SCALE_AMPLITUDE(osc, sample)
+			MIX((int32_t)*sample_ptr, sample, mixed);
+			STORE_SAMPLE(mixed, sample_ptr);
+			PR_ADVANCE_PHASE(osc, phase_step);
 			sample_count--;
 		}
 
-		if (osc->phase_accumulator >= PHASE_LIMIT)
-		{
-			osc->phase_accumulator -= PHASE_LIMIT;
-		}
+		PR_LOOP_PHASE(osc);
 	}
 }
 
 static void procedural_saw_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	// Note can't have osc frequency gtr than 8191 otherwise overflows
-	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
+	PR_CALC_PHASE_STEP(osc, phase_step);
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)
 	{
-		int32_t signal = FIXED_ONE - (osc->phase_accumulator >> 1);
-		signal = (signal * SHRT_MAX) >> FIXED_PRECISION;
-		signal = (signal * osc->level) / SHRT_MAX;
-		*sample_ptr++ = (int16_t)signal;
-		*sample_ptr++ = (int16_t)signal;
-		osc->phase_accumulator += phase_step;
+		PR_CALC_SAW(osc, sample);
+		SCALE_AMPLITUDE(osc, sample);
+		STORE_SAMPLE(sample, sample_ptr);
+		PR_ADVANCE_PHASE(osc, phase_step);
 		sample_count--;
 
-		if (osc->phase_accumulator >= PHASE_LIMIT)
-		{
-			osc->phase_accumulator -= PHASE_LIMIT;
-		}
+		PR_LOOP_PHASE(osc);
 	}
 }
 
 static void procedural_saw_mix_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
-	// Note can't have osc frequency gtr than 8191 otherwise overflows
-	int32_t	phase_step = (PHASE_LIMIT * osc->frequency) / SAMPLE_RATE;
+	PR_CALC_PHASE_STEP(osc, phase_step);
 	int16_t *sample_ptr = (int16_t*) sample_data;
 
 	while (sample_count > 0)
 	{
-		int32_t signal = FIXED_ONE - (osc->phase_accumulator >> 1);
-		signal = (signal * SHRT_MAX) >> FIXED_PRECISION;
-		signal = (signal * osc->level) / SHRT_MAX;
-
-		int32_t original = (int32_t)*sample_ptr;
-		int32_t mixed_sample = original + signal;
-
-		mixed_sample = (mixed_sample * 75) / 100;
-		if (mixed_sample < -SHRT_MAX)
-		{
-			mixed_sample = -SHRT_MAX;
-		}
-		else if (mixed_sample > SHRT_MAX)
-		{
-			mixed_sample = SHRT_MAX;
-		}
-
-		*sample_ptr++ = (int16_t)mixed_sample;
-		*sample_ptr++ = (int16_t)mixed_sample;
-		osc->phase_accumulator += phase_step;
+		PR_CALC_SAW(osc, sample);
+		SCALE_AMPLITUDE(osc, sample);
+		MIX((int32_t)*sample_ptr, sample, mixed);
+		STORE_SAMPLE(mixed, sample_ptr);
+		PR_ADVANCE_PHASE(osc, phase_step);
 		sample_count--;
 
-		if (osc->phase_accumulator >= PHASE_LIMIT)
-		{
-			osc->phase_accumulator -= PHASE_LIMIT;
-		}
+		PR_LOOP_PHASE(osc);
 	}
 }
 

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <math.h>
+#include "waveform_wavetable.h"
 #include "oscillator.h"
 
 #define WAVETABLE_SAMPLE_RATE		44100.0f
@@ -26,32 +27,36 @@ static int wavetable_initialised = 0;
 static waveform_t sine_wave;
 static waveform_t saw_wave;
 
+#define WT_CALC_PHASE_STEP(phase_step, osc, waveform) 	int32_t phase_step = ((int32_t)osc->frequency << FIXED_PRECISION) / (int32_t)waveform->frequency;
+
+#define WT_GET_SAMPLE(osc, sample) 		   			int wave_index = osc->phase_accumulator >> FIXED_PRECISION; \
+													int32_t sample = waveform->samples[wave_index]
+
+#define WT_LINEAR_INTERP(waveform, osc, sample) 	sample += (((int32_t) waveform->linear_deltas[wave_index]) * (osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION
+
+#define WT_ADVANCE_PHASE(osc, waveform, phase_step)	osc->phase_accumulator += phase_step; 					\
+													if (osc->phase_accumulator > waveform->phase_limit) 	\
+														osc->phase_accumulator -= waveform->phase_limit
+
 static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
 {
 	waveform_t *waveform = (waveform_t*) generator->waveform_data;
 
 	if (waveform != NULL)
 	{
-		int32_t phase_step = ((int32_t)osc->frequency << FIXED_PRECISION) / (int32_t)waveform->frequency;
+		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
 		int16_t *sample_ptr = (int16_t*) sample_data;
 
 		while (sample_count > 0)
 		{
-			int wave_index = osc->phase_accumulator >> FIXED_PRECISION;
-			int32_t signal = waveform->samples[wave_index];
+			WT_GET_SAMPLE(osc, sample);
 			if (generator->flags & GENFLAG_LINEAR_INTERP)
 			{
-				signal += (((int32_t) waveform->linear_deltas[wave_index]) * (osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION;
+				WT_LINEAR_INTERP(waveform, osc, sample);
 			}
-			signal = (signal * osc->level) / SHRT_MAX;
-			*sample_ptr++ = (int16_t)signal;
-			*sample_ptr++ = (int16_t)signal;
-			osc->phase_accumulator += phase_step;
-			if (osc->phase_accumulator > waveform->phase_limit)
-			{
-				osc->phase_accumulator -= waveform->phase_limit;
-			}
-
+			SCALE_AMPLITUDE(osc, sample);
+			STORE_SAMPLE(sample, sample_ptr);
+			WT_ADVANCE_PHASE(osc, waveform, phase_step);
 			sample_count--;
 		}
 	}
@@ -63,39 +68,20 @@ static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator
 
 	if (waveform != NULL)
 	{
-		int32_t phase_step = ((int32_t)osc->frequency << FIXED_PRECISION) / (int32_t) waveform->frequency;
+		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
 		int16_t *sample_ptr = (int16_t*) sample_data;
 
 		while (sample_count > 0)
 		{
-			u_int32_t wave_index = osc->phase_accumulator >> FIXED_PRECISION;
-			int32_t original = (int32_t)*sample_ptr;
-			int32_t signal = waveform->samples[wave_index];
+			WT_GET_SAMPLE(osc, sample);
 			if (generator->flags & GENFLAG_LINEAR_INTERP)
 			{
-				signal += (((int32_t) waveform->linear_deltas[wave_index]) * (osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION;
+				WT_LINEAR_INTERP(waveform, osc, sample);
 			}
-			signal = (signal * osc->level) / SHRT_MAX;
-			int32_t mixed_sample = original + signal;
-
-			mixed_sample = (mixed_sample * 75) / 100;
-			if (mixed_sample < -SHRT_MAX)
-			{
-				mixed_sample = -SHRT_MAX;
-			}
-			else if (mixed_sample > SHRT_MAX)
-			{
-				mixed_sample = SHRT_MAX;
-			}
-
-			*sample_ptr++ = (int16_t)mixed_sample;
-			*sample_ptr++ = (int16_t)mixed_sample;
-			osc->phase_accumulator += phase_step;
-			if (osc->phase_accumulator > waveform->phase_limit)
-			{
-				osc->phase_accumulator -= waveform->phase_limit;
-			}
-
+			SCALE_AMPLITUDE(osc, sample);
+			MIX((int32_t)*sample_ptr, sample, mixed);
+			STORE_SAMPLE(mixed, sample_ptr);
+			WT_ADVANCE_PHASE(osc, waveform, phase_step);
 			sample_count--;
 		}
 	}

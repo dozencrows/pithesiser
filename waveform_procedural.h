@@ -8,6 +8,9 @@
 #ifndef WAVEFORM_PROCEDURAL_H_
 #define WAVEFORM_PROCEDURAL_H_
 
+#include "waveform.h"
+#include "waveform_internal.h"
+
 extern void init_procedural_generator(waveform_type_t waveform_type, waveform_generator_t *generator);
 
 #endif /* WAVEFORM_PROCEDURAL_H_ */

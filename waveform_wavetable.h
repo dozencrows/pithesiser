@@ -9,6 +9,7 @@
 #define WAVEFORM_WAVETABLE_H_
 
 #include "waveform.h"
+#include "waveform_internal.h"
 
 extern void init_wavetables();
 extern void init_wavetable_generator(waveform_type_t waveform_type, waveform_generator_t *generator);

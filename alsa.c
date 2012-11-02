@@ -161,7 +161,6 @@ int alsa_initialise(const char* device_name, int period_size)
 		return -1;
 	}
 
-	unsigned int sample_rate = SAMPLE_RATE;
 	int dir = 0;
 
 	if ((error = snd_pcm_hw_params_set_rate(playback_handle, hw_params, SAMPLE_RATE, dir)) < 0)

@@ -3,7 +3,6 @@ Raspberry Pi Synth Project
 
 Ideas to try
 ============
- * Investigate pitch difference between integer wavetable & procedural (wavetable is higher pitch)
  * Better naming for oscillators & generators
  * Design overall synth structure
  * Float based implementation (wavetable & procedural)
@@ -13,8 +12,7 @@ Ideas to try
  * Generate bandlimited saw wave
  * Cubic interpolation with table lookup
  * Phase Distortion control (simple linear)
- * Better framework for flexible oscillator construction/configuration, e.g.
-     * Macros for common operations: e.g. phase accumulator reading, wavetable lookup, phase accumulator update, mixing
+ * Better framework for flexible oscillator construction/configuration/update, e.g.
      * "Bulk" evaluation entrypoint for a set of voices; handles mixing automatically
  * Modulation tools:
    * Envelope generator
