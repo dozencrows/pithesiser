@@ -5,7 +5,8 @@ Ideas to try
 ============
  * Implementation of "whole synth" (see overall structure notes below)
  * Multi-wave wavetable support 
- * Profiling of waveform generation loops
+ * More profiling of waveform generation loops
+ * Examine asm code generated for waveform gen loops; look for support calls
  * Better naming for oscillators & generators
  * Float based implementation (wavetable & procedural)
    * Rationales:
@@ -111,3 +112,24 @@ a lot because of wide range of playback frequencies.
 
 Aliasing reduced further by creating wavetable of higher pitched note; however this made lower pitches
 "duller".
+
+Profiling Notes
+---------------
+Tried out gperftools cpu profiling, in debug and release - with monophonic/polyphonic, wavetable/procedural.
+
+Generally it appeared that the most significant of my own code was waveform output, be it wavetable or
+procedural. 
+
+Hard to compare the two different approaches as testing was somewhat ad-hoc; need to make clearly controlled
+test cases (voice count & setup) and probably best capturing own metrics (time measurements, e.g. spent in
+waveform generation, spend waiting for ALSA, etc.). Also use ProfilerStart() and ProfilerStop() to limit code
+profiled (i.e. main loop only).
+
+Biggest time overall in all profiling tests was in ioctl (between 30% and 45%). Semaphore wait and post
+were also quite high; each around similar time to that spent in waveform output.
+
+Tightening up profiling to just around the main loop shifted the goalposts; when doing polyphonic wavetable
+output, nearly half CPU time is spent in the output mixing, then ~20% in ioctl, then ~9% in the non-mixed
+output. With strictly defined testing config (voice setup, test duration) this would be a basis for
+measuring impact of optimisation efforts.
+  

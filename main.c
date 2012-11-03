@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#include <gperftools/profiler.h>
 #include "alsa.h"
 #include "midi.h"
 #include "waveform.h"
@@ -20,6 +21,7 @@
 #define MAX_FREQUENCY			1760.0f
 #define MIDI_CONTROL_CHANNEL	0
 #define EXIT_CONTROLLER			0x2e
+#define PROFILE_CONTROLLER		0x2c
 
 typedef struct
 {
@@ -39,7 +41,7 @@ voice_t voice[VOICE_COUNT] =
 	{ MIDI_CONTROL_CHANNEL, 0x11, 0x24, 0x1a, 0x05 },
 };
 
-int main()
+int main(int argc, char **argv)
 {
 	if (alsa_initialise("hw:1", 128) < 0)
 	{
@@ -62,11 +64,22 @@ int main()
 		osc_init(&oscillator[i]);
 	}
 
+	int profiling = 0;
+
 	while (1)
 	{
 		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, EXIT_CONTROLLER) > 63)
 		{
 			break;
+		}
+
+		if (!profiling && midi_get_controller_changed(MIDI_CONTROL_CHANNEL, PROFILE_CONTROLLER))
+		{
+			if (argc > 1 && midi_get_controller_value(MIDI_CONTROL_CHANNEL, PROFILE_CONTROLLER) > 63)
+			{
+				ProfilerStart(argv[1]);
+				profiling = 1;
+			}
 		}
 
 		alsa_sync_with_audio_output();
@@ -118,6 +131,11 @@ int main()
 		}
 
 		alsa_unlock_buffer(write_buffer_index);
+	}
+
+	if (argc > 1)
+	{
+		ProfilerStop();
 	}
 
 	alsa_deinitialise();
