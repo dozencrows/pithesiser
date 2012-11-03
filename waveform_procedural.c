@@ -21,14 +21,14 @@
 // 	2> to 4: (1-(t-2))^2 - 1
 #define PR_CALC_SINE_POSITIVE(osc, sample)	int32_t sample = FIXED_ONE - osc->phase_accumulator; \
 											sample = ((int64_t)sample * (int64_t)sample) >> FIXED_PRECISION; \
-											sample = (FIXED_ONE - sample) * SHRT_MAX >> FIXED_PRECISION
+											sample = (int64_t)(FIXED_ONE - sample) * SHRT_MAX >> FIXED_PRECISION
 
 #define PR_CALC_SINE_NEGATIVE(osc, sample)	int32_t sample = FIXED_ONE - (osc->phase_accumulator - PHASE_HALF_LIMIT); \
 											sample = ((int64_t)sample * (int64_t)sample) >> FIXED_PRECISION; \
-											sample = (sample - FIXED_ONE) * SHRT_MAX >> FIXED_PRECISION
+											sample = (int64_t)(sample - FIXED_ONE) * SHRT_MAX >> FIXED_PRECISION
 
 #define PR_CALC_SAW(osc, sample)			int32_t sample = FIXED_ONE - (osc->phase_accumulator >> 1);	\
-											sample = (sample * SHRT_MAX) >> FIXED_PRECISION;
+											sample = ((int64_t)sample * SHRT_MAX) >> FIXED_PRECISION;
 
 #define PR_ADVANCE_PHASE(osc, phase_step)	osc->phase_accumulator += phase_step
 
