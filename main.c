@@ -43,12 +43,12 @@ voice_t voice[VOICE_COUNT] =
 
 int main(int argc, char **argv)
 {
-	if (alsa_initialise("hw:1", 128) < 0)
+	if (alsa_initialise("hw:2", 128) < 0)
 	{
 		exit(EXIT_FAILURE);
 	}
 
-	if (midi_initialise("/dev/midi2") < 0)
+	if (midi_initialise("/dev/midi1") < 0)
 	{
 		exit(EXIT_FAILURE);
 	}
@@ -108,10 +108,31 @@ int main(int argc, char **argv)
 				}
 			}
 
-			float freq_control = (float) midi_get_controller_value(voice[i].midi_channel, voice[i].pitch_controller) / MIDI_MAX_CONTROLLER_VALUE;
-			oscillator[i].frequency = MIN_FREQUENCY + (MAX_FREQUENCY - MIN_FREQUENCY) * freq_control;
+			int note_trigger = 0;
 
-			if (midi_get_controller_value(voice[i].midi_channel, voice[i].trigger_controller) > 63 && oscillator[i].level > 0)
+			if (i == 0)
+			{
+				extern int current_note;
+
+				if (current_note != -1)
+				{
+					oscillator[i].frequency = midi_get_note_frequency(current_note) >> 16;
+					oscillator[i].level = 16384;
+					note_trigger = 1;
+				}
+				else
+				{
+					oscillator[i].level = 0;
+				}
+			}
+			else
+			{
+				float freq_control = (float) midi_get_controller_value(voice[i].midi_channel, voice[i].pitch_controller) / MIDI_MAX_CONTROLLER_VALUE;
+				oscillator[i].frequency = MIN_FREQUENCY + (MAX_FREQUENCY - MIN_FREQUENCY) * freq_control;
+				note_trigger = midi_get_controller_value(voice[i].midi_channel, voice[i].trigger_controller) > 63;
+			}
+
+			if (note_trigger && oscillator[i].level > 0)
 			{
 				if (first_audible_voice < 0)
 				{

@@ -14,5 +14,6 @@ extern int midi_initialise(const char* device_name);
 extern void midi_deinitialise();
 extern int midi_get_controller_changed(int channel_index, int controller_index);
 extern int midi_get_controller_value(int channel_index, int controller_index);
+extern int32_t midi_get_note_frequency(int midi_note);
 
 #endif /* MIDI_H_ */
