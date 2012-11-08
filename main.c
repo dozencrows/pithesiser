@@ -116,8 +116,9 @@ int main(int argc, char **argv)
 
 				if (current_note != -1)
 				{
-					oscillator[i].frequency = midi_get_note_frequency(current_note) >> 16;
+					oscillator[i].frequency = midi_get_note_frequency(current_note);
 					oscillator[i].level = 16384;
+					oscillator[i].waveform = PROCEDURAL_SINE;
 					note_trigger = 1;
 				}
 				else

@@ -23,6 +23,7 @@ Ideas to try
  * Noise channel
  * Filtering
  * Proper pitched note playback
+ * Normalise range of phase accumulator across all waveform types
 
 Pitch Difference Issue
 ----------------------

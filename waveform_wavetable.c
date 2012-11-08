@@ -28,7 +28,7 @@ static waveform_t sine_wave;
 static waveform_t saw_wave;
 static waveform_t saw_wave_bandlimited;
 
-#define WT_CALC_PHASE_STEP(phase_step, osc, waveform) 	int32_t phase_step = (osc->frequency << FIXED_PRECISION) / (int32_t)waveform->frequency;
+#define WT_CALC_PHASE_STEP(phase_step, osc, waveform) 	int32_t phase_step = osc->frequency / (int32_t)waveform->frequency;
 
 #define WT_GET_SAMPLE(osc, sample) 		   			int wave_index = osc->phase_accumulator >> FIXED_PRECISION; \
 													int32_t sample = waveform->samples[wave_index]
