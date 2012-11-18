@@ -22,6 +22,7 @@
 #define MIDI_CONTROL_CHANNEL	0
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
+#define NOTE_LEVEL				8192
 
 typedef struct
 {
@@ -49,6 +50,9 @@ voice_t voice[VOICE_COUNT] =
 };
 
 oscillator_t oscillator[VOICE_COUNT];
+
+float master_level = 1.0f;
+waveform_type_t master_waveform = WAVE_FIRST;
 
 void process_midi_events()
 {
@@ -93,6 +97,20 @@ void process_midi_events()
 			}
 		}
 	}
+
+	master_level = (float) midi_get_controller_value(voice[0].midi_channel, voice[0].level_controller) / MIDI_MAX_CONTROLLER_VALUE;
+
+	if (midi_get_controller_changed(voice[0].midi_channel, voice[0].wave_controller))
+	{
+		if (midi_get_controller_value(voice[0].midi_channel, voice[0].wave_controller) > 63)
+		{
+			master_waveform++;
+			if (master_waveform > WAVE_LAST)
+			{
+				master_waveform = WAVE_FIRST;
+			}
+		}
+	}
 }
 
 void process_audio()
@@ -115,24 +133,27 @@ void process_audio()
 			else
 			{
 				oscillator[i].frequency = midi_get_note_frequency(voice[i].current_note);
-				oscillator[i].level = 8192;
-				oscillator[i].waveform = PROCEDURAL_SINE;
+				oscillator[i].waveform = master_waveform;
 				oscillator[i].phase_accumulator = 0;
 			}
 
 			voice[i].last_note = voice[i].current_note;
 		}
 
-		if (oscillator[i].level > 0)
+		if (voice[i].current_note != -1)
 		{
-			if (first_audible_voice < 0)
+			oscillator[i].level = NOTE_LEVEL * master_level;
+			if (oscillator[i].level > 0)
 			{
-				first_audible_voice = i;
-				osc_output(&oscillator[i], buffer_samples, buffer_data);
-			}
-			else
-			{
-				osc_mix_output(&oscillator[i], buffer_samples, buffer_data);
+				if (first_audible_voice < 0)
+				{
+					first_audible_voice = i;
+					osc_output(&oscillator[i], buffer_samples, buffer_data);
+				}
+				else
+				{
+					osc_mix_output(&oscillator[i], buffer_samples, buffer_data);
+				}
 			}
 		}
 	}
@@ -147,12 +168,12 @@ void process_audio()
 
 int main(int argc, char **argv)
 {
-	if (alsa_initialise("hw:2", 128) < 0)
+	if (alsa_initialise("hw:1", 128) < 0)
 	{
 		exit(EXIT_FAILURE);
 	}
 
-	if (midi_initialise("/dev/midi1") < 0)
+	if (midi_initialise("/dev/midi2", "/dev/midi3") < 0)
 	{
 		exit(EXIT_FAILURE);
 	}
