@@ -30,16 +30,120 @@ typedef struct
 	int wave_controller;
 	int trigger_controller;
 	int level_controller;
+	int last_note;
+	int current_note;
+	int play_counter;
 } voice_t;
 
-#define VOICE_COUNT	4
+#define VOICE_COUNT	8
 voice_t voice[VOICE_COUNT] =
 {
-	{ MIDI_CONTROL_CHANNEL, 0x0e, 0x21, 0x17, 0x02 },
-	{ MIDI_CONTROL_CHANNEL, 0x0f, 0x22, 0x18, 0x03 },
-	{ MIDI_CONTROL_CHANNEL, 0x10, 0x23, 0x19, 0x04 },
-	{ MIDI_CONTROL_CHANNEL, 0x11, 0x24, 0x1a, 0x05 },
+	{ MIDI_CONTROL_CHANNEL, 0x0e, 0x21, 0x17, 0x02, -1, -1, 0 },
+	{ MIDI_CONTROL_CHANNEL, 0x0f, 0x22, 0x18, 0x03, -1, -1, 0 },
+	{ MIDI_CONTROL_CHANNEL, 0x10, 0x23, 0x19, 0x04, -1, -1, 0 },
+	{ MIDI_CONTROL_CHANNEL, 0x11, 0x24, 0x1a, 0x05, -1, -1, 0 },
+	{ MIDI_CONTROL_CHANNEL, 0x0e, 0x21, 0x17, 0x02, -1, -1, 0 },
+	{ MIDI_CONTROL_CHANNEL, 0x0f, 0x22, 0x18, 0x03, -1, -1, 0 },
+	{ MIDI_CONTROL_CHANNEL, 0x10, 0x23, 0x19, 0x04, -1, -1, 0 },
+	{ MIDI_CONTROL_CHANNEL, 0x11, 0x24, 0x1a, 0x05, -1, -1, 0 },
 };
+
+oscillator_t oscillator[VOICE_COUNT];
+
+void process_midi_events()
+{
+	int midi_events = midi_get_event_count();
+
+	while (midi_events-- > 0)
+	{
+		midi_event_t midi_event;
+		midi_pop_event(&midi_event);
+		if (midi_event.type == 0x90)
+		{
+			int candidate_voice = -1;
+			int lowest_play_counter = INT_MAX;
+
+			for (int i = 0; i < VOICE_COUNT; i++)
+			{
+				if (voice[i].current_note == -1)
+				{
+					candidate_voice = i;
+					break;
+				}
+				else
+				{
+					if (voice[i].play_counter < lowest_play_counter)
+					{
+						lowest_play_counter = voice[i].play_counter;
+						candidate_voice = i;
+					}
+				}
+			}
+
+			voice[candidate_voice].current_note = midi_event.data[0];
+		}
+		else if (midi_event.type == 0x80)
+		{
+			for (int i = 0; i < VOICE_COUNT; i++)
+			{
+				if (voice[i].last_note == midi_event.data[0])
+				{
+					voice[i].current_note = -1;
+				}
+			}
+		}
+	}
+}
+
+void process_audio()
+{
+	int write_buffer_index = alsa_lock_next_write_buffer();
+	void* buffer_data;
+	int buffer_samples;
+	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
+
+	int first_audible_voice = -1;
+
+	for (int i = 0; i < VOICE_COUNT; i++)
+	{
+		if (voice[i].current_note != voice[i].last_note)
+		{
+			if (voice[i].current_note == -1)
+			{
+				oscillator[i].level = 0;
+			}
+			else
+			{
+				oscillator[i].frequency = midi_get_note_frequency(voice[i].current_note);
+				oscillator[i].level = 8192;
+				oscillator[i].waveform = PROCEDURAL_SINE;
+				oscillator[i].phase_accumulator = 0;
+			}
+
+			voice[i].last_note = voice[i].current_note;
+		}
+
+		if (oscillator[i].level > 0)
+		{
+			if (first_audible_voice < 0)
+			{
+				first_audible_voice = i;
+				osc_output(&oscillator[i], buffer_samples, buffer_data);
+			}
+			else
+			{
+				osc_mix_output(&oscillator[i], buffer_samples, buffer_data);
+			}
+		}
+	}
+
+	if (first_audible_voice < 0)
+	{
+		memset(buffer_data, 0, buffer_samples * sizeof(int16_t) * 2);
+	}
+
+	alsa_unlock_buffer(write_buffer_index);
+}
 
 int main(int argc, char **argv)
 {
@@ -55,40 +159,21 @@ int main(int argc, char **argv)
 
 	waveform_initialise();
 
-	int elapsed_samples = 0;
-
-	oscillator_t oscillator[VOICE_COUNT];
-
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
 		osc_init(&oscillator[i]);
 	}
 
 	int profiling = 0;
-	int current_note = -1;
 
 	while (1)
 	{
-		int midi_events = midi_get_event_count();
-
-		while (midi_events-- > 0)
-		{
-			midi_event_t midi_event;
-			midi_pop_event(&midi_event);
-			if (midi_event.type == 0x90)
-			{
-				current_note = midi_event.data[0];
-			}
-			else if (midi_event.type == 0x80 && midi_event.data[0] == current_note)
-			{
-				current_note = -1;
-			}
-		}
-
 		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, EXIT_CONTROLLER) > 63)
 		{
 			break;
 		}
+
+		process_midi_events();
 
 		if (!profiling && midi_get_controller_changed(MIDI_CONTROL_CHANNEL, PROFILE_CONTROLLER))
 		{
@@ -100,74 +185,8 @@ int main(int argc, char **argv)
 		}
 
 		alsa_sync_with_audio_output();
-		int write_buffer_index = alsa_lock_next_write_buffer();
-		void* buffer_data;
-		int buffer_samples;
-		alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
 
-		int first_audible_voice = -1;
-
-		for (int i = 0; i < VOICE_COUNT; i++)
-		{
-			float level_control = (float) midi_get_controller_value(voice[i].midi_channel, voice[i].level_controller) / MIDI_MAX_CONTROLLER_VALUE;
-			oscillator[i].level = SHRT_MAX * level_control;
-
-			if (midi_get_controller_changed(voice[i].midi_channel, voice[i].wave_controller))
-			{
-				if (midi_get_controller_value(voice[i].midi_channel, voice[i].wave_controller) > 63)
-				{
-					oscillator[i].waveform++;
-					oscillator[i].phase_accumulator = 0;
-					if (oscillator[i].waveform > WAVE_LAST)
-					{
-						oscillator[i].waveform = WAVE_FIRST;
-					}
-				}
-			}
-
-			int note_trigger = 0;
-
-			if (i == 0)
-			{
-				if (current_note != -1)
-				{
-					oscillator[i].frequency = midi_get_note_frequency(current_note);
-					oscillator[i].level = 16384;
-					oscillator[i].waveform = PROCEDURAL_SINE;
-					note_trigger = 1;
-				}
-				else
-				{
-					oscillator[i].level = 0;
-				}
-			}
-			else
-			{
-				float freq_control = (float) midi_get_controller_value(voice[i].midi_channel, voice[i].pitch_controller) / MIDI_MAX_CONTROLLER_VALUE;
-				oscillator[i].frequency = MIN_FREQUENCY + (MAX_FREQUENCY - MIN_FREQUENCY) * freq_control;
-				note_trigger = midi_get_controller_value(voice[i].midi_channel, voice[i].trigger_controller) > 63;
-			}
-
-			if (note_trigger && oscillator[i].level > 0)
-			{
-				if (first_audible_voice < 0)
-				{
-					first_audible_voice = i;
-					osc_output(&oscillator[i], buffer_samples, buffer_data);
-				}
-				else
-				{
-					osc_mix_output(&oscillator[i], buffer_samples, buffer_data);
-				}
-			}
-		}
-
-		if (first_audible_voice < 0)
-		{
-			memset(buffer_data, 0, buffer_samples * sizeof(int16_t) * 2);
-		}
-
-		alsa_unlock_buffer(write_buffer_index);
+		process_audio();
 	}
 
 	if (argc > 1)
@@ -178,6 +197,6 @@ int main(int argc, char **argv)
 	alsa_deinitialise();
 	midi_deinitialise();
 
-	printf("Done: %d samples output, %d xruns\n", elapsed_samples, alsa_get_xruns_count());
+	printf("Done: %d xruns\n", alsa_get_xruns_count());
 	return 0;
 }

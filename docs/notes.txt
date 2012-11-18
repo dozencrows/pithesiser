@@ -3,27 +3,31 @@ Raspberry Pi Synth Project
 
 Ideas to try
 ============
- * Implementation of "whole synth" (see overall structure notes below)
- * Multi-wave wavetable support 
- * More profiling of waveform generation loops
- * Examine asm code generated for waveform gen loops; look for support calls
+Feature support:
  * Better naming for oscillators & generators
- * Float based implementation (wavetable & procedural)
-   * Rationales:
-     * See if it produces output closer to sine for the approximate sine procedural
-     * See if it produces less aliased output for saw wave (wavetable or procedural)
+ * Normalise range of phase accumulator across all waveform types
+ * Multi-wave wavetable support 
  * Cubic interpolation with table lookup
- * Phase Distortion control (simple linear)
+ * Implementation of "whole synth" (see overall structure notes below)
+ * Paired oscillators: modulation, mixing
  * Modulation tools:
    * Envelope generator
    * Amplitude modulation
    * Frequency modulation
    * LFOs
- * Paired oscillators: modulation, mixing
  * Noise channel
  * Filtering
- * Proper pitched note playback
- * Normalise range of phase accumulator across all waveform types
+
+Performance:
+ * More profiling of waveform generation loops
+ * Examine asm code generated for waveform gen loops; look for calls vs inlined code
+ * Float based implementation (wavetable & procedural)
+   * Rationales:
+     * See if it produces output closer to sine for the approximate sine procedural
+     * See if it produces less aliased output for saw wave (wavetable or procedural)
+
+Advanced:
+ * Phase Distortion control (simple linear)
 
 Pitch Difference Issue
 ----------------------
@@ -87,6 +91,7 @@ Common operations:
 
 What needs to be done to achieve this:
 * Add more waveform shapes (square, triangle, pulse)
+* Ensure waveform generation minimises aliasing
 * Implement voice relative oscillators
 * Implement LFOs
 * Implement envelope generators

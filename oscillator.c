@@ -15,7 +15,7 @@ void osc_init(oscillator_t* osc)
 	osc->waveform 			= WAVETABLE_SINE;
 	osc->frequency			= 440;
 	osc->phase_accumulator 	= 0;
-	osc->level 				= SHRT_MAX;
+	osc->level 				= 0;
 }
 
 void osc_output(oscillator_t* osc, int sample_count, void *sample_data)
