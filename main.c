@@ -65,9 +65,26 @@ int main(int argc, char **argv)
 	}
 
 	int profiling = 0;
+	int current_note = -1;
 
 	while (1)
 	{
+		int midi_events = midi_get_event_count();
+
+		while (midi_events-- > 0)
+		{
+			midi_event_t midi_event;
+			midi_pop_event(&midi_event);
+			if (midi_event.type == 0x90)
+			{
+				current_note = midi_event.data[0];
+			}
+			else if (midi_event.type == 0x80)
+			{
+				current_note = -1;
+			}
+		}
+
 		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, EXIT_CONTROLLER) > 63)
 		{
 			break;
@@ -112,8 +129,6 @@ int main(int argc, char **argv)
 
 			if (i == 0)
 			{
-				extern int current_note;
-
 				if (current_note != -1)
 				{
 					oscillator[i].frequency = midi_get_note_frequency(current_note);
