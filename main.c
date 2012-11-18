@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 			{
 				current_note = midi_event.data[0];
 			}
-			else if (midi_event.type == 0x80)
+			else if (midi_event.type == 0x80 && midi_event.data[0] == current_note)
 			{
 				current_note = -1;
 			}
