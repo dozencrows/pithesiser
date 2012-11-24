@@ -1,6 +1,11 @@
 Raspberry Pi Synth Project
 ==========================
 
+To do
+=====
+* Investigate little audible difference in 50% cut from A -> D -> S - maybe attack not getting there fully?
+* Implement release (voices need to run on...) 
+
 Ideas to try
 ============
 Feature support:
@@ -138,4 +143,18 @@ Tightening up profiling to just around the main loop shifted the goalposts; when
 output, nearly half CPU time is spent in the output mixing, then ~20% in ioctl, then ~9% in the non-mixed
 output. With strictly defined testing config (voice setup, test duration) this would be a basis for
 measuring impact of optimisation efforts.
-  
+
+Envelope Generator Notes
+------------------------
+Basic operation:
+* Note is triggered: starts an envelope generator instance
+  * Start time set to zero; output level set to zero; state set to ATTACK
+* Time stepped with note playing
+  * Envelope time advanced and checked against next state conditions; advance state if time outside bounds
+  * Calculate normalised output level for envelope
+  * Scale master volume by level and set on oscillator
+* ADSR style envelopes
+  * States have:
+    * Starting level: 0-1
+    * Ending level:   0-1
+    * Duration:		  0 to infinity

@@ -11,18 +11,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#include <time.h>
 #include <gperftools/profiler.h>
 #include "alsa.h"
 #include "midi.h"
 #include "waveform.h"
 #include "oscillator.h"
+#include "envelope.h"
 
 #define MIN_FREQUENCY			55.0f
 #define MAX_FREQUENCY			1760.0f
 #define MIDI_CONTROL_CHANNEL	0
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
-#define NOTE_LEVEL				8192
+#define NOTE_LEVEL				32767
 
 typedef struct
 {
@@ -34,6 +36,7 @@ typedef struct
 	int last_note;
 	int current_note;
 	int play_counter;
+	envelope_instance_t	envelope_instance;
 } voice_t;
 
 #define VOICE_COUNT	8
@@ -51,8 +54,49 @@ voice_t voice[VOICE_COUNT] =
 
 oscillator_t oscillator[VOICE_COUNT];
 
+envelope_stage_t envelope_stages[4] =
+{
+	{ 0,				32767,	100, 			},
+	{ 32767, 			16384,	250				},
+	{ 16384,			16384,	DURATION_HELD 	},
+	{ LEVEL_CURRENT,	0,		100				}
+};
+
+envelope_t envelope = { 4, envelope_stages };
+
 float master_level = 1.0f;
 waveform_type_t master_waveform = WAVE_FIRST;
+
+struct timespec timespec_diff(struct timespec start, struct timespec end)
+{
+	struct timespec temp;
+	if ((end.tv_nsec-start.tv_nsec)<0) {
+		temp.tv_sec = end.tv_sec-start.tv_sec-1;
+		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+	} else {
+		temp.tv_sec = end.tv_sec-start.tv_sec;
+		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+	}
+	return temp;
+}
+
+int32_t	get_elapsed_time_ms()
+{
+	static int base_set = 0;
+	static struct timespec base_tspec;
+	struct timespec tspec;
+
+	if (base_set == 0)
+	{
+		base_set = 1;
+		clock_gettime(CLOCK_REALTIME, &base_tspec);
+	}
+
+	clock_gettime(CLOCK_REALTIME, &tspec);
+	struct timespec diff = timespec_diff(base_tspec, tspec);
+
+	return (diff.tv_nsec / 1000000) + (diff.tv_sec * 1000);
+}
 
 void process_midi_events()
 {
@@ -113,7 +157,7 @@ void process_midi_events()
 	}
 }
 
-void process_audio()
+void process_audio(int32_t timestep_ms)
 {
 	int write_buffer_index = alsa_lock_next_write_buffer();
 	void* buffer_data;
@@ -135,6 +179,7 @@ void process_audio()
 				oscillator[i].frequency = midi_get_note_frequency(voice[i].current_note);
 				oscillator[i].waveform = master_waveform;
 				oscillator[i].phase_accumulator = 0;
+				envelope_start(&voice[i].envelope_instance);
 			}
 
 			voice[i].last_note = voice[i].current_note;
@@ -142,7 +187,10 @@ void process_audio()
 
 		if (voice[i].current_note != -1)
 		{
-			oscillator[i].level = NOTE_LEVEL * master_level;
+			int32_t envelope_level = envelope_step(&voice[i].envelope_instance, timestep_ms);
+			int32_t note_level = (NOTE_LEVEL * envelope_level) / ENVELOPE_LEVEL_MAX;
+
+			oscillator[i].level = note_level * master_level;
 			if (oscillator[i].level > 0)
 			{
 				if (first_audible_voice < 0)
@@ -183,9 +231,12 @@ int main(int argc, char **argv)
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
 		osc_init(&oscillator[i]);
+		envelope_init(&voice[i].envelope_instance, &envelope);
 	}
 
 	int profiling = 0;
+
+	int32_t last_timestamp = get_elapsed_time_ms();
 
 	while (1)
 	{
@@ -207,7 +258,9 @@ int main(int argc, char **argv)
 
 		alsa_sync_with_audio_output();
 
-		process_audio();
+		int32_t timestamp = get_elapsed_time_ms();
+		process_audio(timestamp - last_timestamp);
+		last_timestamp = timestamp;
 	}
 
 	if (argc > 1)
