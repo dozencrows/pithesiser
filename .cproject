@@ -29,8 +29,8 @@
 								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.717341780" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1586156562" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/include"/>
-									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/include/arm-linux-gnueabihf"/>
+									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include-fixed"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/finclude"/>
@@ -50,9 +50,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1329318695" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
-								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2136628134" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="__need_timespec"/>
-								</option>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2136628134" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.84834514" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool command="arm-linux-gnueabihf-g++" id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.1983566687" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug"/>
@@ -112,8 +110,8 @@
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1154766712" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.463724828" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/include"/>
-									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/include/arm-linux-gnueabihf"/>
+									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include-fixed"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/finclude"/>
@@ -133,9 +131,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1442520081" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
-								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2041202764" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="__need_timespec"/>
-								</option>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2041202764" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.815851615" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool command="arm-linux-gnueabihf-g++" id="cdt.managedbuild.tool.gnu.c.linker.exe.release.320543978" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release"/>
