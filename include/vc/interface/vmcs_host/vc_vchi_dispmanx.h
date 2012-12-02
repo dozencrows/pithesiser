@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef VC_VCHI_DISPMANX_H
 #define VC_VCHI_DISPMANX_H
 
-#include "interface/peer/vc_vchi_dispmanx_common.h"
+//#include "interface/peer/vc_vchi_dispmanx_common.h"
 
 #define VC_NUM_HOST_RESOURCES 64
 #define DISPMANX_MSGFIFO_SIZE 1024

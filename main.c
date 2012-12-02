@@ -18,6 +18,7 @@
 #include "waveform.h"
 #include "oscillator.h"
 #include "envelope.h"
+#include "gfx.h"
 
 #define MIN_FREQUENCY			55.0f
 #define MAX_FREQUENCY			1760.0f
@@ -216,6 +217,9 @@ void process_audio(int32_t timestep_ms)
 
 int main(int argc, char **argv)
 {
+	gfx_init();
+	gfx_test_render();
+
 	if (alsa_initialise("hw:1", 128) < 0)
 	{
 		exit(EXIT_FAILURE);
@@ -261,6 +265,8 @@ int main(int argc, char **argv)
 		int32_t timestamp = get_elapsed_time_ms();
 		process_audio(timestamp - last_timestamp);
 		last_timestamp = timestamp;
+
+		//gfx_test_render_tick();	// need to do rendering in another thread - messes up audio!
 	}
 
 	if (argc > 1)

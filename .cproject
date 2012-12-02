@@ -48,9 +48,11 @@
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/finclude"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc/interface/vcos/pthreads}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1329318695" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
-								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2136628134" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2136628134" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.84834514" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool command="arm-linux-gnueabihf-g++" id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.1983566687" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug"/>
@@ -65,6 +67,12 @@
 								</option>
 								<option id="gnu.cpp.link.option.libs.793497982" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="asound"/>
+									<listOptionValue builtIn="false" value="GLESv2"/>
+									<listOptionValue builtIn="false" value="vchiq_arm"/>
+									<listOptionValue builtIn="false" value="bcm_host"/>
+									<listOptionValue builtIn="false" value="EGL"/>
+									<listOptionValue builtIn="false" value="OpenVG"/>
+									<listOptionValue builtIn="false" value="vcos"/>
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="profiler"/>
@@ -129,9 +137,11 @@
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/finclude"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc/interface/vcos/pthreads}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1442520081" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
-								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2041202764" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2041202764" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.815851615" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool command="arm-linux-gnueabihf-g++" id="cdt.managedbuild.tool.gnu.c.linker.exe.release.320543978" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release"/>
@@ -146,6 +156,12 @@
 								</option>
 								<option id="gnu.cpp.link.option.libs.517138077" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="asound"/>
+									<listOptionValue builtIn="false" value="GLESv2"/>
+									<listOptionValue builtIn="false" value="vchiq_arm"/>
+									<listOptionValue builtIn="false" value="bcm_host"/>
+									<listOptionValue builtIn="false" value="EGL"/>
+									<listOptionValue builtIn="false" value="OpenVG"/>
+									<listOptionValue builtIn="false" value="vcos"/>
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="profiler"/>
