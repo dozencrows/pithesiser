@@ -9,6 +9,10 @@ To do
 Ideas to try
 ============
 Feature support:
+ * Rendering:
+   * Of waveform output
+   * Of envelope shapes
+   * Of settings
  * Better naming for oscillators & generators
  * Normalise range of phase accumulator across all waveform types
  * Multi-wave wavetable support 
@@ -30,6 +34,9 @@ Performance:
    * Rationales:
      * See if it produces output closer to sine for the approximate sine procedural
      * See if it produces less aliased output for saw wave (wavetable or procedural)
+ * Threading setup
+   * Move "synth engine" to its own thread, allow main thread to be idle?
+   * Set non-main thread priorities accordingly.
 
 Advanced:
  * Phase Distortion control (simple linear)
@@ -158,3 +165,25 @@ Basic operation:
     * Starting level: 0-1
     * Ending level:   0-1
     * Duration:		  0 to infinity
+    
+Rendering Notes
+---------------
+Model of operation:
+* Rendering runs on its own thread
+* Other code (e.g. synth engine) posts rendering events to rendering thread
+* Rendering thread will pick those up and execute them
+  * Potentially up to a limit (time based, count based)
+  * Then executes a buffer swap and goes to sleep until more events ready
+
+Rendering events:
+* Output waveform chunk
+* Parameter change
+
+Response to events:
+* Waveform chunk:
+  * Inject chunk into ring buffer for waveform display: generate an image for it
+  * Re-render ring buffer contents
+* Parameter change:
+  * Map parameter to a display element
+  * Trigger display element re-render with updated parameter value
+

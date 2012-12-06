@@ -5,11 +5,17 @@
  *      Author: ntuckett
  */
 
+#include <pthread.h>
+#include <unistd.h>
+#include <stdio.h>
 #include "EGL/egl.h"
 #include "VG/openvg.h"
 #include "VG/vgu.h"
 #include "interface/vmcs_host/vc_vchi_dispmanx.h"
 #include "bcm_host.h"
+#include "master_time.h"
+
+#define FRAME_TIME_DELAY_US	16667
 
 static EGLDisplay display;
 static EGLContext context;
@@ -29,10 +35,11 @@ static EGL_DISPMANX_WINDOW_T nativewindow;
 static DISPMANX_DISPLAY_HANDLE_T dispman_display;
 static DISPMANX_MODEINFO_T dispman_mode_info;
 
-void gfx_init()
-{
-	bcm_host_init();
+pthread_t	gfx_thread_handle;
+sem_t		gfx_init_semaphore;
 
+void gfx_egl_init()
+{
 	display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 	if (eglInitialize(display, NULL, NULL) == EGL_TRUE)
 	{
@@ -143,13 +150,68 @@ void gfx_test_render_tick()
 		test_colour = test_colour_2;
 	}
 
-//	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
-//	gfx_set_fill_colour(test_colour);
-//
-//	VGPath path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
-//	vguRect(path, 0.f, 0.f, dispman_mode_info.width / 4, dispman_mode_info.height / 4);
-//	vgDrawPath(path, VG_FILL_PATH | VG_STROKE_PATH);
-//	vgDestroyPath(path);
+	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
+	gfx_set_fill_colour(test_colour);
 
-	eglSwapBuffers(display, surface);
+	VGPath path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
+	vguRect(path, 0.f, 0.f, dispman_mode_info.width / 4, dispman_mode_info.height / 4);
+	vgDrawPath(path, VG_FILL_PATH | VG_STROKE_PATH);
+	vgDestroyPath(path);
+}
+
+static int32_t total_frames = 0;
+static int32_t render_exec_time;
+static int32_t render_idle_time;
+
+void *gfx_thread()
+{
+	gfx_egl_init();
+	gfx_test_render();
+	sem_post(&gfx_init_semaphore);
+
+	render_exec_time = 0;
+	render_idle_time = 0;
+	total_frames = 0;
+
+	while (1)
+	{
+		int32_t start_timestamp = get_elapsed_time_ms();
+		gfx_test_render_tick();
+		eglSwapBuffers(display, surface);
+		int32_t end_timestamp = get_elapsed_time_ms();
+		total_frames++;
+
+		int32_t render_elapsed = end_timestamp - start_timestamp;
+		render_exec_time += render_elapsed;
+		useconds_t elapsed_us = render_elapsed * 1000;
+
+		if (elapsed_us < FRAME_TIME_DELAY_US)
+		{
+			useconds_t idle_us = FRAME_TIME_DELAY_US - elapsed_us;
+			render_idle_time += idle_us / 1000;
+			usleep(idle_us);
+		}
+	}
+
+	return NULL;
+}
+
+void gfx_init()
+{
+	bcm_host_init();
+	sem_init(&gfx_init_semaphore, 0, 0);
+	pthread_create(&gfx_thread_handle, NULL, gfx_thread, NULL);
+	sem_wait(&gfx_init_semaphore);
+}
+
+void gfx_deinitialise()
+{
+	pthread_cancel(gfx_thread_handle);
+	pthread_join(gfx_thread_handle, NULL);
+
+	int32_t render_elapsed = render_exec_time + render_idle_time;
+
+	printf("Render time: %d ms\n", render_elapsed);
+	printf("  exec: %d ms  idle: %d ms\n", render_exec_time, render_idle_time);
+	printf("Render frame rate: %f\n", (float)(total_frames * 1000) / (float)render_elapsed);
 }

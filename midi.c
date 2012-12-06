@@ -173,7 +173,8 @@ static void midi_read_packet(int handle)
 
 static void* midi_thread()
 {
-	while (1) {
+	while (1)
+	{
 		fd_set rfds;
 		int nfds = midi_handle1 + 1;
 

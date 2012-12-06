@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
-#include <time.h>
 #include <gperftools/profiler.h>
 #include "alsa.h"
 #include "midi.h"
@@ -19,6 +18,7 @@
 #include "oscillator.h"
 #include "envelope.h"
 #include "gfx.h"
+#include "master_time.h"
 
 #define MIN_FREQUENCY			55.0f
 #define MAX_FREQUENCY			1760.0f
@@ -67,37 +67,6 @@ envelope_t envelope = { 4, envelope_stages };
 
 float master_level = 1.0f;
 waveform_type_t master_waveform = WAVE_FIRST;
-
-struct timespec timespec_diff(struct timespec start, struct timespec end)
-{
-	struct timespec temp;
-	if ((end.tv_nsec-start.tv_nsec)<0) {
-		temp.tv_sec = end.tv_sec-start.tv_sec-1;
-		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
-	} else {
-		temp.tv_sec = end.tv_sec-start.tv_sec;
-		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
-	}
-	return temp;
-}
-
-int32_t	get_elapsed_time_ms()
-{
-	static int base_set = 0;
-	static struct timespec base_tspec;
-	struct timespec tspec;
-
-	if (base_set == 0)
-	{
-		base_set = 1;
-		clock_gettime(CLOCK_REALTIME, &base_tspec);
-	}
-
-	clock_gettime(CLOCK_REALTIME, &tspec);
-	struct timespec diff = timespec_diff(base_tspec, tspec);
-
-	return (diff.tv_nsec / 1000000) + (diff.tv_sec * 1000);
-}
 
 void process_midi_events()
 {
@@ -218,7 +187,6 @@ void process_audio(int32_t timestep_ms)
 int main(int argc, char **argv)
 {
 	gfx_init();
-	gfx_test_render();
 
 	if (alsa_initialise("hw:1", 128) < 0)
 	{
@@ -265,8 +233,6 @@ int main(int argc, char **argv)
 		int32_t timestamp = get_elapsed_time_ms();
 		process_audio(timestamp - last_timestamp);
 		last_timestamp = timestamp;
-
-		//gfx_test_render_tick();	// need to do rendering in another thread - messes up audio!
 	}
 
 	if (argc > 1)
@@ -274,6 +240,7 @@ int main(int argc, char **argv)
 		ProfilerStop();
 	}
 
+	gfx_deinitialise();
 	alsa_deinitialise();
 	midi_deinitialise();
 
