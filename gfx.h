@@ -12,5 +12,4 @@ extern void gfx_init();
 extern void gfx_test_render();
 extern void gfx_test_render_tick();
 
-
 #endif /* GFX_H_ */

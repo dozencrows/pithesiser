@@ -18,6 +18,8 @@
 #include "oscillator.h"
 #include "envelope.h"
 #include "gfx.h"
+#include "gfx_event.h"
+#include "gfx_event_types.h"
 #include "master_time.h"
 
 #define MIN_FREQUENCY			55.0f
@@ -133,6 +135,7 @@ void process_audio(int32_t timestep_ms)
 	void* buffer_data;
 	int buffer_samples;
 	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
+	size_t buffer_bytes = buffer_samples * sizeof(int16_t) * 2;
 
 	int first_audible_voice = -1;
 
@@ -178,10 +181,27 @@ void process_audio(int32_t timestep_ms)
 
 	if (first_audible_voice < 0)
 	{
-		memset(buffer_data, 0, buffer_samples * sizeof(int16_t) * 2);
+		memset(buffer_data, 0, buffer_bytes);
+	}
+	else
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_TEST;
+		gfx_event.ptr = malloc(buffer_bytes);
+		if (gfx_event.ptr != NULL)
+		{
+			memcpy(gfx_event.ptr, buffer_data, buffer_bytes);
+			gfx_send_event(&gfx_event);
+		}
 	}
 
 	alsa_unlock_buffer(write_buffer_index);
+}
+
+// Beware: called from GFX thread!
+void test_gfx_event_handler(gfx_event_t *event)
+{
+	free(event->ptr);
 }
 
 int main(int argc, char **argv)
@@ -205,6 +225,8 @@ int main(int argc, char **argv)
 		osc_init(&oscillator[i]);
 		envelope_init(&voice[i].envelope_instance, &envelope);
 	}
+
+	gfx_register_event_handler(GFX_EVENT_TEST, test_gfx_event_handler);
 
 	int profiling = 0;
 

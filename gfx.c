@@ -5,6 +5,8 @@
  *      Author: ntuckett
  */
 
+#include "gfx.h"
+#include "gfx_event.h"
 #include <pthread.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -119,13 +121,14 @@ void gfx_test_render()
 	vgSetfv(VG_CLEAR_COLOR, 4, clear_colour);
 	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
 	vgLoadIdentity();
+	vgScale(dispman_mode_info.width, dispman_mode_info.height);
 
 	gfx_set_fill_colour(test_colour);
 	gfx_set_stroke_colour(test_colour);
 	gfx_set_stroke_width(0);
 
 	VGPath path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
-	vguRect(path, 0.f, 0.f, dispman_mode_info.width / 4, dispman_mode_info.height / 4);
+	vguRect(path, 0.f, 0.f, 0.25f, 0.25f);
 	vgDrawPath(path, VG_FILL_PATH | VG_STROKE_PATH);
 	vgDestroyPath(path);
 
@@ -154,10 +157,13 @@ void gfx_test_render_tick()
 	gfx_set_fill_colour(test_colour);
 
 	VGPath path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
-	vguRect(path, 0.f, 0.f, dispman_mode_info.width / 4, dispman_mode_info.height / 4);
+	vguRect(path, 0.f, 0.f, 0.25f, 0.25f);
 	vgDrawPath(path, VG_FILL_PATH | VG_STROKE_PATH);
 	vgDestroyPath(path);
 }
+
+//---------------------------------------------------------------
+// Gfx processing thread
 
 static int32_t total_frames = 0;
 static int32_t render_exec_time;
@@ -175,6 +181,15 @@ void *gfx_thread()
 
 	while (1)
 	{
+		int gfx_events = gfx_get_event_count();
+
+		while (gfx_events-- > 0)
+		{
+			gfx_event_t event;
+			gfx_pop_event(&event);
+			gfx_handle_event(&event);
+		}
+
 		int32_t start_timestamp = get_elapsed_time_ms();
 		gfx_test_render_tick();
 		eglSwapBuffers(display, surface);
