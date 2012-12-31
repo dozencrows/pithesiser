@@ -8,11 +8,14 @@
 #ifndef GFX_EVENT_H_
 #define GFX_EVENT_H_
 
+#include <stddef.h>
+
 typedef unsigned int gfx_event_type_t;
 
 typedef struct gfx_event_t
 {
 	gfx_event_type_t type;
+	size_t			 size;
 	union
 	{
 		void *ptr;

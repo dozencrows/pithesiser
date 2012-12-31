@@ -8,7 +8,10 @@
 #ifndef GFX_EVENT_TYPES_H_
 #define GFX_EVENT_TYPES_H_
 
-#define GFX_EVENT_TEST		1000
+#define GFX_EVENT_BUFFERSWAP	1
+
+#define GFX_EVENT_WAVE			1000
+#define GFX_EVENT_SILENCE		1001
 
 
 #endif /* GFX_EVENT_TYPES_H_ */

@@ -8,8 +8,7 @@
 #ifndef GFX_H_
 #define GFX_H_
 
-extern void gfx_init();
-extern void gfx_test_render();
-extern void gfx_test_render_tick();
+extern void gfx_initialise();
+extern void gfx_deinitialise();
 
 #endif /* GFX_H_ */
