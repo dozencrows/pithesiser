@@ -19,20 +19,54 @@
 #include "master_time.h"
 
 #define FRAME_TIME_DELAY_US	16667
+#define MAX_EGL_CONFIGS 32
 
 static EGLDisplay display;
 static EGLContext context;
 static EGLSurface surface;
 
-static const EGLint attribute_list[] = {
-	EGL_RED_SIZE, 8,
-	EGL_GREEN_SIZE, 8,
-	EGL_BLUE_SIZE, 8,
-	EGL_ALPHA_SIZE, 8,
-	EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-	EGL_CONFORMANT, EGL_OPENVG_BIT,
-	EGL_NONE
-};
+EGLConfig get_desired_egl_config(int red_bits_wanted, int green_bits_wanted, int blue_bits_wanted)
+{
+	static EGLint attribute_list[] = {
+		EGL_RED_SIZE, 0,
+		EGL_GREEN_SIZE, 0,
+		EGL_BLUE_SIZE, 0,
+		EGL_ALPHA_SIZE, 0,
+		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+		EGL_CONFORMANT, EGL_OPENVG_BIT,
+		EGL_NONE
+	};
+
+	EGLint num_egl_configs;
+	EGLConfig found_config = NULL;
+
+	attribute_list[1] = red_bits_wanted;
+	attribute_list[3] = green_bits_wanted;
+	attribute_list[5] = blue_bits_wanted;
+
+	if (eglChooseConfig(display, attribute_list, NULL, 0, &num_egl_configs) == EGL_TRUE)
+	{
+		EGLConfig *egl_configs = (EGLConfig*)alloca(sizeof(EGLConfig) * num_egl_configs);
+
+		if (eglChooseConfig(display, attribute_list, egl_configs, num_egl_configs, &num_egl_configs) == EGL_TRUE)
+		{
+			for (int i = 0; i < num_egl_configs; i++) {
+				EGLint red_bits, green_bits, blue_bits;
+				eglGetConfigAttrib(display, egl_configs[i], EGL_RED_SIZE, &red_bits);
+				eglGetConfigAttrib(display, egl_configs[i], EGL_GREEN_SIZE, &green_bits);
+				eglGetConfigAttrib(display, egl_configs[i], EGL_BLUE_SIZE, &blue_bits);
+
+				if (red_bits == red_bits_wanted && green_bits == green_bits_wanted && blue_bits == blue_bits_wanted)
+				{
+					found_config = egl_configs[i];
+					break;
+				}
+			}
+		}
+	}
+
+	return found_config;
+}
 
 static EGL_DISPMANX_WINDOW_T nativewindow;
 
@@ -49,12 +83,11 @@ void gfx_egl_init()
 	{
 		eglBindAPI(EGL_OPENVG_API);
 
-		EGLConfig config;
-		EGLint num_config;
+		EGLConfig egl_config = get_desired_egl_config(5, 6, 5);
 
-		if (eglChooseConfig(display, attribute_list, &config, 1, &num_config) == EGL_TRUE)
+		if (egl_config != NULL)
 		{
-			context = eglCreateContext(display, config, EGL_NO_CONTEXT, NULL);
+			context = eglCreateContext(display, egl_config, EGL_NO_CONTEXT, NULL);
 			dispman_display = vc_dispmanx_display_open(0);
 			vc_dispmanx_display_get_info(dispman_display, &dispman_mode_info);
 
@@ -82,7 +115,7 @@ void gfx_egl_init()
 			nativewindow.height = dispman_mode_info.height;
 			vc_dispmanx_update_submit_sync(dispman_update);
 
-			surface = eglCreateWindowSurface(display, config, &nativewindow, NULL);
+			surface = eglCreateWindowSurface(display, egl_config, &nativewindow, NULL);
 			eglSurfaceAttrib(display, surface, EGL_SWAP_BEHAVIOR, EGL_BUFFER_PRESERVED);
 			eglMakeCurrent(display, surface, surface, context);
 			eglSwapInterval(display, 0);

@@ -13,12 +13,12 @@
 
 #define WAVE_IMAGE_WIDTH		1024
 #define WAVE_IMAGE_HEIGHT		512
-#define WAVE_IMAGE_PIXEL_STRIDE	4
+#define WAVE_IMAGE_PIXEL_STRIDE	2
 #define WAVE_IMAGE_ROW_STRIDE	(WAVE_IMAGE_PIXEL_STRIDE * WAVE_IMAGE_WIDTH)
 #define WAVE_IMAGE_SCALE		129		// roughly 32767 divided by 256 with a safety margin
 #define WAVE_IMAGE_ZERO			(WAVE_IMAGE_HEIGHT / 2)
-#define WAVE_COLOUR				0x008000ff
-#define WAVE_CLEAR_COLOUR		0x000000ff
+#define WAVE_COLOUR				0x03e0
+#define WAVE_CLEAR_COLOUR		0x0000
 
 #define BYTES_PER_CHANNEL	(sizeof(int16_t))
 #define CHANNELS_PER_SAMPLE	2
@@ -47,16 +47,22 @@
 static char *pixel_buffer	= NULL;
 static int buffer_render_x	= 0;
 
-int16_t sample_peak = 0;
-
-static void fill_column(int column, int32_t colour, size_t start_y, int height)
+static void fill_column(int column, int16_t colour, size_t start_y, int height)
 {
-	char *column_ptr = pixel_buffer + column * WAVE_IMAGE_PIXEL_STRIDE + start_y * WAVE_IMAGE_ROW_STRIDE;
+	char *column_ptr = pixel_buffer + column * WAVE_IMAGE_PIXEL_STRIDE + (WAVE_IMAGE_HEIGHT - start_y - 1) * WAVE_IMAGE_ROW_STRIDE;
 
 	while (height-- > 0)
 	{
-		*(int32_t*)column_ptr = colour;
-		column_ptr += WAVE_IMAGE_ROW_STRIDE;
+		*(int16_t*)column_ptr = colour;
+		column_ptr -= WAVE_IMAGE_ROW_STRIDE;
+	}
+}
+
+static void render_test_pattern()
+{
+	for(int i = 0; i < WAVE_IMAGE_HEIGHT; i++)
+	{
+		fill_column(i, WAVE_COLOUR, 0, i);
 	}
 }
 
@@ -70,11 +76,6 @@ static void wave_event_handler(gfx_event_t *event)
 
 		while (column_count-- > 0)
 		{
-			if (*sample_data > sample_peak)
-			{
-				sample_peak = *sample_data;
-			}
-
 			size_t wave_y = WAVE_IMAGE_ZERO - ((*sample_data) / WAVE_IMAGE_SCALE);
 			size_t bar_start_y;
 			size_t bar_end_y;
@@ -126,7 +127,7 @@ static void silence_event_handler(gfx_event_t *event)
 
 static void swap_event_handler(gfx_event_t *event)
 {
-	vgWritePixels(pixel_buffer, WAVE_IMAGE_ROW_STRIDE, VG_sRGBA_8888, 0, 0, WAVE_IMAGE_WIDTH, WAVE_IMAGE_HEIGHT);
+	vgWritePixels(pixel_buffer, WAVE_IMAGE_ROW_STRIDE, VG_sRGB_565, 0, 0, WAVE_IMAGE_WIDTH, WAVE_IMAGE_HEIGHT);
 	buffer_render_x = 0;
 }
 
@@ -145,6 +146,4 @@ void gfx_wave_render_deinitialise()
 {
 	free(pixel_buffer);
 	pixel_buffer = NULL;
-
-	printf("Sample peak: %d\n", sample_peak);
 }

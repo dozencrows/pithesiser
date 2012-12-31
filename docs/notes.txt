@@ -4,7 +4,7 @@ Raspberry Pi Synth Project
 To do
 =====
 * Investigate little audible difference in 50% cut from A -> D -> S - maybe attack not getting there fully?
-* Implement release (voices need to run on...) 
+* Implement envelope release (voices need to run on...) 
 
 Ideas to try
 ============
@@ -181,9 +181,23 @@ Rendering events:
 
 Response to events:
 * Waveform chunk:
-  * Inject chunk into ring buffer for waveform display: generate an image for it
-  * Re-render ring buffer contents
+  * Render waveform chunk into a buffer image until image full
+  * Blit image to screen prior to screen flip
 * Parameter change:
   * Map parameter to a display element
   * Trigger display element re-render with updated parameter value
 
+Performance experiences:
+* 32-bit pixel format is slow: get hits on both the blit (vgWritePixels) and waveform rendering. ~4fps in debug.
+* 16-bit pixel format is better: twice as fast (~8fps in debug), about 25% of render time spent on the blit.
+  E.g. exec 3075ms, idle 9373ms, frame rate 62.5fps when just doing blit.
+  E.g. exec 12854ms, idle 27ms, frame rate 9fps when just rendering silence.
+  E.g. exec 14878ms, idle 25ms, frame rate 7.98fps when rendering full waveform.
+  
+Possible performance improvements: 
+* Inline the column filling.
+* Reimplement render in assembly.
+* Switch to row-major fill (i.e. linear memory access) and adjust size & rendering rotation accordingly.
+* Average sample pairs and render half as much.
+* Render as OpenVG lines to fill columns (with no anti-aliasing)
+* Render as sample-to-sample OpenVG lines
