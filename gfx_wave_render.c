@@ -7,143 +7,162 @@
 
 #include "gfx_wave_render.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/param.h>
+#include <memory.h>
 #include "gfx_event.h"
 #include "gfx_event_types.h"
 #include "VG/openvg.h"
 
-#define WAVE_IMAGE_WIDTH		1024
-#define WAVE_IMAGE_HEIGHT		512
-#define WAVE_IMAGE_PIXEL_STRIDE	2
-#define WAVE_IMAGE_ROW_STRIDE	(WAVE_IMAGE_PIXEL_STRIDE * WAVE_IMAGE_WIDTH)
-#define WAVE_IMAGE_SCALE		129		// roughly 32767 divided by 256 with a safety margin
-#define WAVE_IMAGE_ZERO			(WAVE_IMAGE_HEIGHT / 2)
-#define WAVE_COLOUR				0x03e0
-#define WAVE_CLEAR_COLOUR		0x0000
+//--------------------------------------------------------------------------------------------------------------
+// Common waveform rendering support
 
 #define BYTES_PER_CHANNEL	(sizeof(int16_t))
 #define CHANNELS_PER_SAMPLE	2
 #define BYTES_PER_SAMPLE	(BYTES_PER_CHANNEL * CHANNELS_PER_SAMPLE)
 
-//
-// Needs:
-//	* Image buffer in which to build up waveform display
-//	  * Sample-per-pixel horizontally
-//	  * Parameters:
-//		* Image format (best match display format)
-//		* Width
-//		* Height
-//	* Event to render waveform chunk into buffer
-//	* Means to trigger rendering of image to screen
-//	  * Using vgWritePixels - immediately updates screen
-//
-// Alternative ideas:
-//	* One buffer per chunk: rendered to screen immediately after render to buffer
-//	* Use vgSetPixels to render (requires image object and intermediate upload)
-//  * Use vgDrawImage to render (requires image object and intermediate upload, greater power over image appearance)
-//
-// Future thoughts:
-//	* Stereo!
+#define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) printf("VG Error: %d (%s)\n", error, s); }
 
-static char *pixel_buffer	= NULL;
 static int buffer_render_x	= 0;
 
-static void fill_column(int column, int16_t colour, size_t start_y, int height)
+//--------------------------------------------------------------------------------------------------------------
+// Vector-based waveform rendering
+//
+
+#define VECTOR_WAVE_WIDTH		1024
+#define VECTOR_WAVE_X			0
+#define VECTOR_WAVE_Y			256
+#define VECTOR_WAVE_HALFHEIGHT	256
+#define VECTOR_WAVE_SCALE		129		// roughly 32767 divided by 256 with a safety margin
+
+#define CALC_Y_COORD(sample)	(VECTOR_WAVE_Y + (sample / VECTOR_WAVE_SCALE))
+
+static int16_t last_sample = 0;
+static VGPath wave_path;
+static VGPaint wave_stroke_paint;
+static VGubyte first_sample_segment_commands[1] = { VG_MOVE_TO_ABS };
+static VGubyte horiz_segment_commands[3] = { VG_MOVE_TO_ABS, VG_VLINE_TO_ABS, VG_HLINE_TO_ABS };
+static VGubyte sample_segment_commands[128];
+static VGshort sample_segment_coords[128 * 2];
+
+static void vector_wave_event_handler(gfx_event_t *event)
 {
-	char *column_ptr = pixel_buffer + column * WAVE_IMAGE_PIXEL_STRIDE + (WAVE_IMAGE_HEIGHT - start_y - 1) * WAVE_IMAGE_ROW_STRIDE;
+	size_t sample_count = event->size / BYTES_PER_SAMPLE;
+	int16_t *sample_data = (int16_t*) event->ptr;
 
-	while (height-- > 0)
+	if (buffer_render_x < VECTOR_WAVE_WIDTH)
 	{
-		*(int16_t*)column_ptr = colour;
-		column_ptr -= WAVE_IMAGE_ROW_STRIDE;
-	}
-}
-
-static void render_test_pattern()
-{
-	for(int i = 0; i < WAVE_IMAGE_HEIGHT; i++)
-	{
-		fill_column(i, WAVE_COLOUR, 0, i);
-	}
-}
-
-// Beware: called from GFX thread!
-static void wave_event_handler(gfx_event_t *event)
-{
-	if (buffer_render_x < WAVE_IMAGE_WIDTH)
-	{
-		size_t column_count = event->size / BYTES_PER_SAMPLE;
-		int16_t *sample_data = (int16_t*) event->ptr;
-
-		while (column_count-- > 0)
+		if (buffer_render_x == 0)
 		{
-			size_t wave_y = WAVE_IMAGE_ZERO - ((*sample_data) / WAVE_IMAGE_SCALE);
-			size_t bar_start_y;
-			size_t bar_end_y;
+			VGshort segment_coords[2];
+			segment_coords[0] = VECTOR_WAVE_X;
+			segment_coords[1] = CALC_Y_COORD(last_sample);
 
-			if (*sample_data >= 0)
-			{
-				bar_start_y = wave_y;
-				bar_end_y = WAVE_IMAGE_ZERO;
-			}
-			else
-			{
-				bar_start_y = WAVE_IMAGE_ZERO;
-				bar_end_y = wave_y;
-			}
-
-			fill_column(buffer_render_x, WAVE_CLEAR_COLOUR, 0, bar_start_y);
-			fill_column(buffer_render_x, WAVE_COLOUR, bar_start_y, bar_end_y - bar_start_y);
-			fill_column(buffer_render_x, WAVE_CLEAR_COLOUR, bar_end_y, WAVE_IMAGE_HEIGHT - bar_end_y);
-
-			sample_data += CHANNELS_PER_SAMPLE;
-			buffer_render_x++;
-			if (buffer_render_x >= WAVE_IMAGE_WIDTH)
-			{
-				break;
-			}
+			vgAppendPathData(wave_path, 1, first_sample_segment_commands, segment_coords);
+			VG_ERROR_CHECK("vgAppendPathData - wave 1");
 		}
+
+		VGshort *coord_ptr = sample_segment_coords;
+		int16_t *sample_ptr = sample_data;
+		size_t coord_count = sample_count;
+		while (coord_count > 0 && buffer_render_x < VECTOR_WAVE_WIDTH)
+		{
+			*coord_ptr++ = VECTOR_WAVE_X + buffer_render_x;
+			*coord_ptr++ = CALC_Y_COORD(*sample_ptr);
+
+			sample_ptr += CHANNELS_PER_SAMPLE;
+			buffer_render_x++;
+			coord_count--;
+		}
+
+		vgAppendPathData(wave_path, sample_count - coord_count, sample_segment_commands, sample_segment_coords);
+		VG_ERROR_CHECK("vgAppendPathData - wave 2");
 	}
 
+	last_sample = sample_data[(sample_count - 1) * CHANNELS_PER_SAMPLE];
 	free(event->ptr);
 }
 
-static void silence_event_handler(gfx_event_t *event)
+static void vector_silence_event_handler(gfx_event_t *event)
 {
-	if (buffer_render_x < WAVE_IMAGE_WIDTH)
+	if (buffer_render_x < VECTOR_WAVE_WIDTH)
 	{
-		size_t column_count = event->size / BYTES_PER_SAMPLE;
+		size_t sample_count = event->size / BYTES_PER_SAMPLE;
 
-		while (column_count-- > 0)
-		{
-			fill_column(buffer_render_x, WAVE_CLEAR_COLOUR, 0, WAVE_IMAGE_HEIGHT);
-			buffer_render_x++;
-			if (buffer_render_x >= WAVE_IMAGE_WIDTH)
-			{
-				break;
-			}
-		}
+		VGshort segment_coords[4];
+		segment_coords[0] = VECTOR_WAVE_X + buffer_render_x;
+		segment_coords[1] = CALC_Y_COORD(last_sample);
+		segment_coords[2] = CALC_Y_COORD(0);
+        segment_coords[3] = VECTOR_WAVE_X + MIN(buffer_render_x + sample_count, VECTOR_WAVE_WIDTH);
+		vgAppendPathData(wave_path, 3, horiz_segment_commands, segment_coords);
+		VG_ERROR_CHECK("vgAppendPathData - silence");
+
+        buffer_render_x += sample_count;
 	}
+
+	last_sample = 0;
 }
 
-static void swap_event_handler(gfx_event_t *event)
+static void vector_swap_event_handler(gfx_event_t *event)
 {
-	vgWritePixels(pixel_buffer, WAVE_IMAGE_ROW_STRIDE, VG_sRGB_565, 0, 0, WAVE_IMAGE_WIDTH, WAVE_IMAGE_HEIGHT);
+	static VGfloat clear_colour[] = { 0.0f, 0.0f, 64.0f, 1.0f };
+
+	vgSetfv(VG_CLEAR_COLOR, 4, clear_colour);
+	vgClear(VECTOR_WAVE_X, VECTOR_WAVE_Y - VECTOR_WAVE_HALFHEIGHT, VECTOR_WAVE_WIDTH + 1, VECTOR_WAVE_HALFHEIGHT * 2);
+
+	vgSetf(VG_STROKE_LINE_WIDTH, 1.0f);
+	vgSeti(VG_STROKE_CAP_STYLE, VG_CAP_BUTT);
+	vgSeti(VG_STROKE_JOIN_STYLE, VG_JOIN_MITER);
+	vgSetPaint(wave_stroke_paint, VG_STROKE_PATH);
+	vgSeti(VG_RENDERING_QUALITY, VG_RENDERING_QUALITY_NONANTIALIASED);
+	vgDrawPath(wave_path, VG_STROKE_PATH);
+	VG_ERROR_CHECK("vgDrawPath");
+	vgClearPath(wave_path, VG_PATH_CAPABILITY_APPEND_TO);
+	VG_ERROR_CHECK("vgClearPath");
 	buffer_render_x = 0;
 }
+
+static void vector_post_init_handler(gfx_event_t *event)
+{
+	wave_path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_S_16, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_APPEND_TO);
+	VG_ERROR_CHECK("vgCreatePath");
+
+	VGfloat line_colour[4] = { 0.0f, 255.0f, 0.0f, 255.0f };
+	wave_stroke_paint = vgCreatePaint();
+	vgSetParameteri(wave_stroke_paint, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
+	vgSetParameterfv(wave_stroke_paint, VG_PAINT_COLOR, 4, line_colour);
+}
+
+void gfx_wave_render_vector_initialise()
+{
+	gfx_register_event_handler(GFX_EVENT_POSTINIT, vector_post_init_handler);
+	gfx_register_event_handler(GFX_EVENT_WAVE, vector_wave_event_handler);
+	gfx_register_event_handler(GFX_EVENT_SILENCE, vector_silence_event_handler);
+	gfx_register_event_handler(GFX_EVENT_BUFFERSWAP, vector_swap_event_handler);
+
+	buffer_render_x = 0;
+	last_sample = 0;
+
+	memset(sample_segment_commands, VG_LINE_TO_ABS, sizeof(sample_segment_commands));
+}
+
+void gfx_wave_render_vector_deinitialise()
+{
+	vgDestroyPath(wave_path);
+	vgDestroyPaint(wave_stroke_paint);
+}
+
+//--------------------------------------------------------------------------------------------------------------
+// Entrypoint
+//
 
 void gfx_wave_render_initialise()
 {
-	gfx_register_event_handler(GFX_EVENT_WAVE, wave_event_handler);
-	gfx_register_event_handler(GFX_EVENT_SILENCE, silence_event_handler);
-	gfx_register_event_handler(GFX_EVENT_BUFFERSWAP, swap_event_handler);
-
-	buffer_render_x = 0;
-
-	pixel_buffer = (char*) malloc(WAVE_IMAGE_ROW_STRIDE * WAVE_IMAGE_HEIGHT);
+	gfx_wave_render_vector_initialise();
 }
 
 void gfx_wave_render_deinitialise()
 {
-	free(pixel_buffer);
-	pixel_buffer = NULL;
+	gfx_wave_render_vector_deinitialise();
 }
+

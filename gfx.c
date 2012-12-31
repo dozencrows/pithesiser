@@ -123,6 +123,12 @@ void gfx_egl_init()
 	}
 }
 
+void gfx_clear(VGfloat *clear_colour)
+{
+	vgSetfv(VG_CLEAR_COLOR, 4, clear_colour);
+	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
+}
+
 void gfx_set_fill_colour(VGfloat *colour)
 {
 	VGPaint fillPaint = vgCreatePaint();
@@ -146,6 +152,13 @@ void gfx_set_stroke_width(VGfloat width)
 	vgSetf(VG_STROKE_LINE_WIDTH, width);
 	vgSeti(VG_STROKE_CAP_STYLE, VG_CAP_BUTT);
 	vgSeti(VG_STROKE_JOIN_STYLE, VG_JOIN_MITER);
+}
+
+void gfx_openvg_init()
+{
+	VGfloat clear_colour[4] = { 0, 0, 0, 1 };
+	gfx_clear(clear_colour);
+	vgLoadIdentity();
 }
 
 //void gfx_test_render()
@@ -207,7 +220,12 @@ static int32_t render_idle_time;
 void *gfx_thread()
 {
 	gfx_egl_init();
+	gfx_openvg_init();
 	sem_post(&gfx_init_semaphore);
+
+	gfx_event_t postinit_event;
+	postinit_event.type = GFX_EVENT_POSTINIT;
+	gfx_handle_event(&postinit_event);
 
 	render_exec_time = 0;
 	render_idle_time = 0;

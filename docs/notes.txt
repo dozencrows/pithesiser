@@ -192,12 +192,25 @@ Performance experiences:
 * 16-bit pixel format is better: twice as fast (~8fps in debug), about 25% of render time spent on the blit.
   E.g. exec 3075ms, idle 9373ms, frame rate 62.5fps when just doing blit.
   E.g. exec 12854ms, idle 27ms, frame rate 9fps when just rendering silence.
-  E.g. exec 14878ms, idle 25ms, frame rate 7.98fps when rendering full waveform.
+  E.g. exec 14878ms, idle 25ms, frame rate 7.98fps when rendering full waveform (debug + 8 voices).
+* Rendering as sample-to-sample line segments was massively faster than bitmap form, when minimising OpenVG API calls
+  through buffering:
+  E.g. exec 3960ms, idle 13112ms, frame rate 62.5fps when rendering full waveform (debug + 8 voices).
   
-Possible performance improvements: 
+Possible performance improvements for bitmaps (not likely to beat sample-to-sample line segments): 
 * Inline the column filling.
 * Reimplement render in assembly.
 * Switch to row-major fill (i.e. linear memory access) and adjust size & rendering rotation accordingly.
 * Average sample pairs and render half as much.
-* Render as OpenVG lines to fill columns (with no anti-aliasing)
-* Render as sample-to-sample OpenVG lines
+
+Observations:
+* Audio/video sync not really there; amount of waveform rendered each visual frame varies continuously.
+* Oscilloscope "window size" & AV sync (or lack) shows visual aliasing in how waveform appears depending on waveform frequency.
+
+Gfx usability improvements:
+* Better parameterise oscilloscope display
+  * Use input parameters rather than consts or defines; make more programmable (e.g. colour, size, position, sample format, 
+    sample channel, waveform chunk size).
+* Look at driving frame refresh from audio timing rather than arbitrary timing; e.g. only frame flip in sync with audio playback period.
+* Create a more general purpose UI framework that can have a variety of data-driven displays from synth objects.
+  * Ensure it only updates what has changed.
