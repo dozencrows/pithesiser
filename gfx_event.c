@@ -43,12 +43,7 @@ void gfx_send_event(gfx_event_t *event)
 	}
 
 	pthread_mutex_unlock(&gfx_event_lock);
-	int event_semaphore_count;
-	sem_getvalue(&gfx_event_semaphore, &event_semaphore_count);
-	if (event_semaphore_count <= 0)
-	{
-		sem_post(&gfx_event_semaphore);
-	}
+	sem_post(&gfx_event_semaphore);
 }
 
 gfx_event_t *gfx_pop_event(gfx_event_t *event)

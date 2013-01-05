@@ -161,23 +161,19 @@ void *gfx_thread()
 		gfx_wait_for_event();
 		int32_t idle_end_timestamp = get_elapsed_time_ms();
 		render_idle_time += idle_end_timestamp - idle_start_timestamp;
-		int gfx_events = gfx_get_event_count();
 
-		while (gfx_events-- > 0)
+		gfx_event_t event;
+		gfx_pop_event(&event);
+		gfx_handle_event(&event);
+
+		if (frame_progress >= frame_complete_threshold)
 		{
-			gfx_event_t event;
-			gfx_pop_event(&event);
-			gfx_handle_event(&event);
-
-			if (frame_progress >= frame_complete_threshold)
-			{
-				gfx_event_t swap_event;
-				swap_event.type = GFX_EVENT_BUFFERSWAP;
-				gfx_handle_event(&swap_event);
-				eglSwapBuffers(display, surface);
-				total_frames++;
-				frame_progress = 0;
-			}
+			gfx_event_t swap_event;
+			swap_event.type = GFX_EVENT_BUFFERSWAP;
+			gfx_handle_event(&swap_event);
+			eglSwapBuffers(display, surface);
+			total_frames++;
+			frame_progress = 0;
 		}
 
 		int32_t exec_end_timestamp = get_elapsed_time_ms();
