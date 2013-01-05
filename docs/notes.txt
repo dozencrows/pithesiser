@@ -208,9 +208,13 @@ Observations:
 * Oscilloscope "window size" & AV sync (or lack) shows visual aliasing in how waveform appears depending on waveform frequency.
 
 Gfx usability improvements:
-* Better parameterise oscilloscope display
-  * Use input parameters rather than consts or defines; make more programmable (e.g. colour, size, position, sample format, 
-    sample channel, waveform chunk size).
-* Look at driving frame refresh from audio timing rather than arbitrary timing; e.g. only frame flip in sync with audio playback period.
+* Look at "tuning" the oscilloscope; ability to adjust a reference frequency to improve stability of waveform at matching
+  frequency and its harmonics.
+  * Can't really exceed refresh rate of 60hz, so need to adjust timings to keep this as a minimum (at 44100hz, this is 735 samples).
+  * Idea would be to adjust amount rendered to a whole number of wavelengths for the given frequency.
+  * Would need to allow for "splitting" of a waveform chunk between two frames as chunks are fixed size (currently 128 samples).
+    * Have 2 paths per renderer as double buffer; when split occurs, switch to next buffer and render previous.
+  * May also want to tune X scale of waveform as wavelengths get longer; render more samples per frame, which will decrease
+    overall framerate. 
 * Create a more general purpose UI framework that can have a variety of data-driven displays from synth objects.
   * Ensure it only updates what has changed.
