@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <string.h>
 #include "midi.h"
+#include "waveform_internal.h"
 
 #define CHANNEL_COUNT	16
 #define MIDI_NOTE_COUNT	128
@@ -304,3 +305,9 @@ int32_t midi_get_note_frequency(int midi_note)
 	return note_frequency[midi_note];
 }
 
+int midi_get_note_wavelength_samples(int midi_note)
+{
+	int32_t note_frequency = midi_get_note_frequency(midi_note);
+	int64_t sample_rate = (int64_t)SYSTEM_SAMPLE_RATE << FIXED_PRECISION;
+	return (int)(sample_rate / note_frequency);
+}

@@ -10,11 +10,10 @@
 #include "waveform_procedural.h"
 #include "oscillator.h"
 
-#define SAMPLE_RATE			44100
 #define PHASE_LIMIT			(4 * FIXED_ONE)
 #define PHASE_HALF_LIMIT	(2 * FIXED_ONE)
 
-#define PR_CALC_PHASE_STEP(osc, phase_step)	int32_t	phase_step = (((int64_t)PHASE_LIMIT * (int64_t)osc->frequency) >> FIXED_PRECISION) / SAMPLE_RATE
+#define PR_CALC_PHASE_STEP(osc, phase_step)	int32_t	phase_step = (((int64_t)PHASE_LIMIT * (int64_t)osc->frequency) >> FIXED_PRECISION) / SYSTEM_SAMPLE_RATE
 
 // Formulae (input is phase, t):
 // 	0  to 2: 1 - (1-t)^2

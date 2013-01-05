@@ -28,6 +28,7 @@
 #define MIDI_CONTROL_CHANNEL	0
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
+#define OSCILLOSCOPE_CONTROLLER	0x0e
 #define NOTE_LEVEL				32767
 
 typedef struct
@@ -205,9 +206,24 @@ void process_audio(int32_t timestep_ms)
 	alsa_unlock_buffer(write_buffer_index);
 }
 
+void process_buffer_swap(gfx_event_t *event)
+{
+	static int last_note = -1;
+	int oscilloscope_tuned_note = midi_get_controller_value(MIDI_CONTROL_CHANNEL, OSCILLOSCOPE_CONTROLLER);
+	int oscilloscope_tuned_wavelength = midi_get_note_wavelength_samples(oscilloscope_tuned_note);
+	if (last_note != oscilloscope_tuned_note)
+	{
+		last_note = oscilloscope_tuned_note;
+		gfx_wave_render_wavelength(oscilloscope_tuned_wavelength);
+		//printf("Osc note %d, wavelength %d\n", oscilloscope_tuned_note, oscilloscope_tuned_wavelength);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	gfx_wave_render_initialise();
+
+	gfx_event_initialise();
 	gfx_initialise();
 
 	if (alsa_initialise("hw:1", 128) < 0)
@@ -221,6 +237,7 @@ int main(int argc, char **argv)
 	}
 
 	waveform_initialise();
+	gfx_register_event_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{

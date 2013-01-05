@@ -11,7 +11,7 @@
 #include "waveform_wavetable.h"
 #include "oscillator.h"
 
-#define WAVETABLE_SAMPLE_RATE		44100.0f
+#define WAVETABLE_SAMPLE_RATE		((float)SYSTEM_SAMPLE_RATE)
 #define WAVETABLE_BASE_FREQUENCY	110.0f
 
 typedef struct

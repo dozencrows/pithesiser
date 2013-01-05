@@ -25,7 +25,9 @@ typedef struct gfx_event_t
 
 typedef void (*gfx_event_handler_t)(gfx_event_t *event);
 
+extern void gfx_event_initialise();
 extern void gfx_send_event(gfx_event_t *event);
+extern void gfx_wait_for_event();
 extern int gfx_get_event_count();
 extern gfx_event_t *gfx_pop_event(gfx_event_t *event);
 extern void gfx_register_event_handler(gfx_event_type_t event_type, gfx_event_handler_t handler);

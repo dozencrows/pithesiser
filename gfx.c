@@ -123,92 +123,13 @@ void gfx_egl_init()
 	}
 }
 
-void gfx_clear(VGfloat *clear_colour)
-{
-	vgSetfv(VG_CLEAR_COLOR, 4, clear_colour);
-	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
-}
-
-void gfx_set_fill_colour(VGfloat *colour)
-{
-	VGPaint fillPaint = vgCreatePaint();
-	vgSetParameteri(fillPaint, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
-	vgSetParameterfv(fillPaint, VG_PAINT_COLOR, 4, colour);
-	vgSetPaint(fillPaint, VG_FILL_PATH);
-	vgDestroyPaint(fillPaint);
-}
-
-void gfx_set_stroke_colour(VGfloat *colour)
-{
-	VGPaint strokePaint = vgCreatePaint();
-	vgSetParameteri(strokePaint, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
-	vgSetParameterfv(strokePaint, VG_PAINT_COLOR, 4, colour);
-	vgSetPaint(strokePaint, VG_STROKE_PATH);
-	vgDestroyPaint(strokePaint);
-}
-
-void gfx_set_stroke_width(VGfloat width)
-{
-	vgSetf(VG_STROKE_LINE_WIDTH, width);
-	vgSeti(VG_STROKE_CAP_STYLE, VG_CAP_BUTT);
-	vgSeti(VG_STROKE_JOIN_STYLE, VG_JOIN_MITER);
-}
-
 void gfx_openvg_init()
 {
 	VGfloat clear_colour[4] = { 0, 0, 0, 1 };
-	gfx_clear(clear_colour);
+	vgSetfv(VG_CLEAR_COLOR, 4, clear_colour);
+	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
 	vgLoadIdentity();
 }
-
-//void gfx_test_render()
-//{
-//	VGfloat clear_colour[4] = { 0, 0, 0, 1 };
-//	VGfloat test_colour[4] = { 255, 0, 0, 1 };
-//
-//	vgSetfv(VG_CLEAR_COLOR, 4, clear_colour);
-//	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
-//	vgLoadIdentity();
-//	vgScale(dispman_mode_info.width, dispman_mode_info.height);
-//
-//	gfx_set_fill_colour(test_colour);
-//	gfx_set_stroke_colour(test_colour);
-//	gfx_set_stroke_width(0);
-//
-//	VGPath path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
-//	vguRect(path, 0.f, 0.f, 0.25f, 0.25f);
-//	vgDrawPath(path, VG_FILL_PATH | VG_STROKE_PATH);
-//	vgDestroyPath(path);
-//
-//	eglSwapBuffers(display, surface);
-//}
-//
-//void gfx_test_render_tick()
-//{
-//	static int call_count = 0;
-//	VGfloat test_colour_1[4] = { 255, 0, 0, 1 };
-//	VGfloat test_colour_2[4] = { 0, 255, 0, 1 };
-//	VGfloat *test_colour;
-//
-//	call_count++;
-//
-//	if ((call_count & 4))
-//	{
-//		test_colour = test_colour_1;
-//	}
-//	else
-//	{
-//		test_colour = test_colour_2;
-//	}
-//
-//	vgClear(0, 0, dispman_mode_info.width, dispman_mode_info.height);
-//	gfx_set_fill_colour(test_colour);
-//
-//	VGPath path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
-//	vguRect(path, 0.f, 0.f, 0.25f, 0.25f);
-//	vgDrawPath(path, VG_FILL_PATH | VG_STROKE_PATH);
-//	vgDestroyPath(path);
-//}
 
 //---------------------------------------------------------------
 // Gfx processing thread
@@ -216,6 +137,8 @@ void gfx_openvg_init()
 static int32_t total_frames = 0;
 static int32_t render_exec_time;
 static int32_t render_idle_time;
+static size_t frame_progress = 0;
+static size_t frame_complete_threshold = 0;
 
 void *gfx_thread()
 {
@@ -230,40 +153,49 @@ void *gfx_thread()
 	render_exec_time = 0;
 	render_idle_time = 0;
 	total_frames = 0;
+	frame_progress = 0;
 
 	while (1)
 	{
+		int32_t idle_start_timestamp = get_elapsed_time_ms();
+		gfx_wait_for_event();
+		int32_t idle_end_timestamp = get_elapsed_time_ms();
+		render_idle_time += idle_end_timestamp - idle_start_timestamp;
 		int gfx_events = gfx_get_event_count();
 
-		int32_t start_timestamp = get_elapsed_time_ms();
 		while (gfx_events-- > 0)
 		{
 			gfx_event_t event;
 			gfx_pop_event(&event);
 			gfx_handle_event(&event);
+
+			if (frame_progress >= frame_complete_threshold)
+			{
+				gfx_event_t swap_event;
+				swap_event.type = GFX_EVENT_BUFFERSWAP;
+				gfx_handle_event(&swap_event);
+				eglSwapBuffers(display, surface);
+				total_frames++;
+				frame_progress = 0;
+			}
 		}
 
-		gfx_event_t swap_event;
-		swap_event.type = GFX_EVENT_BUFFERSWAP;
-		gfx_handle_event(&swap_event);
-
-		eglSwapBuffers(display, surface);
-		int32_t end_timestamp = get_elapsed_time_ms();
-		total_frames++;
-
-		int32_t render_elapsed = end_timestamp - start_timestamp;
+		int32_t exec_end_timestamp = get_elapsed_time_ms();
+		int32_t render_elapsed = exec_end_timestamp - idle_end_timestamp;
 		render_exec_time += render_elapsed;
-		useconds_t elapsed_us = render_elapsed * 1000;
-
-		if (elapsed_us < FRAME_TIME_DELAY_US)
-		{
-			useconds_t idle_us = FRAME_TIME_DELAY_US - elapsed_us;
-			render_idle_time += idle_us / 1000;
-			usleep(idle_us);
-		}
 	}
 
 	return NULL;
+}
+
+void gfx_set_frame_complete_threshold(size_t complete_threshold)
+{
+	frame_complete_threshold = complete_threshold;
+}
+
+void gfx_advance_frame_progress(size_t progress)
+{
+	frame_progress += progress;
 }
 
 void gfx_initialise()
