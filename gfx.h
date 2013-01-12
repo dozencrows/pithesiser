@@ -15,6 +15,8 @@
 extern void gfx_initialise();
 extern void gfx_deinitialise();
 extern void gfx_set_frame_complete_threshold(size_t complete_threshold);
-extern void gfx_advance_frame_progress(size_t progress);
+extern size_t gfx_get_frame_complete_threshold();
+extern void gfx_advance_frame_progress(size_t progress_delta);
+extern void gfx_set_frame_progress(size_t progress);
 
 #endif /* GFX_H_ */

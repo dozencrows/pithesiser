@@ -189,9 +189,19 @@ void gfx_set_frame_complete_threshold(size_t complete_threshold)
 	frame_complete_threshold = complete_threshold;
 }
 
-void gfx_advance_frame_progress(size_t progress)
+size_t gfx_get_frame_complete_threshold()
 {
-	frame_progress += progress;
+	return frame_complete_threshold;
+}
+
+void gfx_advance_frame_progress(size_t progress_delta)
+{
+	frame_progress += progress_delta;
+}
+
+void gfx_set_frame_progress(size_t progress)
+{
+	frame_progress = progress;
 }
 
 void gfx_initialise()

@@ -206,16 +206,20 @@ void process_audio(int32_t timestep_ms)
 	alsa_unlock_buffer(write_buffer_index);
 }
 
+void tune_oscilloscope_to_note(int note)
+{
+	int note_wavelength = midi_get_note_wavelength_samples(note);
+	gfx_wave_render_wavelength(note_wavelength);
+}
+
 void process_buffer_swap(gfx_event_t *event)
 {
 	static int last_note = -1;
 	int oscilloscope_tuned_note = midi_get_controller_value(MIDI_CONTROL_CHANNEL, OSCILLOSCOPE_CONTROLLER);
-	int oscilloscope_tuned_wavelength = midi_get_note_wavelength_samples(oscilloscope_tuned_note);
 	if (last_note != oscilloscope_tuned_note)
 	{
 		last_note = oscilloscope_tuned_note;
-		gfx_wave_render_wavelength(oscilloscope_tuned_wavelength);
-		//printf("Osc note %d, wavelength %d\n", oscilloscope_tuned_note, oscilloscope_tuned_wavelength);
+		tune_oscilloscope_to_note(last_note);
 	}
 }
 

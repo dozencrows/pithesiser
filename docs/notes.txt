@@ -5,12 +5,13 @@ To do
 =====
 * Investigate little audible difference in 50% cut from A -> D -> S - maybe attack not getting there fully?
 * Implement envelope release (voices need to run on...) 
+* Implement envelope rendering
+* Implement envelope controls
 
 Ideas to try
 ============
 Feature support:
  * Rendering:
-   * Of waveform output
    * Of envelope shapes
    * Of settings
  * Better naming for oscillators & generators
@@ -206,15 +207,16 @@ Possible performance improvements for bitmaps (not likely to beat sample-to-samp
 Observations:
 * Audio/video sync not really there; amount of waveform rendered each visual frame varies continuously.
 * Oscilloscope "window size" & AV sync (or lack) shows visual aliasing in how waveform appears depending on waveform frequency.
+* Oscilloscope tuning achieved by controlling # samples rendered based on wavelength of tuned frequency.
+  * Fixed sample rate and maximum renderable area mean some tuned wavelengths truncate the display.
+  * Perfect tuning not yet achieved to inaccuracies in the system, e.g.
+    * Rounding of wavelength in calculation
+    * Inaccuracies in rendering and interpolation of wavetable data
+    * Inaccuracies/bias in graphics refresh rate (in GPU, in LCD panel)
 
-Gfx usability improvements:
-* Look at "tuning" the oscilloscope; ability to adjust a reference frequency to improve stability of waveform at matching
-  frequency and its harmonics.
-  * Can't really exceed refresh rate of 60hz, so need to adjust timings to keep this as a minimum (at 44100hz, this is 735 samples).
-  * Idea would be to adjust amount rendered to a whole number of wavelengths for the given frequency.
-  * Would need to allow for "splitting" of a waveform chunk between two frames as chunks are fixed size (currently 128 samples).
-    * Have 2 paths per renderer as double buffer; when split occurs, switch to next buffer and render previous.
-  * May also want to tune X scale of waveform as wavelengths get longer; render more samples per frame, which will decrease
-    overall framerate. 
-* Create a more general purpose UI framework that can have a variety of data-driven displays from synth objects.
-  * Ensure it only updates what has changed.
+* Gfx improvements
+  * Used fixed point fractional wavelength in max rendered samples calculation for tuning.
+  * Look at adjusting scale alongside wavelength to avoid truncated waveform display.
+  * Refactor into a more general-purpose UI framework for better reusability.
+
+ 
