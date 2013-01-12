@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include <string.h>
 #include "midi.h"
-#include "waveform_internal.h"
+#include "system_constants.h"
 
 #define CHANNEL_COUNT	16
 #define MIDI_NOTE_COUNT	128

@@ -14,7 +14,7 @@
 #include "gfx.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
-#include "waveform_internal.h"
+#include "system_constants.h"
 
 typedef struct waveform_renderer_def_t
 {

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <math.h>
+#include "system_constants.h"
 #include "waveform_wavetable.h"
 #include "oscillator.h"
 
