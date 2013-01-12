@@ -22,7 +22,7 @@ extern void midi_deinitialise();
 extern int midi_get_controller_changed(int channel_index, int controller_index);
 extern int midi_get_controller_value(int channel_index, int controller_index);
 extern int32_t midi_get_note_frequency(int midi_note);
-extern int midi_get_note_wavelength_samples(int midi_note);
+extern int32_t midi_get_note_wavelength_samples(int midi_note);
 extern int midi_get_event_count();
 extern midi_event_t *midi_pop_event(midi_event_t *event);
 

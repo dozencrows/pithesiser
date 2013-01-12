@@ -3,6 +3,7 @@ Raspberry Pi Synth Project
 
 To do
 =====
+* Create types for fixed values, and also some basic math funcs/macros for readability
 * Investigate little audible difference in 50% cut from A -> D -> S - maybe attack not getting there fully?
 * Implement envelope release (voices need to run on...) 
 * Implement envelope rendering
@@ -215,7 +216,6 @@ Observations:
     * Inaccuracies/bias in graphics refresh rate (in GPU, in LCD panel)
 
 * Gfx improvements
-  * Used fixed point fractional wavelength in max rendered samples calculation for tuning.
   * Look at adjusting scale alongside wavelength to avoid truncated waveform display.
   * Refactor into a more general-purpose UI framework for better reusability.
 

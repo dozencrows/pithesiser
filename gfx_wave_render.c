@@ -20,7 +20,7 @@ typedef struct waveform_renderer_def_t
 {
 	int	x, y;
 	int width, height;
-	int tuned_wavelength;
+	int tuned_wavelength_fx;
 	int amplitude_scale;
 	VGfloat	background_colour[4];
 	VGfloat	line_colour[4];
@@ -273,18 +273,23 @@ void gfx_wave_render_deinitialise()
 	gfx_wave_render_vector_deinitialise();
 }
 
-void gfx_wave_render_wavelength(int wavelength_samples)
+void gfx_wave_render_wavelength(int32_t wavelength_samples_fx)
 {
-	if (wavelength_samples <= 0) {
-		waveform_renderer.definition.tuned_wavelength = 0;
+	if (wavelength_samples_fx <= 0) {
+		waveform_renderer.definition.tuned_wavelength_fx = 0;
 		waveform_renderer.state.max_rendered_samples = waveform_renderer.definition.width;
 	}
 	else {
-		waveform_renderer.definition.tuned_wavelength = wavelength_samples;
+		waveform_renderer.definition.tuned_wavelength_fx = wavelength_samples_fx;
 
-		if (wavelength_samples < waveform_renderer.definition.width)
+		int64_t wave_max_samples_fx = waveform_renderer.definition.width << FIXED_PRECISION;
+
+		if (wavelength_samples_fx < wave_max_samples_fx)
 		{
-			waveform_renderer.state.max_rendered_samples = (waveform_renderer.definition.width / wavelength_samples) * wavelength_samples;
+			// Wavelength count is result of a truncation so rendering does not overflow maximum area
+			int64_t wavelengths_count = (((wave_max_samples_fx << FIXED_PRECISION) / (int64_t)wavelength_samples_fx)) >> FIXED_PRECISION;
+			int samples_count = ((wavelengths_count * (int64_t)wavelength_samples_fx) + FIXED_HALF) >> FIXED_PRECISION;
+			waveform_renderer.state.max_rendered_samples = samples_count;
 		}
 		else
 		{

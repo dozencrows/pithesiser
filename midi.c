@@ -305,10 +305,9 @@ int32_t midi_get_note_frequency(int midi_note)
 	return note_frequency[midi_note];
 }
 
-int midi_get_note_wavelength_samples(int midi_note)
+int32_t midi_get_note_wavelength_samples(int midi_note)
 {
 	int32_t note_frequency = midi_get_note_frequency(midi_note);
 	int64_t sample_rate = (int64_t)SYSTEM_SAMPLE_RATE << (FIXED_PRECISION * 2);
-	int64_t wavelength = (sample_rate / note_frequency) + (int64_t)FIXED_HALF;
-	return (int)(wavelength >> FIXED_PRECISION);
+	return (int32_t)(sample_rate / note_frequency);
 }
