@@ -21,6 +21,7 @@
 #include "gfx_event.h"
 #include "gfx_event_types.h"
 #include "gfx_wave_render.h"
+#include "gfx_envelope_render.h"
 #include "master_time.h"
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -28,6 +29,7 @@
 //
 #define MIDI_CONTROL_CHANNEL	0
 #define WAVE_RENDERER_ID		1
+#define ENVELOPE_RENDERER_ID	2
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Audio processing
@@ -161,6 +163,15 @@ void process_audio(int32_t timestep_ms)
 #define PROFILE_CONTROLLER		0x2c
 #define OSCILLOSCOPE_CONTROLLER	0x0e
 
+#define ENVELOPE_ATTACK_LEVEL_CTRL	0x03
+#define ENVELOPE_ATTACK_TIME_CTRL	0x0f
+#define ENVELOPE_DECAY_LEVEL_CTRL	0x04
+#define ENVELOPE_DECAY_TIME_CTRL	0x10
+#define ENVELOPE_SUSTAIN_TIME_CTRL	0x11
+#define ENVELOPE_RELEASE_TIME_CTRL	0x12
+
+#define ENVELOPE_ATTACK_DURATION_SCALE	10
+
 void process_midi_events()
 {
 	int midi_events = midi_get_event_count();
@@ -225,6 +236,7 @@ void process_midi_events()
 //
 
 wave_renderer_t *waveform_renderer = NULL;
+envelope_renderer_t *envelope_renderer = NULL;
 
 void create_ui()
 {
@@ -244,6 +256,22 @@ void create_ui()
 	waveform_renderer->line_colour[1] = 255.0f;
 	waveform_renderer->line_colour[2] = 0.0f;
 	waveform_renderer->line_colour[3] = 255.0f;
+
+	envelope_renderer = gfx_envelope_renderer_create(ENVELOPE_RENDERER_ID);
+
+	envelope_renderer->x = 0;
+	envelope_renderer->y = 514;
+	envelope_renderer->width = 512;
+	envelope_renderer->height = 256;
+	envelope_renderer->envelope = &envelope;
+	envelope_renderer->background_colour[0] = 0.0f;
+	envelope_renderer->background_colour[1] = 0.0f;
+	envelope_renderer->background_colour[2] = 16.0f;
+	envelope_renderer->background_colour[3] = 255.0f;
+	envelope_renderer->line_colour[0] = 0.0f;
+	envelope_renderer->line_colour[1] = 255.0f;
+	envelope_renderer->line_colour[2] = 0.0f;
+	envelope_renderer->line_colour[3] = 255.0f;
 }
 
 void tune_oscilloscope_to_note(int note)
@@ -254,6 +282,7 @@ void tune_oscilloscope_to_note(int note)
 
 void destroy_ui()
 {
+	gfx_envelope_renderer_destroy(envelope_renderer);
 	gfx_wave_renderer_destroy(waveform_renderer);
 }
 
@@ -269,6 +298,30 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 		last_note = oscilloscope_tuned_note;
 		tune_oscilloscope_to_note(last_note);
 	}
+
+	int envelope_updated = 0;
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_LEVEL_CTRL))
+	{
+		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_LEVEL_CTRL);
+		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = (ENVELOPE_LEVEL_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
+		envelope_updated = 1;
+	}
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_TIME_CTRL))
+	{
+		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_TIME_CTRL);
+		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = value * ENVELOPE_ATTACK_DURATION_SCALE;
+		envelope_updated = 1;
+	}
+
+	if (envelope_updated)
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
+		gfx_send_event(&gfx_event);
+	}
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -277,6 +330,7 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 int main(int argc, char **argv)
 {
 	gfx_wave_render_initialise();
+	gfx_envelope_render_initialise();
 
 	create_ui();
 
@@ -338,6 +392,7 @@ int main(int argc, char **argv)
 
 	gfx_deinitialise();
 	destroy_ui();
+	gfx_envelope_render_deinitialise();
 	gfx_wave_render_deinitialise();
 	alsa_deinitialise();
 	midi_deinitialise();

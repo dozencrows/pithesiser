@@ -1,13 +1,25 @@
 Raspberry Pi Synth Project
 ==========================
 
-To do
-=====
+Underway
+========
+* Implement envelope rendering
+* Implement envelope controls
+  * Add decay, sustain & release controls.
+  * Link control effects to keep envelope.
+  * Make controller mechanism data-driven.
+
+To do next
+==========
 * Create types for fixed values, and also some basic math funcs/macros for readability
 * Investigate little audible difference in 50% cut from A -> D -> S - maybe attack not getting there fully?
 * Implement envelope release (voices need to run on...) 
-* Implement envelope rendering
-* Implement envelope controls
+
+Blog ideas
+==========
+* New case
+* Basic architecture and operation
+* On the quality of digital audio
 
 Ideas to try
 ============
@@ -43,7 +55,7 @@ Performance:
 Advanced:
  * Phase Distortion control (simple linear)
 
-Pitch Difference Issue
+Pitch Difference Issue (resolved)
 ----------------------
 * Procedural generated waveform is pitching lower than wavetable waveform.
 * Areas to check:
@@ -217,6 +229,7 @@ Observations:
 
 * Gfx improvements
   * Look at adjusting scale alongside wavelength to avoid truncated waveform display.
+    * But note that using OpenVG to scale will also affect stroke as well as coordinates.
   * Refactor into a more general-purpose UI framework for better reusability.
 
  

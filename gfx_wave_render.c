@@ -167,6 +167,8 @@ static void render_waveform_data(wave_renderer_internal_t *renderer, size_t samp
 static void update_display(wave_renderer_internal_t *renderer)
 {
 	VGPath path = renderer->state.path[renderer->state.draw_path];
+	vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
+	vgLoadIdentity();
 	vgSetfv(VG_CLEAR_COLOR, 4, renderer->definition.background_colour);
 	vgClear(renderer->definition.x, renderer->definition.y - renderer->state.half_height,
 			renderer->definition.width + 1, renderer->definition.height);
