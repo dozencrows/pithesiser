@@ -20,9 +20,18 @@ typedef struct gfx_event_handler_record_t
 	gfx_event_handler_t handler;
 } gfx_event_handler_record_t;
 
+typedef struct gfx_event_receiver_handler_record_t
+{
+	gfx_event_type_t 	type;
+	gfx_object_t		*receiver;
+	gfx_event_handler_t handler;
+} gfx_event_receiver_handler_record_t;
 
 gfx_event_handler_record_t	gfx_event_handlers[GFX_MAX_EVENT_HANDLERS];
 int gfx_event_handler_count = 0;
+
+gfx_event_receiver_handler_record_t gfx_event_receiver_handlers[GFX_MAX_EVENT_HANDLERS];
+int gfx_event_receiver_handler_count = 0;
 
 pthread_mutex_t	gfx_event_lock = PTHREAD_MUTEX_INITIALIZER;
 sem_t gfx_event_semaphore;
@@ -82,7 +91,7 @@ int gfx_get_event_count()
 	return event_count;
 }
 
-void gfx_register_event_handler(gfx_event_type_t event_type, gfx_event_handler_t handler)
+void gfx_register_event_global_handler(gfx_event_type_t event_type, gfx_event_handler_t handler)
 {
 	if (gfx_event_handler_count < GFX_MAX_EVENT_HANDLERS)
 	{
@@ -92,14 +101,48 @@ void gfx_register_event_handler(gfx_event_type_t event_type, gfx_event_handler_t
 	}
 }
 
-void gfx_handle_event(gfx_event_t *event)
+void gfx_register_event_receiver_handler(gfx_event_type_t event_type, gfx_event_handler_t handler, gfx_object_t *receiver)
 {
-	gfx_event_handler_record_t *handler_record = gfx_event_handlers;
-	for (int i = 0; i < gfx_event_handler_count; i++, handler_record++)
+	if (gfx_event_receiver_handler_count < GFX_MAX_EVENT_HANDLERS)
 	{
-		if (handler_record->type == event->type)
+		gfx_event_receiver_handlers[gfx_event_receiver_handler_count].type = event_type;
+		gfx_event_receiver_handlers[gfx_event_receiver_handler_count].receiver = receiver;
+		gfx_event_receiver_handlers[gfx_event_receiver_handler_count].handler = handler;
+		gfx_event_receiver_handler_count++;
+	}
+}
+
+void gfx_process_event(gfx_event_t *event)
+{
+	if (event->receiver_id == GFX_ANY_OBJECT)
+	{
+		gfx_event_handler_record_t *handler_record = gfx_event_handlers;
+		for (int i = 0; i < gfx_event_handler_count; i++, handler_record++)
 		{
-			handler_record->handler(event);
+			if (handler_record->type == event->type)
+			{
+				handler_record->handler(event, NULL);
+			}
+		}
+
+		gfx_event_receiver_handler_record_t *receiver_handler_record = gfx_event_receiver_handlers;
+		for (int i = 0; i < gfx_event_receiver_handler_count; i++, receiver_handler_record++)
+		{
+			if (receiver_handler_record->type == event->type)
+			{
+				receiver_handler_record->handler(event, receiver_handler_record->receiver);
+			}
+		}
+	}
+	else
+	{
+		gfx_event_receiver_handler_record_t *handler_record = gfx_event_receiver_handlers;
+		for (int i = 0; i < gfx_event_receiver_handler_count; i++, handler_record++)
+		{
+			if (handler_record->type == event->type && handler_record->receiver->id == event->receiver_id)
+			{
+				handler_record->handler(event, handler_record->receiver);
+			}
 		}
 	}
 }

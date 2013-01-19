@@ -10,8 +10,6 @@
 
 #include <stddef.h>
 
-#define SYSTEM_FRAME_RATE	60
-
 extern void gfx_initialise();
 extern void gfx_deinitialise();
 extern void gfx_set_frame_complete_threshold(size_t complete_threshold);

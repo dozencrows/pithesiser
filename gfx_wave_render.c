@@ -16,21 +16,7 @@
 #include "gfx_event_types.h"
 #include "system_constants.h"
 
-typedef struct waveform_renderer_def_t
-{
-	int	x, y;
-	int width, height;
-	int tuned_wavelength_fx;
-	int amplitude_scale;
-	VGfloat	background_colour[4];
-	VGfloat	line_colour[4];
-	VGfloat line_width;
-	VGint line_cap_style;
-	VGint line_join_style;
-	VGint rendering_quality;
-} waveform_renderer_def_t;
-
-typedef struct waveform_renderer_state_t
+typedef struct wave_renderer_state_t
 {
 	VGPaint line_paint;
 	int half_height;
@@ -40,48 +26,19 @@ typedef struct waveform_renderer_state_t
 	int16_t render_path;
 	int16_t draw_path;
 	int16_t last_sample;
-} waveform_renderer_state_t;
+} wave_renderer_state_t;
 
-typedef struct waveform_renderer_t
+typedef struct waveform_renderer_internal_t
 {
-	waveform_renderer_def_t	definition;
-	waveform_renderer_state_t state;
-} waveform_renderer_t;
-
-//--------------------------------------------------------------------------------------------------------------
-// Common waveform rendering support
+	wave_renderer_t	definition;
+	wave_renderer_state_t state;
+} wave_renderer_internal_t;
 
 #define BYTES_PER_CHANNEL	(sizeof(int16_t))
 #define CHANNELS_PER_SAMPLE	2
 #define BYTES_PER_SAMPLE	(BYTES_PER_CHANNEL * CHANNELS_PER_SAMPLE)
 
 #define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) printf("VG Error: %d (%s)\n", error, s); }
-
-//--------------------------------------------------------------------------------------------------------------
-// Test data
-//
-
-waveform_renderer_t waveform_renderer =
-{
-	{
-		0, 256, 1024, 512,
-		100, 129,
-		{ 0.0f, 0.0f, 64.0f, 255.0f },
-		{ 0.0f, 255.0f, 0.0f, 255.0f },
-		1.0f,
-		VG_CAP_BUTT, VG_JOIN_MITER, VG_RENDERING_QUALITY_NONANTIALIASED
-	},
-	{
-		(VGPaint)0,
-		0, 0, 0,
-		{ (VGPath)0, (VGPath)0 },
-		0, 0, 0
-	}
-};
-
-//--------------------------------------------------------------------------------------------------------------
-// Vector-based waveform rendering
-//
 
 #define CALC_Y_COORD(renderer, sample)	(renderer->definition.y + (sample / renderer->definition.amplitude_scale))
 
@@ -90,7 +47,10 @@ static VGubyte horiz_segment_commands[3] = { VG_MOVE_TO_ABS, VG_VLINE_TO_ABS, VG
 static VGubyte sample_segment_commands[128];
 static VGshort sample_segment_coords[128 * 2];
 
-static void initialise_renderer(waveform_renderer_t *renderer)
+//--------------------------------------------------------------------------------------------------------------
+// Internal functionality
+//
+static void initialise_renderer(wave_renderer_internal_t *renderer)
 {
 	renderer->state.line_paint = vgCreatePaint();
 	VG_ERROR_CHECK("vgCreatePaint");
@@ -105,14 +65,14 @@ static void initialise_renderer(waveform_renderer_t *renderer)
 	renderer->state.render_path = 0;
 }
 
-static void deinitialise_renderer(waveform_renderer_t *renderer)
+static void deinitialise_renderer(wave_renderer_internal_t *renderer)
 {
 	vgDestroyPath(renderer->state.path[0]);
 	vgDestroyPath(renderer->state.path[1]);
 	vgDestroyPaint(renderer->state.line_paint);
 }
 
-static size_t render_samples_to_path(waveform_renderer_t *renderer, size_t sample_count, int16_t *sample_data, VGPath path)
+static size_t render_samples_to_path(wave_renderer_internal_t *renderer, size_t sample_count, int16_t *sample_data, VGPath path)
 {
 	size_t rendered_samples = 0;
 
@@ -149,7 +109,7 @@ static size_t render_samples_to_path(waveform_renderer_t *renderer, size_t sampl
 	return rendered_samples;
 }
 
-static size_t render_silence_to_path(waveform_renderer_t *renderer, size_t sample_count, VGPath path)
+static size_t render_silence_to_path(wave_renderer_internal_t *renderer, size_t sample_count, VGPath path)
 {
 	size_t rendered_samples = 0;
 
@@ -171,7 +131,7 @@ static size_t render_silence_to_path(waveform_renderer_t *renderer, size_t sampl
 	return rendered_samples;
 }
 
-static size_t render_to_path(waveform_renderer_t *renderer, size_t sample_count, int16_t *sample_data, size_t sample_offset, VGPath path)
+static size_t render_to_path(wave_renderer_internal_t *renderer, size_t sample_count, int16_t *sample_data, size_t sample_offset, VGPath path)
 {
 	if (sample_data != NULL)
 	{
@@ -183,7 +143,7 @@ static size_t render_to_path(waveform_renderer_t *renderer, size_t sample_count,
 	}
 }
 
-static void render_waveform_data(waveform_renderer_t *renderer, size_t sample_count, int16_t *sample_data)
+static void render_waveform_data(wave_renderer_internal_t *renderer, size_t sample_count, int16_t *sample_data)
 {
 	VGPath path = renderer->state.path[renderer->state.render_path];
 	size_t rendered_samples = render_to_path(renderer, sample_count, sample_data, 0, path);
@@ -204,7 +164,7 @@ static void render_waveform_data(waveform_renderer_t *renderer, size_t sample_co
 	}
 }
 
-static void update_display(waveform_renderer_t *renderer)
+static void update_display(wave_renderer_internal_t *renderer)
 {
 	VGPath path = renderer->state.path[renderer->state.draw_path];
 	vgSetfv(VG_CLEAR_COLOR, 4, renderer->definition.background_colour);
@@ -222,78 +182,98 @@ static void update_display(waveform_renderer_t *renderer)
 	VG_ERROR_CHECK("vgClearPath");
 }
 
-static void vector_wave_event_handler(gfx_event_t *event)
+//--------------------------------------------------------------------------------------------------------------
+// Event handlers
+//
+static void vector_wave_event_handler(gfx_event_t *event, gfx_object_t *receiver)
 {
-	render_waveform_data(&waveform_renderer, event->size / BYTES_PER_SAMPLE, (int16_t*)event->ptr);
+	render_waveform_data((wave_renderer_internal_t*)receiver, event->size / BYTES_PER_SAMPLE, (int16_t*)event->ptr);
 	free(event->ptr);
 }
 
-static void vector_silence_event_handler(gfx_event_t *event)
+static void vector_silence_event_handler(gfx_event_t *event, gfx_object_t *receiver)
 {
-	render_waveform_data(&waveform_renderer, event->size / BYTES_PER_SAMPLE, NULL);
+	render_waveform_data((wave_renderer_internal_t*)receiver, event->size / BYTES_PER_SAMPLE, NULL);
 }
 
-static void vector_swap_event_handler(gfx_event_t *event)
+static void vector_swap_event_handler(gfx_event_t *event, gfx_object_t *receiver)
 {
-	update_display(&waveform_renderer);
+	update_display((wave_renderer_internal_t*)receiver);
 }
 
-static void vector_post_init_handler(gfx_event_t *event)
+static void vector_post_init_handler(gfx_event_t *event, gfx_object_t *receiver)
 {
-	initialise_renderer(&waveform_renderer);
+	initialise_renderer((wave_renderer_internal_t*)receiver);
 	gfx_set_frame_complete_threshold(SYSTEM_SAMPLE_RATE / SYSTEM_FRAME_RATE);
-}
-
-static void gfx_wave_render_vector_initialise()
-{
-	gfx_register_event_handler(GFX_EVENT_POSTINIT, vector_post_init_handler);
-	gfx_register_event_handler(GFX_EVENT_WAVE, vector_wave_event_handler);
-	gfx_register_event_handler(GFX_EVENT_SILENCE, vector_silence_event_handler);
-	gfx_register_event_handler(GFX_EVENT_BUFFERSWAP, vector_swap_event_handler);
-
-	memset(sample_segment_commands, VG_LINE_TO_ABS, sizeof(sample_segment_commands));
-}
-
-static void gfx_wave_render_vector_deinitialise()
-{
-	deinitialise_renderer(&waveform_renderer);
 }
 
 //--------------------------------------------------------------------------------------------------------------
 // Public interface
 //
 
+//
+// Module initialisation
+//
 void gfx_wave_render_initialise()
 {
-	gfx_wave_render_vector_initialise();
+	memset(sample_segment_commands, VG_LINE_TO_ABS, sizeof(sample_segment_commands));
 }
 
 void gfx_wave_render_deinitialise()
 {
-	gfx_wave_render_vector_deinitialise();
 }
 
-void gfx_wave_render_wavelength(int32_t wavelength_samples_fx)
+//
+// Instance functions
+//
+wave_renderer_t *gfx_wave_renderer_create(object_id_t id)
 {
+	wave_renderer_internal_t *renderer = (wave_renderer_internal_t*) calloc(1, sizeof(wave_renderer_internal_t));
+
+	gfx_object_t *gfx_object = &renderer->definition.gfx_object;
+	gfx_object->id = id;
+	gfx_register_event_receiver_handler(GFX_EVENT_POSTINIT, vector_post_init_handler, gfx_object);
+	gfx_register_event_receiver_handler(GFX_EVENT_WAVE, vector_wave_event_handler, gfx_object);
+	gfx_register_event_receiver_handler(GFX_EVENT_SILENCE, vector_silence_event_handler, gfx_object);
+	gfx_register_event_receiver_handler(GFX_EVENT_BUFFERSWAP, vector_swap_event_handler, gfx_object);
+
+	renderer->definition.line_width 		= 1.0f;
+	renderer->definition.line_cap_style 	= VG_CAP_BUTT;
+	renderer->definition.line_join_style	= VG_JOIN_MITER;
+	renderer->definition.rendering_quality	= VG_RENDERING_QUALITY_NONANTIALIASED;
+
+	return (wave_renderer_t*)renderer;
+}
+
+void gfx_wave_render_wavelength(wave_renderer_t *renderer, int32_t wavelength_samples_fx)
+{
+	wave_renderer_internal_t *renderer_int = (wave_renderer_internal_t*)renderer;
+
 	if (wavelength_samples_fx <= 0) {
-		waveform_renderer.definition.tuned_wavelength_fx = 0;
-		waveform_renderer.state.max_rendered_samples = waveform_renderer.definition.width;
+		renderer_int->definition.tuned_wavelength_fx = 0;
+		renderer_int->state.max_rendered_samples = renderer_int->definition.width;
 	}
 	else {
-		waveform_renderer.definition.tuned_wavelength_fx = wavelength_samples_fx;
+		renderer_int->definition.tuned_wavelength_fx = wavelength_samples_fx;
 
-		int64_t wave_max_samples_fx = waveform_renderer.definition.width << FIXED_PRECISION;
+		int64_t wave_max_samples_fx = renderer_int->definition.width << FIXED_PRECISION;
 
 		if (wavelength_samples_fx < wave_max_samples_fx)
 		{
 			// Wavelength count is result of a truncation so rendering does not overflow maximum area
 			int64_t wavelengths_count = (((wave_max_samples_fx << FIXED_PRECISION) / (int64_t)wavelength_samples_fx)) >> FIXED_PRECISION;
 			int samples_count = ((wavelengths_count * (int64_t)wavelength_samples_fx) + FIXED_HALF) >> FIXED_PRECISION;
-			waveform_renderer.state.max_rendered_samples = samples_count;
+			renderer_int->state.max_rendered_samples = samples_count;
 		}
 		else
 		{
-			waveform_renderer.state.max_rendered_samples = waveform_renderer.definition.width;
+			renderer_int->state.max_rendered_samples = renderer_int->definition.width;
 		}
 	}
+}
+
+void gfx_wave_renderer_destroy(wave_renderer_t *waveform_renderer)
+{
+	deinitialise_renderer((wave_renderer_internal_t*) waveform_renderer);
+	free(waveform_renderer);
 }

@@ -13,6 +13,6 @@
 
 #define GFX_EVENT_WAVE			1000
 #define GFX_EVENT_SILENCE		1001
-
+#define GFX_EVENT_REFRESH		1002
 
 #endif /* GFX_EVENT_TYPES_H_ */

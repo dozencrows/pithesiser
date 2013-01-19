@@ -23,12 +23,17 @@
 #include "gfx_wave_render.h"
 #include "master_time.h"
 
+//-----------------------------------------------------------------------------------------------------------------------
+// Commons
+//
+#define MIDI_CONTROL_CHANNEL	0
+#define WAVE_RENDERER_ID		1
+
+//-----------------------------------------------------------------------------------------------------------------------
+// Audio processing
+//
 #define MIN_FREQUENCY			55.0f
 #define MAX_FREQUENCY			1760.0f
-#define MIDI_CONTROL_CHANNEL	0
-#define EXIT_CONTROLLER			0x2e
-#define PROFILE_CONTROLLER		0x2c
-#define OSCILLOSCOPE_CONTROLLER	0x0e
 #define NOTE_LEVEL				32767
 
 typedef struct
@@ -71,6 +76,90 @@ envelope_t envelope = { 4, envelope_stages };
 
 float master_level = 1.0f;
 waveform_type_t master_waveform = WAVE_FIRST;
+
+void process_audio(int32_t timestep_ms)
+{
+	int write_buffer_index = alsa_lock_next_write_buffer();
+	void* buffer_data;
+	int buffer_samples;
+	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
+	size_t buffer_bytes = buffer_samples * sizeof(int16_t) * 2;
+
+	int first_audible_voice = -1;
+
+	for (int i = 0; i < VOICE_COUNT; i++)
+	{
+		if (voice[i].current_note != voice[i].last_note)
+		{
+			if (voice[i].current_note == -1)
+			{
+				oscillator[i].level = 0;
+			}
+			else
+			{
+				oscillator[i].frequency = midi_get_note_frequency(voice[i].current_note);
+				oscillator[i].waveform = master_waveform;
+				oscillator[i].phase_accumulator = 0;
+				envelope_start(&voice[i].envelope_instance);
+			}
+
+			voice[i].last_note = voice[i].current_note;
+		}
+
+		if (voice[i].current_note != -1)
+		{
+			int32_t envelope_level = envelope_step(&voice[i].envelope_instance, timestep_ms);
+			int32_t note_level = (NOTE_LEVEL * envelope_level) / ENVELOPE_LEVEL_MAX;
+
+			oscillator[i].level = note_level * master_level;
+			if (oscillator[i].level > 0)
+			{
+				if (first_audible_voice < 0)
+				{
+					first_audible_voice = i;
+					osc_output(&oscillator[i], buffer_samples, buffer_data);
+				}
+				else
+				{
+					osc_mix_output(&oscillator[i], buffer_samples, buffer_data);
+				}
+			}
+		}
+	}
+
+	if (first_audible_voice < 0)
+	{
+		memset(buffer_data, 0, buffer_bytes);
+
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_SILENCE;
+		gfx_event.size = buffer_bytes;
+		gfx_event.receiver_id = WAVE_RENDERER_ID;
+		gfx_send_event(&gfx_event);
+	}
+	else
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_WAVE;
+		gfx_event.ptr = malloc(buffer_bytes);
+		gfx_event.receiver_id = WAVE_RENDERER_ID;
+		if (gfx_event.ptr != NULL)
+		{
+			gfx_event.size = buffer_bytes;
+			memcpy(gfx_event.ptr, buffer_data, buffer_bytes);
+			gfx_send_event(&gfx_event);
+		}
+	}
+
+	alsa_unlock_buffer(write_buffer_index);
+}
+
+//-----------------------------------------------------------------------------------------------------------------------
+// MIDI processing
+//
+#define EXIT_CONTROLLER			0x2e
+#define PROFILE_CONTROLLER		0x2c
+#define OSCILLOSCOPE_CONTROLLER	0x0e
 
 void process_midi_events()
 {
@@ -131,88 +220,47 @@ void process_midi_events()
 	}
 }
 
-void process_audio(int32_t timestep_ms)
+//-----------------------------------------------------------------------------------------------------------------------
+// UI data & management
+//
+
+wave_renderer_t *waveform_renderer = NULL;
+
+void create_ui()
 {
-	int write_buffer_index = alsa_lock_next_write_buffer();
-	void* buffer_data;
-	int buffer_samples;
-	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
-	size_t buffer_bytes = buffer_samples * sizeof(int16_t) * 2;
+	waveform_renderer = gfx_wave_renderer_create(WAVE_RENDERER_ID);
 
-	int first_audible_voice = -1;
-
-	for (int i = 0; i < VOICE_COUNT; i++)
-	{
-		if (voice[i].current_note != voice[i].last_note)
-		{
-			if (voice[i].current_note == -1)
-			{
-				oscillator[i].level = 0;
-			}
-			else
-			{
-				oscillator[i].frequency = midi_get_note_frequency(voice[i].current_note);
-				oscillator[i].waveform = master_waveform;
-				oscillator[i].phase_accumulator = 0;
-				envelope_start(&voice[i].envelope_instance);
-			}
-
-			voice[i].last_note = voice[i].current_note;
-		}
-
-		if (voice[i].current_note != -1)
-		{
-			int32_t envelope_level = envelope_step(&voice[i].envelope_instance, timestep_ms);
-			int32_t note_level = (NOTE_LEVEL * envelope_level) / ENVELOPE_LEVEL_MAX;
-
-			oscillator[i].level = note_level * master_level;
-			if (oscillator[i].level > 0)
-			{
-				if (first_audible_voice < 0)
-				{
-					first_audible_voice = i;
-					osc_output(&oscillator[i], buffer_samples, buffer_data);
-				}
-				else
-				{
-					osc_mix_output(&oscillator[i], buffer_samples, buffer_data);
-				}
-			}
-		}
-	}
-
-	if (first_audible_voice < 0)
-	{
-		memset(buffer_data, 0, buffer_bytes);
-
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_SILENCE;
-		gfx_event.size = buffer_bytes;
-		gfx_send_event(&gfx_event);
-	}
-	else
-	{
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_WAVE;
-		gfx_event.ptr = malloc(buffer_bytes);
-		if (gfx_event.ptr != NULL)
-		{
-			gfx_event.size = buffer_bytes;
-			memcpy(gfx_event.ptr, buffer_data, buffer_bytes);
-			gfx_send_event(&gfx_event);
-		}
-	}
-
-	alsa_unlock_buffer(write_buffer_index);
+	waveform_renderer->x = 0;
+	waveform_renderer->y = 256;
+	waveform_renderer->width = 1024;
+	waveform_renderer->height = 512;
+	waveform_renderer->amplitude_scale = 129;
+	waveform_renderer->tuned_wavelength_fx = 129;
+	waveform_renderer->background_colour[0] = 0.0f;
+	waveform_renderer->background_colour[1] = 0.0f;
+	waveform_renderer->background_colour[2] = 16.0f;
+	waveform_renderer->background_colour[3] = 255.0f;
+	waveform_renderer->line_colour[0] = 0.0f;
+	waveform_renderer->line_colour[1] = 255.0f;
+	waveform_renderer->line_colour[2] = 0.0f;
+	waveform_renderer->line_colour[3] = 255.0f;
 }
 
 void tune_oscilloscope_to_note(int note)
 {
 	int note_wavelength = midi_get_note_wavelength_samples(note);
-	gfx_wave_render_wavelength(note_wavelength);
+	gfx_wave_render_wavelength(waveform_renderer, note_wavelength);
 }
 
-void process_buffer_swap(gfx_event_t *event)
+void destroy_ui()
+{
+	gfx_wave_renderer_destroy(waveform_renderer);
+}
+
+//-----------------------------------------------------------------------------------------------------------------------
+// GFX event handlers
+//
+void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 {
 	static int last_note = -1;
 	int oscilloscope_tuned_note = midi_get_controller_value(MIDI_CONTROL_CHANNEL, OSCILLOSCOPE_CONTROLLER);
@@ -223,9 +271,14 @@ void process_buffer_swap(gfx_event_t *event)
 	}
 }
 
+//-----------------------------------------------------------------------------------------------------------------------
+// Entrypoint
+//
 int main(int argc, char **argv)
 {
 	gfx_wave_render_initialise();
+
+	create_ui();
 
 	gfx_event_initialise();
 	gfx_initialise();
@@ -241,7 +294,7 @@ int main(int argc, char **argv)
 	}
 
 	waveform_initialise();
-	gfx_register_event_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
+	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
@@ -284,6 +337,7 @@ int main(int argc, char **argv)
 	}
 
 	gfx_deinitialise();
+	destroy_ui();
 	gfx_wave_render_deinitialise();
 	alsa_deinitialise();
 	midi_deinitialise();

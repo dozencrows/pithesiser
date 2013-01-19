@@ -148,7 +148,8 @@ void *gfx_thread()
 
 	gfx_event_t postinit_event;
 	postinit_event.type = GFX_EVENT_POSTINIT;
-	gfx_handle_event(&postinit_event);
+	postinit_event.receiver_id = GFX_ANY_OBJECT;
+	gfx_process_event(&postinit_event);
 
 	render_exec_time = 0;
 	render_idle_time = 0;
@@ -164,13 +165,14 @@ void *gfx_thread()
 
 		gfx_event_t event;
 		gfx_pop_event(&event);
-		gfx_handle_event(&event);
+		gfx_process_event(&event);
 
 		if (frame_progress >= frame_complete_threshold)
 		{
 			gfx_event_t swap_event;
 			swap_event.type = GFX_EVENT_BUFFERSWAP;
-			gfx_handle_event(&swap_event);
+			swap_event.receiver_id = GFX_ANY_OBJECT;
+			gfx_process_event(&swap_event);
 			eglSwapBuffers(display, surface);
 			total_frames++;
 			frame_progress = 0;
