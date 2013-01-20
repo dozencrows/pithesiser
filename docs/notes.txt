@@ -3,23 +3,19 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Implement envelope rendering
 * Implement envelope controls
-  * Add decay, sustain & release controls.
-  * Link control effects to keep envelope.
   * Make controller mechanism data-driven.
 
 To do next
 ==========
 * Create types for fixed values, and also some basic math funcs/macros for readability
-* Investigate little audible difference in 50% cut from A -> D -> S - maybe attack not getting there fully?
-* Implement envelope release (voices need to run on...) 
+* LFO: vibrato, tremelo, with envelope
 
 Blog ideas
 ==========
-* New case
-* Basic architecture and operation
+* ADSR completion with UI
 * On the quality of digital audio
+* Fixed point math
 
 Ideas to try
 ============

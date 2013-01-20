@@ -41,7 +41,7 @@ static void deinitialise_renderer(envelope_render_internal_t *renderer)
 
 static VGubyte commands[ENVELOPE_STAGES_MAX * 2];
 static VGshort coords[ENVELOPE_STAGES_MAX * 2 * 2];
-#define HELD_DURATION_LENGTH	1000
+#define HELD_DURATION_LENGTH	1280
 
 static void update_display(envelope_render_internal_t *renderer)
 {
@@ -62,8 +62,8 @@ static void update_display(envelope_render_internal_t *renderer)
 		}
 	}
 
-	float horizontal_scale = (float)renderer->definition.width / (float) total_duration;
-	float vertical_scale = (float)renderer->definition.height / (float)ENVELOPE_LEVEL_MAX;
+	float horizontal_scale = (float)(renderer->definition.width - 1) / (float) total_duration;
+	float vertical_scale = (float)(renderer->definition.height - 1) / (float)ENVELOPE_LEVEL_MAX;
 
 	// Build path segments from envelope stages
 	int command_index = 0;
