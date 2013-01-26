@@ -5,14 +5,18 @@ Underway
 ========
 * Implement envelope controls
   * Make controller mechanism data-driven.
+* LFO: vibrato, tremelo, with envelope
+  * delay/two stage attack on envelopes
+  * Multiple envelopes -> need smarter control management 
+  * two independent LFOs; target separate outputs & separate parameters, but triggered in step.
 
 To do next
 ==========
 * Create types for fixed values, and also some basic math funcs/macros for readability
-* LFO: vibrato, tremelo, with envelope
 
 Blog ideas
 ==========
+* LFO progress
 * ADSR completion with UI
 * On the quality of digital audio
 * Fixed point math
@@ -228,4 +232,13 @@ Observations:
     * But note that using OpenVG to scale will also affect stroke as well as coordinates.
   * Refactor into a more general-purpose UI framework for better reusability.
 
- 
+LFO Notes
+---------
+LFO frequency is typically 20 Hz or less. For simplicity & optimisation, can assume that LFO value is constant across
+each synthesis packet.
+* Can reuse existing oscillator code with special "LFO" waveforms, and a "midpoint" output calculation for a synthesis packet.
+* LFO application to volume is linear
+* LFO application to pitch is exponential (2 raised to LFO amplitude)
+* Useful to half both full waveforms (for pitch mostly) and positive only (biased) waveforms (for volume).
+* LFO is reset when no notes are playing (or reset on first note after silence) but stays uniform for all notes when playing.
+

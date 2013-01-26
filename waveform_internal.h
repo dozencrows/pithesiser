@@ -25,6 +25,7 @@ typedef struct
 	waveform_generator_def_t	definition;
 	generator_output_func_t		output_func;
 	generator_output_func_t		mix_func;
+	generator_output_func_t		mid_func;
 } waveform_generator_t;
 
 extern waveform_generator_t generators[];

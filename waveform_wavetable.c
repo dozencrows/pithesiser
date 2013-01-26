@@ -239,5 +239,6 @@ void init_wavetable_generator(waveform_type_t waveform_type, waveform_generator_
 		generator->definition.waveform_data = waveform;
 		generator->output_func = wavetable_output;
 		generator->mix_func = wavetable_mix_output;
+		generator->mid_func = NULL;
 	}
 }

@@ -21,11 +21,26 @@ void osc_init(oscillator_t* osc)
 void osc_output(oscillator_t* osc, int sample_count, void *sample_data)
 {
 	waveform_generator_t *generator = &generators[osc->waveform];
-	generator->output_func(&generator->definition, osc, sample_count, sample_data);
+	if (generator->output_func != NULL)
+	{
+		generator->output_func(&generator->definition, osc, sample_count, sample_data);
+	}
 }
 
 void osc_mix_output(oscillator_t* osc, int sample_count, void *sample_data)
 {
 	waveform_generator_t *generator = &generators[osc->waveform];
-	generator->mix_func(&generator->definition, osc, sample_count, sample_data);
+	if (generator->mix_func != NULL)
+	{
+		generator->mix_func(&generator->definition, osc, sample_count, sample_data);
+	}
+}
+
+void osc_mid_output(oscillator_t* osc, int sample_count, void *sample_data)
+{
+	waveform_generator_t *generator = &generators[osc->waveform];
+	if (generator->mid_func != NULL)
+	{
+		generator->mid_func(&generator->definition, osc, sample_count, sample_data);
+	}
 }

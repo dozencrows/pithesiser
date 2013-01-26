@@ -9,6 +9,7 @@
 #define MIDI_H_
 
 #define MIDI_MAX_CONTROLLER_VALUE	127
+#define MIDI_MID_CONTROLLER_VALUE	63
 
 #define MIDI_EVENT_DATA_SIZE	3
 typedef struct midi_event_t

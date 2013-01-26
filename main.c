@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <gperftools/profiler.h>
+#include "system_constants.h"
 #include "alsa.h"
 #include "midi.h"
 #include "waveform.h"
@@ -40,6 +41,14 @@
 #define NOTE_ENDING				-2
 #define NOTE_NOT_PLAYING		-1
 
+#define LFO_MIN_FREQUENCY		(FIXED_ONE / 10)
+#define LFO_MAX_FREQUENCY		(20 * FIXED_ONE)
+
+#define LFO_STATE_OFF			0
+#define LFO_STATE_VOLUME		1
+#define LFO_STATE_PITCH			2
+#define LFO_STATE_LAST			LFO_STATE_PITCH
+
 typedef struct
 {
 	int	midi_channel;
@@ -67,6 +76,7 @@ voice_t voice[VOICE_COUNT] =
 };
 
 oscillator_t oscillator[VOICE_COUNT];
+int active_voices;
 
 envelope_stage_t envelope_stages[4] =
 {
@@ -79,7 +89,10 @@ envelope_stage_t envelope_stages[4] =
 envelope_t envelope = { 4, envelope_stages };
 
 float master_level = 1.0f;
-waveform_type_t master_waveform = WAVE_FIRST;
+waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;
+
+oscillator_t lf_oscillator;
+int lfo_state;
 
 void process_audio(int32_t timestep_ms)
 {
@@ -88,6 +101,12 @@ void process_audio(int32_t timestep_ms)
 	int buffer_samples;
 	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
 	size_t buffer_bytes = buffer_samples * sizeof(int16_t) * 2;
+	int16_t lfo_value = 0;
+
+	if (lfo_state)
+	{
+		osc_mid_output(&lf_oscillator, buffer_samples, &lfo_value);
+	}
 
 	int first_audible_voice = -1;
 
@@ -115,6 +134,18 @@ void process_audio(int32_t timestep_ms)
 			int32_t envelope_level = envelope_step(&voice[i].envelope_instance, timestep_ms);
 			int32_t note_level = (NOTE_LEVEL * envelope_level) / ENVELOPE_LEVEL_MAX;
 
+			int32_t base_frequency = oscillator[i].frequency;
+
+			if (lfo_state == LFO_STATE_VOLUME)
+			{
+				note_level = (note_level * lfo_value) / SHRT_MAX;
+			}
+			else if (lfo_state == LFO_STATE_PITCH)
+			{
+				// TODO: use a proper fixed point power function!
+				oscillator[i].frequency = (((int64_t)base_frequency * (int64_t)(powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE)) >> FIXED_PRECISION);
+			}
+
 			oscillator[i].level = note_level * master_level;
 			if (oscillator[i].level > 0)
 			{
@@ -131,6 +162,12 @@ void process_audio(int32_t timestep_ms)
 			else if (voice[i].current_note == NOTE_ENDING)
 			{
 				voice[i].current_note = NOTE_NOT_PLAYING;
+				active_voices--;
+			}
+
+			if (lfo_state == LFO_STATE_PITCH)
+			{
+				oscillator[i].frequency = base_frequency;
 			}
 		}
 	}
@@ -163,7 +200,7 @@ void process_audio(int32_t timestep_ms)
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
-// MIDI processing
+// Controller processing
 //
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
@@ -173,8 +210,13 @@ void process_audio(int32_t timestep_ms)
 #define ENVELOPE_ATTACK_TIME_CTRL	0x0f	// dial 2
 #define ENVELOPE_DECAY_LEVEL_CTRL	0x04	// slider 3
 #define ENVELOPE_DECAY_TIME_CTRL	0x10	// dial 3
-#define ENVELOPE_SUSTAIN_TIME_CTRL	0x05	// slider 4
-#define ENVELOPE_RELEASE_TIME_CTRL	0x11	// dial 4
+#define ENVELOPE_SUSTAIN_TIME_CTRL	0x11	// dial 4
+#define ENVELOPE_RELEASE_TIME_CTRL	0x05	// slider 4
+
+#define LFO_TOGGLE					0x1b	// upper switch 5
+#define LFO_WAVEFORM				0x25	// lower switch 5
+#define LFO_FREQUENCY				0x12	// dial 5
+#define LFO_LEVEL					0x06	// slider 5
 
 #define ENVELOPE_ATTACK_DURATION_SCALE	10
 #define ENVELOPE_DECAY_DURATION_SCALE	10
@@ -199,6 +241,12 @@ void process_midi_events()
 				if (voice[i].current_note == NOTE_NOT_PLAYING)
 				{
 					candidate_voice = i;
+
+					if (active_voices == 0)
+					{
+						lf_oscillator.phase_accumulator = 0;
+					}
+					active_voices++;
 					break;
 				}
 				else
@@ -233,9 +281,9 @@ void process_midi_events()
 		if (midi_get_controller_value(voice[0].midi_channel, voice[0].wave_controller) > 63)
 		{
 			master_waveform++;
-			if (master_waveform > WAVE_LAST)
+			if (master_waveform > WAVE_LAST_AUDIBLE)
 			{
-				master_waveform = WAVE_FIRST;
+				master_waveform = WAVE_FIRST_AUDIBLE;
 			}
 		}
 	}
@@ -374,6 +422,42 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
 		gfx_send_event(&gfx_event);
 	}
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_TOGGLE))
+	{
+		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
+		{
+			lfo_state++;
+			if (lfo_state > LFO_STATE_LAST)
+			{
+				lfo_state = LFO_STATE_OFF;
+			}
+		}
+	}
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_WAVEFORM))
+	{
+		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_WAVEFORM) > MIDI_MID_CONTROLLER_VALUE)
+		{
+			lf_oscillator.waveform++;
+			if (lf_oscillator.waveform > WAVE_LAST_LFO)
+			{
+				lf_oscillator.waveform = WAVE_FIRST_LFO;
+			}
+		}
+	}
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_LEVEL))
+	{
+		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_LEVEL);
+		lf_oscillator.level = (SHRT_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
+	}
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_FREQUENCY))
+	{
+		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_FREQUENCY);
+		lf_oscillator.frequency = LFO_MIN_FREQUENCY + ((LFO_MAX_FREQUENCY - LFO_MIN_FREQUENCY) * value) / MIDI_MAX_CONTROLLER_VALUE;
+	}
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -407,6 +491,13 @@ int main(int argc, char **argv)
 		osc_init(&oscillator[i]);
 		envelope_init(&voice[i].envelope_instance, &envelope);
 	}
+	active_voices = 0;
+
+	osc_init(&lf_oscillator);
+	lf_oscillator.waveform = LFO_PROCEDURAL_SINE;
+	lf_oscillator.frequency = 1 * FIXED_ONE;
+	lf_oscillator.level = SHRT_MAX;
+	lfo_state = 0;
 
 	int profiling = 0;
 

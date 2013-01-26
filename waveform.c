@@ -24,4 +24,13 @@ void waveform_initialise()
 
 	init_procedural_generator(PROCEDURAL_SINE, &generators[PROCEDURAL_SINE]);
 	init_procedural_generator(PROCEDURAL_SAW, &generators[PROCEDURAL_SAW]);
+	init_procedural_generator(LFO_PROCEDURAL_SINE, &generators[LFO_PROCEDURAL_SINE]);
+	init_procedural_generator(LFO_PROCEDURAL_SAW_DOWN, &generators[LFO_PROCEDURAL_SAW_DOWN]);
+	init_procedural_generator(LFO_PROCEDURAL_SAW_UP, &generators[LFO_PROCEDURAL_SAW_UP]);
+	init_procedural_generator(LFO_PROCEDURAL_TRIANGLE, &generators[LFO_PROCEDURAL_TRIANGLE]);
+	init_procedural_generator(LFO_PROCEDURAL_SQUARE, &generators[LFO_PROCEDURAL_SQUARE]);
+	init_procedural_generator(LFO_PROCEDURAL_HALFSAW_DOWN, &generators[LFO_PROCEDURAL_HALFSAW_DOWN]);
+	init_procedural_generator(LFO_PROCEDURAL_HALFSAW_UP, &generators[LFO_PROCEDURAL_HALFSAW_UP]);
+	init_procedural_generator(LFO_PROCEDURAL_HALFSINE, &generators[LFO_PROCEDURAL_HALFSINE]);
+	init_procedural_generator(LFO_PROCEDURAL_HALFTRIANGLE, &generators[LFO_PROCEDURAL_HALFTRIANGLE]);
 }
