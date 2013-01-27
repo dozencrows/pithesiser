@@ -67,6 +67,8 @@
 								</option>
 								<option id="gnu.cpp.link.option.libs.793497982" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="asound"/>
+									<listOptionValue builtIn="false" value="z"/>
+									<listOptionValue builtIn="false" value="png"/>
 									<listOptionValue builtIn="false" value="GLESv2"/>
 									<listOptionValue builtIn="false" value="vchiq_arm"/>
 									<listOptionValue builtIn="false" value="bcm_host"/>
@@ -113,7 +115,7 @@
 							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.release.1339509849" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.release"/>
 							<builder buildPath="${workspace_loc:/HelloWorld/Release}" id="cdt.managedbuild.target.gnu.builder.exe.release.1155821655" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.release"/>
 							<tool command="arm-linux-gnueabihf-g++" id="cdt.managedbuild.tool.gnu.archiver.base.249419107" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-							<tool command="arm-linux-gnueabihf-g++" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.608657093" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release">
+							<tool command="arm-linux-gnueabihf-g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.608657093" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release">
 								<option id="gnu.cpp.compiler.exe.release.option.optimization.level.608057225" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1154766712" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.463724828" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
@@ -156,6 +158,8 @@
 								</option>
 								<option id="gnu.cpp.link.option.libs.517138077" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="asound"/>
+									<listOptionValue builtIn="false" value="z"/>
+									<listOptionValue builtIn="false" value="png"/>
 									<listOptionValue builtIn="false" value="GLESv2"/>
 									<listOptionValue builtIn="false" value="vchiq_arm"/>
 									<listOptionValue builtIn="false" value="bcm_host"/>
@@ -205,4 +209,5 @@
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

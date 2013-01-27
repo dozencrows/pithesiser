@@ -186,26 +186,9 @@ void *gfx_thread()
 	return NULL;
 }
 
-void gfx_set_frame_complete_threshold(size_t complete_threshold)
-{
-	frame_complete_threshold = complete_threshold;
-}
-
-size_t gfx_get_frame_complete_threshold()
-{
-	return frame_complete_threshold;
-}
-
-void gfx_advance_frame_progress(size_t progress_delta)
-{
-	frame_progress += progress_delta;
-}
-
-void gfx_set_frame_progress(size_t progress)
-{
-	frame_progress = progress;
-}
-
+//---------------------------------------------------------------
+// Public interface
+//
 void gfx_initialise()
 {
 	bcm_host_init();
@@ -224,4 +207,37 @@ void gfx_deinitialise()
 	printf("Render time: %d ms\n", render_elapsed);
 	printf("  exec: %d ms  idle: %d ms\n", render_exec_time, render_idle_time);
 	printf("Render frame rate: %f\n", (float)(total_frames * 1000) / (float)render_elapsed);
+}
+
+void gfx_get_screen_resolution(int *width, int *height)
+{
+	if (width != NULL)
+	{
+		*width = dispman_mode_info.width;
+	}
+
+	if (height != NULL)
+	{
+		*height = dispman_mode_info.height;
+	}
+}
+
+void gfx_set_frame_complete_threshold(size_t complete_threshold)
+{
+	frame_complete_threshold = complete_threshold;
+}
+
+size_t gfx_get_frame_complete_threshold()
+{
+	return frame_complete_threshold;
+}
+
+void gfx_advance_frame_progress(size_t progress_delta)
+{
+	frame_progress += progress_delta;
+}
+
+void gfx_set_frame_progress(size_t progress)
+{
+	frame_progress = progress;
 }
