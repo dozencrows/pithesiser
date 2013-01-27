@@ -301,7 +301,7 @@ void create_ui()
 	waveform_renderer = gfx_wave_renderer_create(WAVE_RENDERER_ID);
 
 	waveform_renderer->x = 0;
-	waveform_renderer->y = 256;
+	waveform_renderer->y = 0;
 	waveform_renderer->width = 1024;
 	waveform_renderer->height = 512;
 	waveform_renderer->amplitude_scale = 129;

@@ -40,7 +40,7 @@ typedef struct waveform_renderer_internal_t
 
 #define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) printf("VG Error: %d (%s)\n", error, s); }
 
-#define CALC_Y_COORD(renderer, sample)	(renderer->definition.y + (sample / renderer->definition.amplitude_scale))
+#define CALC_Y_COORD(renderer, sample)	(sample / renderer->definition.amplitude_scale)
 
 static VGubyte first_sample_segment_commands[1] = { VG_MOVE_TO_ABS };
 static VGubyte horiz_segment_commands[3] = { VG_MOVE_TO_ABS, VG_VLINE_TO_ABS, VG_HLINE_TO_ABS };
@@ -79,7 +79,7 @@ static size_t render_samples_to_path(wave_renderer_internal_t *renderer, size_t 
 	if (renderer->state.rendered_samples == 0)
 	{
 		VGshort segment_coords[2];
-		segment_coords[0] = renderer->definition.x;
+		segment_coords[0] = 0;
 		segment_coords[1] = CALC_Y_COORD(renderer, renderer->state.last_sample);
 
 		vgAppendPathData(path, 1, first_sample_segment_commands, segment_coords);
@@ -93,7 +93,7 @@ static size_t render_samples_to_path(wave_renderer_internal_t *renderer, size_t 
 		size_t coord_count = sample_count;
 		while (coord_count > 0 && renderer->state.rendered_samples < renderer->state.max_rendered_samples)
 		{
-			*coord_ptr++ = renderer->definition.x + renderer->state.rendered_samples;
+			*coord_ptr++ = renderer->state.rendered_samples;
 			*coord_ptr++ = CALC_Y_COORD(renderer, *sample_ptr);
 
 			sample_ptr += CHANNELS_PER_SAMPLE;
@@ -117,10 +117,10 @@ static size_t render_silence_to_path(wave_renderer_internal_t *renderer, size_t 
 	{
 		VGshort segment_coords[4];
 		rendered_samples = MIN(sample_count, renderer->state.max_rendered_samples - renderer->state.rendered_samples);
-		segment_coords[0] = renderer->definition.x + renderer->state.rendered_samples;
+		segment_coords[0] = renderer->state.rendered_samples;
 		segment_coords[1] = CALC_Y_COORD(renderer, renderer->state.last_sample);
 		segment_coords[2] = CALC_Y_COORD(renderer, 0);
-        segment_coords[3] = renderer->definition.x + renderer->state.rendered_samples + rendered_samples;
+        segment_coords[3] = renderer->state.rendered_samples + rendered_samples;
 		vgAppendPathData(path, 3, horiz_segment_commands, segment_coords);
 		VG_ERROR_CHECK("vgAppendPathData - silence");
 
@@ -170,9 +170,11 @@ static void update_display(wave_renderer_internal_t *renderer)
 	vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
 	vgLoadIdentity();
 	vgSetfv(VG_CLEAR_COLOR, 4, renderer->definition.background_colour);
-	vgClear(renderer->definition.x, renderer->definition.y - renderer->state.half_height,
+	vgSetiv(VG_SCISSOR_RECTS, 4, &renderer->definition.x);
+	vgSeti(VG_SCISSORING, VG_TRUE);
+	vgClear(renderer->definition.x, renderer->definition.y,
 			renderer->definition.width + 1, renderer->definition.height);
-
+	vgTranslate(renderer->definition.x, renderer->definition.y + renderer->state.half_height);
 	vgSetf(VG_STROKE_LINE_WIDTH, renderer->definition.line_width);
 	vgSeti(VG_STROKE_CAP_STYLE, renderer->definition.line_cap_style);
 	vgSeti(VG_STROKE_JOIN_STYLE, renderer->definition.line_join_style);
@@ -180,6 +182,7 @@ static void update_display(wave_renderer_internal_t *renderer)
 	vgSeti(VG_RENDERING_QUALITY, renderer->definition.rendering_quality);
 	vgDrawPath(path, VG_STROKE_PATH);
 	VG_ERROR_CHECK("vgDrawPath");
+	vgSeti(VG_SCISSORING, VG_FALSE);
 	vgClearPath(path, VG_PATH_CAPABILITY_APPEND_TO);
 	VG_ERROR_CHECK("vgClearPath");
 }
@@ -263,8 +266,8 @@ void gfx_wave_render_wavelength(wave_renderer_t *renderer, int32_t wavelength_sa
 		if (wavelength_samples_fx < wave_max_samples_fx)
 		{
 			// Wavelength count is result of a truncation so rendering does not overflow maximum area
-			int64_t wavelengths_count = (((wave_max_samples_fx << FIXED_PRECISION) / (int64_t)wavelength_samples_fx)) >> FIXED_PRECISION;
-			int samples_count = ((wavelengths_count * (int64_t)wavelength_samples_fx) + FIXED_HALF) >> FIXED_PRECISION;
+			int64_t wavelengths_count = ((wave_max_samples_fx << FIXED_PRECISION) / (int64_t)wavelength_samples_fx) + FIXED_ONE;
+			int samples_count = (((wavelengths_count * (int64_t)wavelength_samples_fx) >> FIXED_PRECISION) + FIXED_HALF) >> FIXED_PRECISION;
 			renderer_int->state.max_rendered_samples = samples_count;
 		}
 		else
