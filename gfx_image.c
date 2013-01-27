@@ -144,7 +144,12 @@ static int read_png_file(char* file_name, image_renderer_state_t *image_state)
 	}
 
 	image_state->row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * image_state->image_height);
-	png_uint_32 row_bytes = png_get_rowbytes(image_state->png_ptr, image_state->info_ptr) + image_state->image_width;
+	png_uint_32 row_bytes = png_get_rowbytes(image_state->png_ptr, image_state->info_ptr);
+	if (image_state->info_ptr->channels == 3)
+	{
+		row_bytes += image_state->image_width;
+	}
+
 	image_state->image_ptr = (png_byte*) malloc(row_bytes * image_state->image_height);
 	for (int y = 0; y < image_state->image_height; y++)
 		image_state->row_pointers[image_state->image_height - y - 1] = image_state->image_ptr + y * row_bytes;
@@ -167,18 +172,25 @@ static void create_image(image_renderer_internal_t *renderer)
 
 			for (int x = state->image_width - 1; x >= 0; x--)
 			{
-				// Pi is little endian - so memory order is ABGR. Source data is RGB in memory order.
+				// Pi is little endian - source data is RGB in memory order, but when treated as pixels is reversed.
 				// Written in reverse order to avoid overwrites.
-				row_ptr[x*4 + 3] = row_ptr[x*3 + 0];
-				row_ptr[x*4 + 2] = row_ptr[x*3 + 1];
-				row_ptr[x*4 + 1] = row_ptr[x*3 + 2];
-				row_ptr[x*4 + 0] = 255;
+				row_ptr[x*4 + 3] = 255;
+				row_ptr[x*4 + 2] = row_ptr[x*3 + 2];
+				row_ptr[x*4 + 1] = row_ptr[x*3 + 1];
+				row_ptr[x*4 + 0] = row_ptr[x*3 + 0];
 			}
 		}
 
 		state->image_handle = vgCreateImage(VG_sRGB_565, state->image_width, state->image_height, VG_IMAGE_QUALITY_FASTER);
 		VG_ERROR_CHECK("vgCreateImage");
-		vgImageSubData(state->image_handle, state->image_ptr, state->image_width * 4, VG_sRGBA_8888, 0, 0, state->image_width, state->image_height);
+		vgImageSubData(state->image_handle, state->image_ptr, state->image_width * 4, VG_sABGR_8888, 0, 0, state->image_width, state->image_height);
+		VG_ERROR_CHECK("vgImageSubData");
+	}
+	else if (state->info_ptr->channels == 4 && state->info_ptr->bit_depth == 8 && state->info_ptr->color_type == PNG_COLOR_TYPE_RGB_ALPHA)
+	{
+		state->image_handle = vgCreateImage(VG_sRGBA_5551, state->image_width, state->image_height, VG_IMAGE_QUALITY_FASTER);
+		VG_ERROR_CHECK("vgCreateImage");
+		vgImageSubData(state->image_handle, state->image_ptr, state->image_width * 4, VG_sABGR_8888, 0, 0, state->image_width, state->image_height);
 		VG_ERROR_CHECK("vgImageSubData");
 	}
 }

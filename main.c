@@ -351,7 +351,7 @@ void create_ui()
 	image_renderer->y = 0;
 	image_renderer->width = 157;
 	image_renderer->height = 140;
-	image_renderer->image_file = "resources/pithesiser_logo.png";
+	image_renderer->image_file = "resources/pithesiser_alpha.png";
 }
 
 void tune_oscilloscope_to_note(int note)
