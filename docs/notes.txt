@@ -132,6 +132,8 @@ Useful info:
 * Filters:
   * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=185
   * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=29
+  * http://zynaddsubfx.git.sourceforge.net/git/gitweb.cgi?p=zynaddsubfx/zynaddsubfx;a=tree;f=src/DSP;h=2e55bb52e4b767825394789fcdd55a87f705c925;hb=HEAD
+  * https://ccrma.stanford.edu/~jos/filters/Elementary_Filter_Sections.html
 * Noise generation:
   * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=216
   * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=217
