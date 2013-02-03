@@ -10,6 +10,7 @@
 
 #include <sys/types.h>
 #include "VG/openvg.h"
+#include "system_constants.h"
 #include "gfx_object.h"
 
 typedef struct wave_renderer_t
@@ -31,7 +32,7 @@ extern void gfx_wave_render_initialise();
 extern void gfx_wave_render_deinitialise();
 
 extern wave_renderer_t *gfx_wave_renderer_create(object_id_t id);
-extern void gfx_wave_render_wavelength(wave_renderer_t *renderer, int32_t wavelength_samples);
+extern void gfx_wave_render_wavelength(wave_renderer_t *renderer, fixed_t wavelength_samples);
 extern void gfx_wave_renderer_destroy(wave_renderer_t *waveform_renderer);
 
 #endif /* GFX_WAVE_RENDER_H_ */

@@ -30,15 +30,15 @@ typedef struct
 
 extern waveform_generator_t generators[];
 
-#define SCALE_AMPLITUDE(osc, sample)				sample = (sample * osc->level) / SHRT_MAX;
+#define SCALE_AMPLITUDE(osc, sample)				sample = (sample * osc->level) / SAMPLE_MAX;
 
 #define MIX(original, sample, mixed)				int32_t mixed = original + sample;	\
 													mixed = (mixed * 75) / 100;			\
-													if (mixed < -SHRT_MAX)				\
-														mixed = -SHRT_MAX;				\
-													else if (mixed > SHRT_MAX)			\
-														mixed = SHRT_MAX;
+													if (mixed < -SAMPLE_MAX)				\
+														mixed = -SAMPLE_MAX;				\
+													else if (mixed > SAMPLE_MAX)			\
+														mixed = SAMPLE_MAX;
 
-#define STORE_SAMPLE(sample, sample_ptr)			*sample_ptr++ = (int16_t)sample; *sample_ptr++ = (int16_t)sample
+#define STORE_SAMPLE(sample, sample_ptr)			*sample_ptr++ = (sample_t)sample; *sample_ptr++ = (sample_t)sample
 
 #endif /* WAVEFORM_INTERNAL_H_ */

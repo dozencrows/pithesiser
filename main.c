@@ -18,6 +18,7 @@
 #include "waveform.h"
 #include "oscillator.h"
 #include "envelope.h"
+#include "filter.h"
 #include "gfx.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
@@ -50,6 +51,13 @@
 #define LFO_STATE_VOLUME		1
 #define LFO_STATE_PITCH			2
 #define LFO_STATE_LAST			LFO_STATE_PITCH
+
+#define FILTER_STATE_OFF		FILTER_PASS
+#define FILTER_STATE_LAST		FILTER_HPF
+#define FILTER_MIN_FREQUENCY	(FIXED_ONE / 10)
+#define FILTER_MAX_FREQUENCY	(4186 * FIXED_ONE)
+#define FILTER_MIN_Q			(FIXED_ONE / 100)
+#define FILTER_MAX_Q			(FIXED_ONE)
 
 typedef struct
 {
@@ -96,14 +104,16 @@ waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;
 oscillator_t lf_oscillator;
 int lfo_state;
 
+filter_t global_filter;
+
 void process_audio(int32_t timestep_ms)
 {
 	int write_buffer_index = alsa_lock_next_write_buffer();
 	void* buffer_data;
 	int buffer_samples;
 	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
-	size_t buffer_bytes = buffer_samples * sizeof(int16_t) * 2;
-	int16_t lfo_value = 0;
+	size_t buffer_bytes = buffer_samples * sizeof(sample_t) * 2;
+	sample_t lfo_value = 0;
 
 	if (lfo_state)
 	{
@@ -136,7 +146,7 @@ void process_audio(int32_t timestep_ms)
 			int32_t envelope_level = envelope_step(&voice[i].envelope_instance, timestep_ms);
 			int32_t note_level = (NOTE_LEVEL * envelope_level) / ENVELOPE_LEVEL_MAX;
 
-			int32_t base_frequency = oscillator[i].frequency;
+			fixed_t base_frequency = oscillator[i].frequency;
 
 			if (lfo_state == LFO_STATE_VOLUME)
 			{
@@ -173,6 +183,8 @@ void process_audio(int32_t timestep_ms)
 			}
 		}
 	}
+
+	filter_apply(&global_filter, buffer_samples, buffer_data);
 
 	if (first_audible_voice < 0)
 	{
@@ -224,6 +236,10 @@ void process_audio(int32_t timestep_ms)
 #define ENVELOPE_DECAY_DURATION_SCALE	10
 #define ENVELOPE_SUSTAIN_DURATION_SCALE	10
 #define ENVELOPE_RELEASE_DURATION_SCALE	10
+
+#define FILTER_TOGGLE				0x1c	// upper switch 6
+#define FILTER_FREQUENCY			0x13	// dial 6
+#define FILTER_Q					0x08	// slider 6
 
 void process_midi_events()
 {
@@ -362,7 +378,7 @@ void tune_oscilloscope_to_note(int note)
 
 void destroy_ui()
 {
-	gfx_image_renderer_create(image_renderer);
+	gfx_image_renderer_destroy(image_renderer);
 	gfx_envelope_renderer_destroy(envelope_renderer);
 	gfx_wave_renderer_destroy(waveform_renderer);
 }
@@ -481,6 +497,40 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_FREQUENCY);
 		lf_oscillator.frequency = LFO_MIN_FREQUENCY + ((LFO_MAX_FREQUENCY - LFO_MIN_FREQUENCY) * value) / MIDI_MAX_CONTROLLER_VALUE;
 	}
+
+	int filter_changed = 0;
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, FILTER_TOGGLE))
+	{
+		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, FILTER_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
+		{
+			global_filter.definition.type++;;
+			if (global_filter.definition.type > FILTER_STATE_LAST)
+			{
+				global_filter.definition.type = FILTER_STATE_OFF;
+			}
+			filter_changed++;
+		}
+	}
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, FILTER_FREQUENCY))
+	{
+		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, FILTER_FREQUENCY);
+		global_filter.definition.frequency = FILTER_MIN_FREQUENCY + ((FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY) * value) / MIDI_MAX_CONTROLLER_VALUE;
+		filter_changed++;
+	}
+
+	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, FILTER_Q))
+	{
+		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, FILTER_Q);
+		global_filter.definition.q = FILTER_MIN_Q + ((FILTER_MAX_Q - FILTER_MIN_Q) * value) / MIDI_MAX_CONTROLLER_VALUE;
+		filter_changed++;
+	}
+
+	if (filter_changed)
+	{
+		filter_update(&global_filter);
+	}
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -521,6 +571,12 @@ int main(int argc, char **argv)
 	lf_oscillator.frequency = 1 * FIXED_ONE;
 	lf_oscillator.level = SHRT_MAX;
 	lfo_state = 0;
+
+	filter_init(&global_filter);
+	global_filter.definition.type = FILTER_PASS;
+	global_filter.definition.frequency = FILTER_MIN_FREQUENCY;
+	global_filter.definition.q = FIXED_HALF;
+	filter_update(&global_filter);
 
 	int profiling = 0;
 

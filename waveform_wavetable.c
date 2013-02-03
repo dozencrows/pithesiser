@@ -17,11 +17,11 @@
 
 typedef struct
 {
-	int		sample_count;
-	int		frequency;
-	int32_t	phase_limit;
-	int16_t	*samples;
-	int16_t	*linear_deltas;
+	int			sample_count;
+	int			frequency;
+	fixed_t		phase_limit;
+	sample_t	*samples;
+	sample_t	*linear_deltas;
 } waveform_t;
 
 static int wavetable_initialised = 0;
@@ -29,7 +29,7 @@ static waveform_t sine_wave;
 static waveform_t saw_wave;
 static waveform_t saw_wave_bandlimited;
 
-#define WT_CALC_PHASE_STEP(phase_step, osc, waveform) 	int32_t phase_step = osc->frequency / (int32_t)waveform->frequency;
+#define WT_CALC_PHASE_STEP(phase_step, osc, waveform) 	fixed_t phase_step = osc->frequency / (fixed_t)waveform->frequency;
 
 #define WT_GET_SAMPLE(osc, sample) 		   			int wave_index = osc->phase_accumulator >> FIXED_PRECISION; \
 													int32_t sample = waveform->samples[wave_index]
@@ -47,7 +47,7 @@ static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* 
 	if (waveform != NULL)
 	{
 		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
-		int16_t *sample_ptr = (int16_t*) sample_data;
+		sample_t *sample_ptr = (sample_t*) sample_data;
 
 		while (sample_count > 0)
 		{
@@ -71,7 +71,7 @@ static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator
 	if (waveform != NULL)
 	{
 		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
-		int16_t *sample_ptr = (int16_t*) sample_data;
+		sample_t *sample_ptr = (sample_t*) sample_data;
 
 		while (sample_count > 0)
 		{

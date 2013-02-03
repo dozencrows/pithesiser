@@ -34,10 +34,6 @@ typedef struct waveform_renderer_internal_t
 	wave_renderer_state_t state;
 } wave_renderer_internal_t;
 
-#define BYTES_PER_CHANNEL	(sizeof(int16_t))
-#define CHANNELS_PER_SAMPLE	2
-#define BYTES_PER_SAMPLE	(BYTES_PER_CHANNEL * CHANNELS_PER_SAMPLE)
-
 #define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) printf("VG Error: %d (%s)\n", error, s); }
 
 #define CALC_Y_COORD(renderer, sample)	(sample / renderer->definition.amplitude_scale)
@@ -89,7 +85,7 @@ static size_t render_samples_to_path(wave_renderer_internal_t *renderer, size_t 
 	if (renderer->state.rendered_samples < renderer->state.max_rendered_samples)
 	{
 		VGshort *coord_ptr = sample_segment_coords;
-		int16_t *sample_ptr = sample_data;
+		sample_t *sample_ptr = sample_data;
 		size_t coord_count = sample_count;
 		while (coord_count > 0 && renderer->state.rendered_samples < renderer->state.max_rendered_samples)
 		{
@@ -131,7 +127,7 @@ static size_t render_silence_to_path(wave_renderer_internal_t *renderer, size_t 
 	return rendered_samples;
 }
 
-static size_t render_to_path(wave_renderer_internal_t *renderer, size_t sample_count, int16_t *sample_data, size_t sample_offset, VGPath path)
+static size_t render_to_path(wave_renderer_internal_t *renderer, size_t sample_count, sample_t *sample_data, size_t sample_offset, VGPath path)
 {
 	if (sample_data != NULL)
 	{
@@ -143,7 +139,7 @@ static size_t render_to_path(wave_renderer_internal_t *renderer, size_t sample_c
 	}
 }
 
-static void render_waveform_data(wave_renderer_internal_t *renderer, size_t sample_count, int16_t *sample_data)
+static void render_waveform_data(wave_renderer_internal_t *renderer, size_t sample_count, sample_t *sample_data)
 {
 	VGPath path = renderer->state.path[renderer->state.render_path];
 	size_t rendered_samples = render_to_path(renderer, sample_count, sample_data, 0, path);
@@ -192,7 +188,7 @@ static void update_display(wave_renderer_internal_t *renderer)
 //
 static void vector_wave_event_handler(gfx_event_t *event, gfx_object_t *receiver)
 {
-	render_waveform_data((wave_renderer_internal_t*)receiver, event->size / BYTES_PER_SAMPLE, (int16_t*)event->ptr);
+	render_waveform_data((wave_renderer_internal_t*)receiver, event->size / BYTES_PER_SAMPLE, (sample_t*)event->ptr);
 	free(event->ptr);
 }
 
@@ -250,7 +246,7 @@ wave_renderer_t *gfx_wave_renderer_create(object_id_t id)
 	return (wave_renderer_t*)renderer;
 }
 
-void gfx_wave_render_wavelength(wave_renderer_t *renderer, int32_t wavelength_samples_fx)
+void gfx_wave_render_wavelength(wave_renderer_t *renderer, fixed_t wavelength_samples_fx)
 {
 	wave_renderer_internal_t *renderer_int = (wave_renderer_internal_t*)renderer;
 
