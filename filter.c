@@ -9,6 +9,12 @@
 #include <memory.h>
 #include <math.h>
 
+//#define FLOAT_FILTER
+
+#if !defined(FLOAT_FILTER)
+#include "fixed_point_math.h"
+#endif
+
 static void clear_history(filter_t *filter)
 {
 	memset(filter->state.history, 0, sizeof(filter->state.history));
@@ -24,22 +30,23 @@ void filter_init(filter_t *filter)
 
 void filter_update(filter_t *filter)
 {
-	float frequency	= (float)filter->definition.frequency/(float)FIXED_ONE;
-	float q = (float)filter->definition.q/(float)FIXED_ONE;
+#if defined(FLOAT_FILTER)
+	double frequency	= (double)filter->definition.frequency/(double)FIXED_ONE;
+	double q = (double)filter->definition.q/(double)FIXED_ONE;
 
-	float w0 = 2.0f * M_PI * frequency / (float)SYSTEM_SAMPLE_RATE;
-	float cos_w0	= cosf(w0);
-	float sin_w0	= sinf(w0);
-	float alpha		= sin_w0 / (q + q);
+	double w0 = 2.0f * M_PI * frequency / (double)SYSTEM_SAMPLE_RATE;
+	double cos_w0	= cos(w0);
+	double sin_w0	= sin(w0);
+	double alpha	= sin_w0 / (q + q);
 
-	float a[3];
-	float b[3];
+	double a[3];
+	double b[3];
 
 	switch(filter->definition.type)
 	{
 		case FILTER_LPF:
 		{
-			float tmp = 1.0f - cos_w0;
+			double tmp = 1.0f - cos_w0;
 			b[0] = tmp * 0.5f;
 			b[1] = tmp;
 			b[2] = tmp * 0.5f;
@@ -52,7 +59,7 @@ void filter_update(filter_t *filter)
 
 		case FILTER_HPF:
 		{
-			float tmp = 1.0f + cos_w0;
+			double tmp = 1.0f + cos_w0;
 			b[0] = tmp * 0.5f;
 			b[1] = -tmp;
 			b[2] = tmp * 0.5f;
@@ -72,13 +79,69 @@ void filter_update(filter_t *filter)
 		}
 	}
 
-	filter->state.input_coeff[0] = (fixed_wide_t)((b[0] / a[0]) * (float)FIXED_ONE);
-	filter->state.input_coeff[1] = (fixed_wide_t)((b[1] / a[0]) * (float)FIXED_ONE);
-	filter->state.input_coeff[2] = (fixed_wide_t)((b[2] / a[0]) * (float)FIXED_ONE);
+	filter->state.input_coeff[0] = (fixed_wide_t)((b[0] / a[0]) * (double)FIXED_ONE);
+	filter->state.input_coeff[1] = (fixed_wide_t)((b[1] / a[0]) * (double)FIXED_ONE);
+	filter->state.input_coeff[2] = (fixed_wide_t)((b[2] / a[0]) * (double)FIXED_ONE);
 
-	filter->state.output_coeff[0] = (fixed_wide_t)((a[1] / a[0]) * (float)FIXED_ONE);
-	filter->state.output_coeff[1] = (fixed_wide_t)((a[2] / a[0]) * (float)FIXED_ONE);
+	filter->state.output_coeff[0] = (fixed_wide_t)((a[1] / a[0]) * (double)FIXED_ONE);
+	filter->state.output_coeff[1] = (fixed_wide_t)((a[2] / a[0]) * (double)FIXED_ONE);
+#else
+	fixed_wide_t w0 = (((fixed_wide_t)(FIXED_PI) * (fixed_wide_t)filter->definition.frequency)) >> FIXED_PRECISION;
+	w0 = (2 * w0) / (fixed_wide_t)SYSTEM_SAMPLE_RATE;
+	fixed_t cos_w0, sin_w0;
 
+	fixed_sin_cos((fixed_t)w0, &sin_w0, &cos_w0);
+
+	fixed_t alpha	= ((fixed_wide_t)sin_w0 << FIXED_PRECISION) / ((fixed_wide_t)(filter->definition.q) * 2);
+
+	fixed_wide_t a[3];
+	fixed_wide_t b[3];
+
+	switch(filter->definition.type)
+	{
+		case FILTER_LPF:
+		{
+			fixed_wide_t tmp = FIXED_ONE - cos_w0;
+			b[0] = tmp >> 1;
+			b[1] = tmp;
+			b[2] = tmp >> 1;
+
+			a[0] = FIXED_ONE + alpha;
+			a[1] = -2 * (fixed_wide_t) cos_w0;
+			a[2] = FIXED_ONE - alpha;
+			break;
+		}
+
+		case FILTER_HPF:
+		{
+			fixed_wide_t tmp = FIXED_ONE + cos_w0;
+			b[0] = tmp >> 1;
+			b[1] = -tmp;
+			b[2] = tmp >> 1;
+
+			a[0] = FIXED_ONE + alpha;
+			a[1] = -2 * (fixed_wide_t) cos_w0;
+			a[2] = FIXED_ONE - alpha;
+			break;
+		}
+
+		default:
+		{
+			b[0] = a[0] = FIXED_ONE;
+			a[1] = a[2] = 0;
+			b[1] = b[2] = 0;
+			break;
+		}
+	}
+
+
+	filter->state.input_coeff[0] = (b[0] << FIXED_PRECISION) / a[0];
+	filter->state.input_coeff[1] = (b[1] << FIXED_PRECISION) / a[0];
+	filter->state.input_coeff[2] = (b[2] << FIXED_PRECISION) / a[0];
+
+	filter->state.output_coeff[0] = (a[1] << FIXED_PRECISION)/ a[0];
+	filter->state.output_coeff[1] = (a[2] << FIXED_PRECISION)/ a[0];
+#endif
 	clear_history(filter);
 }
 

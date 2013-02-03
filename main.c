@@ -516,7 +516,8 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, FILTER_FREQUENCY))
 	{
 		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, FILTER_FREQUENCY);
-		global_filter.definition.frequency = FILTER_MIN_FREQUENCY + ((FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY) * value) / MIDI_MAX_CONTROLLER_VALUE;
+		fixed_wide_t frequency_offset = ((fixed_wide_t)(FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY) * (fixed_wide_t)value) / (fixed_wide_t)MIDI_MAX_CONTROLLER_VALUE;
+		global_filter.definition.frequency = FILTER_MIN_FREQUENCY + frequency_offset;
 		filter_changed++;
 	}
 
@@ -574,7 +575,7 @@ int main(int argc, char **argv)
 
 	filter_init(&global_filter);
 	global_filter.definition.type = FILTER_PASS;
-	global_filter.definition.frequency = FILTER_MIN_FREQUENCY;
+	global_filter.definition.frequency = midi_get_note_frequency(81);
 	global_filter.definition.q = FIXED_HALF;
 	filter_update(&global_filter);
 
