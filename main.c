@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#include <libconfig.h>
 #include <gperftools/profiler.h>
 #include "system_constants.h"
 #include "alsa.h"
@@ -30,10 +31,11 @@
 //-----------------------------------------------------------------------------------------------------------------------
 // Commons
 //
-#define MIDI_CONTROL_CHANNEL	0
 #define WAVE_RENDERER_ID		1
 #define ENVELOPE_RENDERER_ID	2
 #define IMAGE_RENDERER_ID		3
+
+config_t app_config;
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Audio processing
@@ -62,10 +64,6 @@
 typedef struct
 {
 	int	midi_channel;
-	int pitch_controller;
-	int wave_controller;
-	int trigger_controller;
-	int level_controller;
 	int last_note;
 	int current_note;
 	int play_counter;
@@ -75,14 +73,14 @@ typedef struct
 #define VOICE_COUNT	8
 voice_t voice[VOICE_COUNT] =
 {
-	{ MIDI_CONTROL_CHANNEL, 0x0e, 0x21, 0x17, 0x02, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ MIDI_CONTROL_CHANNEL, 0x0f, 0x22, 0x18, 0x03, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ MIDI_CONTROL_CHANNEL, 0x10, 0x23, 0x19, 0x04, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ MIDI_CONTROL_CHANNEL, 0x11, 0x24, 0x1a, 0x05, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ MIDI_CONTROL_CHANNEL, 0x0e, 0x21, 0x17, 0x02, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ MIDI_CONTROL_CHANNEL, 0x0f, 0x22, 0x18, 0x03, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ MIDI_CONTROL_CHANNEL, 0x10, 0x23, 0x19, 0x04, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ MIDI_CONTROL_CHANNEL, 0x11, 0x24, 0x1a, 0x05, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
+	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
 };
 
 oscillator_t oscillator[VOICE_COUNT];
@@ -105,6 +103,22 @@ oscillator_t lf_oscillator;
 int lfo_state;
 
 filter_t global_filter;
+
+void configure_audio()
+{
+	const char *setting_devices_audio_output = NULL;
+
+	if (config_lookup_string(&app_config, "devices.audio.output", &setting_devices_audio_output) != CONFIG_TRUE)
+	{
+		printf("Missing audio output device in config\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (alsa_initialise(setting_devices_audio_output, 128) < 0)
+	{
+		exit(EXIT_FAILURE);
+	}
+}
 
 void process_audio(int32_t timestep_ms)
 {
@@ -214,11 +228,13 @@ void process_audio(int32_t timestep_ms)
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
-// Controller processing
+// Midi processing
 //
+#define WAVE_CONTROLLER			0x21
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
 #define OSCILLOSCOPE_CONTROLLER	0x0e
+#define VOLUME_CONTROLLER		0x02
 
 #define ENVELOPE_ATTACK_LEVEL_CTRL	0x03	// slider 2
 #define ENVELOPE_ATTACK_TIME_CTRL	0x0f	// dial 2
@@ -240,6 +256,48 @@ void process_audio(int32_t timestep_ms)
 #define FILTER_TOGGLE				0x1c	// upper switch 6
 #define FILTER_FREQUENCY			0x13	// dial 6
 #define FILTER_Q					0x08	// slider 6
+
+int controller_channel = 0;
+
+void configure_midi()
+{
+	int note_channel = 0;
+
+	config_lookup_int(&app_config, "devices.midi.controller_channel", &controller_channel);
+	config_lookup_int(&app_config, "devices.midi.note_channel", &note_channel);
+
+	for (int i = 0 ; i < VOICE_COUNT; i++)
+	{
+		voice[i].midi_channel = note_channel;
+	}
+
+	config_setting_t *setting_devices_midi_input = config_lookup(&app_config, "devices.midi.input");
+
+	if (setting_devices_midi_input == NULL)
+	{
+		printf("Missing midi input devices in config\n");
+		exit(EXIT_FAILURE);
+	}
+
+	const char* midi_device_names[MAX_MIDI_DEVICES];
+	int midi_device_count = config_setting_length(setting_devices_midi_input);
+
+	if (midi_device_count < 0 || midi_device_count > MAX_MIDI_DEVICES)
+	{
+		printf("Invalid number of midi devices %d - should be between 1 and %d\n", midi_device_count, MAX_MIDI_DEVICES);
+		exit(EXIT_FAILURE);
+	}
+
+	for (int i = 0; i < midi_device_count; i++)
+	{
+		midi_device_names[i] = config_setting_get_string_elem(setting_devices_midi_input, i);
+	}
+
+	if (midi_initialise(midi_device_count, midi_device_names) < 0)
+	{
+		exit(EXIT_FAILURE);
+	}
+}
 
 void process_midi_events()
 {
@@ -291,12 +349,17 @@ void process_midi_events()
 			}
 		}
 	}
+}
 
-	master_level = (float) midi_get_controller_value(voice[0].midi_channel, voice[0].level_controller) / MIDI_MAX_CONTROLLER_VALUE;
+extern void tune_oscilloscope_to_note(int note);
 
-	if (midi_get_controller_changed(voice[0].midi_channel, voice[0].wave_controller))
+void process_midi_controllers()
+{
+	master_level = (float) midi_get_controller_value(controller_channel, VOLUME_CONTROLLER) / MIDI_MAX_CONTROLLER_VALUE;
+
+	if (midi_get_controller_changed(controller_channel, WAVE_CONTROLLER))
 	{
-		if (midi_get_controller_value(voice[0].midi_channel, voice[0].wave_controller) > 63)
+		if (midi_get_controller_value(controller_channel, WAVE_CONTROLLER) > 63)
 		{
 			master_waveform++;
 			if (master_waveform > WAVE_LAST_AUDIBLE)
@@ -304,6 +367,151 @@ void process_midi_events()
 				master_waveform = WAVE_FIRST_AUDIBLE;
 			}
 		}
+	}
+
+	static int last_note = -1;
+	int oscilloscope_tuned_note = midi_get_controller_value(controller_channel, OSCILLOSCOPE_CONTROLLER);
+	if (last_note != oscilloscope_tuned_note)
+	{
+		last_note = oscilloscope_tuned_note;
+		tune_oscilloscope_to_note(last_note);
+	}
+
+	int envelope_updated = 0;
+
+	// Suggested data driven model:
+	//	Parameters: controller id, value calculation func & params, destination values.
+	if (midi_get_controller_changed(controller_channel, ENVELOPE_ATTACK_LEVEL_CTRL))
+	{
+		int value = midi_get_controller_value(controller_channel, ENVELOPE_ATTACK_LEVEL_CTRL);
+		int32_t envelope_level = (ENVELOPE_LEVEL_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
+		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = envelope_level;
+		envelope.stages[ENVELOPE_STAGE_DECAY].start_level = envelope_level;
+		envelope_updated = 1;
+	}
+
+	if (midi_get_controller_changed(controller_channel, ENVELOPE_ATTACK_TIME_CTRL))
+	{
+		int value = midi_get_controller_value(controller_channel, ENVELOPE_ATTACK_TIME_CTRL);
+		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = value * ENVELOPE_ATTACK_DURATION_SCALE;
+		envelope_updated = 1;
+	}
+
+	if (midi_get_controller_changed(controller_channel, ENVELOPE_DECAY_LEVEL_CTRL))
+	{
+		int value = midi_get_controller_value(controller_channel, ENVELOPE_DECAY_LEVEL_CTRL);
+		int32_t envelope_level = (ENVELOPE_LEVEL_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
+		envelope.stages[ENVELOPE_STAGE_DECAY].end_level = envelope_level;
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].start_level = envelope_level;
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].end_level = envelope_level;
+		envelope_updated = 1;
+	}
+
+	if (midi_get_controller_changed(controller_channel, ENVELOPE_DECAY_TIME_CTRL))
+	{
+		int value = midi_get_controller_value(controller_channel, ENVELOPE_DECAY_TIME_CTRL);
+		envelope.stages[ENVELOPE_STAGE_DECAY].duration = value * ENVELOPE_DECAY_DURATION_SCALE;
+		envelope_updated = 1;
+	}
+
+	if (midi_get_controller_changed(controller_channel, ENVELOPE_SUSTAIN_TIME_CTRL))
+	{
+		int value = midi_get_controller_value(controller_channel, ENVELOPE_SUSTAIN_TIME_CTRL);
+		if (value < MIDI_MAX_CONTROLLER_VALUE)
+		{
+			envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = value * ENVELOPE_SUSTAIN_DURATION_SCALE;
+		}
+		else
+		{
+			envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = DURATION_HELD;
+		}
+		envelope_updated = 1;
+	}
+
+	if (midi_get_controller_changed(controller_channel, ENVELOPE_RELEASE_TIME_CTRL))
+	{
+		int value = midi_get_controller_value(controller_channel, ENVELOPE_RELEASE_TIME_CTRL);
+		envelope.stages[ENVELOPE_STAGE_RELEASE].duration = value * ENVELOPE_RELEASE_DURATION_SCALE;
+		envelope_updated = 1;
+	}
+
+	if (envelope_updated)
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
+		gfx_send_event(&gfx_event);
+	}
+
+	if (midi_get_controller_changed(controller_channel, LFO_TOGGLE))
+	{
+		if (midi_get_controller_value(controller_channel, LFO_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
+		{
+			lfo_state++;
+			if (lfo_state > LFO_STATE_LAST)
+			{
+				lfo_state = LFO_STATE_OFF;
+			}
+		}
+	}
+
+	if (midi_get_controller_changed(controller_channel, LFO_WAVEFORM))
+	{
+		if (midi_get_controller_value(controller_channel, LFO_WAVEFORM) > MIDI_MID_CONTROLLER_VALUE)
+		{
+			lf_oscillator.waveform++;
+			if (lf_oscillator.waveform > WAVE_LAST_LFO)
+			{
+				lf_oscillator.waveform = WAVE_FIRST_LFO;
+			}
+		}
+	}
+
+	if (midi_get_controller_changed(controller_channel, LFO_LEVEL))
+	{
+		int value = midi_get_controller_value(controller_channel, LFO_LEVEL);
+		lf_oscillator.level = (SHRT_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
+	}
+
+	if (midi_get_controller_changed(controller_channel, LFO_FREQUENCY))
+	{
+		int value = midi_get_controller_value(controller_channel, LFO_FREQUENCY);
+		lf_oscillator.frequency = LFO_MIN_FREQUENCY + ((LFO_MAX_FREQUENCY - LFO_MIN_FREQUENCY) * value) / MIDI_MAX_CONTROLLER_VALUE;
+	}
+
+	int filter_changed = 0;
+
+	if (midi_get_controller_changed(controller_channel, FILTER_TOGGLE))
+	{
+		if (midi_get_controller_value(controller_channel, FILTER_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
+		{
+			global_filter.definition.type++;;
+			if (global_filter.definition.type > FILTER_STATE_LAST)
+			{
+				global_filter.definition.type = FILTER_STATE_OFF;
+			}
+			filter_changed++;
+		}
+	}
+
+	if (midi_get_controller_changed(controller_channel, FILTER_FREQUENCY))
+	{
+		int value = midi_get_controller_value(controller_channel, FILTER_FREQUENCY);
+		fixed_wide_t frequency_offset = ((fixed_wide_t)(FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY) * (fixed_wide_t)value) / (fixed_wide_t)MIDI_MAX_CONTROLLER_VALUE;
+		global_filter.definition.frequency = FILTER_MIN_FREQUENCY + frequency_offset;
+		filter_changed++;
+	}
+
+	if (midi_get_controller_changed(controller_channel, FILTER_Q))
+	{
+		int value = midi_get_controller_value(controller_channel, FILTER_Q);
+		global_filter.definition.q = FILTER_MIN_Q + ((FILTER_MAX_Q - FILTER_MIN_Q) * value) / MIDI_MAX_CONTROLLER_VALUE;
+		filter_changed++;
+	}
+
+	if (filter_changed)
+	{
+		filter_update(&global_filter);
 	}
 }
 
@@ -388,150 +596,7 @@ void destroy_ui()
 //
 void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 {
-	static int last_note = -1;
-	int oscilloscope_tuned_note = midi_get_controller_value(MIDI_CONTROL_CHANNEL, OSCILLOSCOPE_CONTROLLER);
-	if (last_note != oscilloscope_tuned_note)
-	{
-		last_note = oscilloscope_tuned_note;
-		tune_oscilloscope_to_note(last_note);
-	}
-
-	int envelope_updated = 0;
-
-	// Suggested data driven model:
-	//	Parameters: controller id, value calculation func & params, destination values.
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_LEVEL_CTRL))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_LEVEL_CTRL);
-		int32_t envelope_level = (ENVELOPE_LEVEL_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
-		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = envelope_level;
-		envelope.stages[ENVELOPE_STAGE_DECAY].start_level = envelope_level;
-		envelope_updated = 1;
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_TIME_CTRL))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_ATTACK_TIME_CTRL);
-		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = value * ENVELOPE_ATTACK_DURATION_SCALE;
-		envelope_updated = 1;
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_DECAY_LEVEL_CTRL))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_DECAY_LEVEL_CTRL);
-		int32_t envelope_level = (ENVELOPE_LEVEL_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
-		envelope.stages[ENVELOPE_STAGE_DECAY].end_level = envelope_level;
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].start_level = envelope_level;
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].end_level = envelope_level;
-		envelope_updated = 1;
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_DECAY_TIME_CTRL))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_DECAY_TIME_CTRL);
-		envelope.stages[ENVELOPE_STAGE_DECAY].duration = value * ENVELOPE_DECAY_DURATION_SCALE;
-		envelope_updated = 1;
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_SUSTAIN_TIME_CTRL))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_SUSTAIN_TIME_CTRL);
-		if (value < MIDI_MAX_CONTROLLER_VALUE)
-		{
-			envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = value * ENVELOPE_SUSTAIN_DURATION_SCALE;
-		}
-		else
-		{
-			envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = DURATION_HELD;
-		}
-		envelope_updated = 1;
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, ENVELOPE_RELEASE_TIME_CTRL))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, ENVELOPE_RELEASE_TIME_CTRL);
-		envelope.stages[ENVELOPE_STAGE_RELEASE].duration = value * ENVELOPE_RELEASE_DURATION_SCALE;
-		envelope_updated = 1;
-	}
-
-	if (envelope_updated)
-	{
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_REFRESH;
-		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
-		gfx_send_event(&gfx_event);
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_TOGGLE))
-	{
-		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
-		{
-			lfo_state++;
-			if (lfo_state > LFO_STATE_LAST)
-			{
-				lfo_state = LFO_STATE_OFF;
-			}
-		}
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_WAVEFORM))
-	{
-		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_WAVEFORM) > MIDI_MID_CONTROLLER_VALUE)
-		{
-			lf_oscillator.waveform++;
-			if (lf_oscillator.waveform > WAVE_LAST_LFO)
-			{
-				lf_oscillator.waveform = WAVE_FIRST_LFO;
-			}
-		}
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_LEVEL))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_LEVEL);
-		lf_oscillator.level = (SHRT_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, LFO_FREQUENCY))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, LFO_FREQUENCY);
-		lf_oscillator.frequency = LFO_MIN_FREQUENCY + ((LFO_MAX_FREQUENCY - LFO_MIN_FREQUENCY) * value) / MIDI_MAX_CONTROLLER_VALUE;
-	}
-
-	int filter_changed = 0;
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, FILTER_TOGGLE))
-	{
-		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, FILTER_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
-		{
-			global_filter.definition.type++;;
-			if (global_filter.definition.type > FILTER_STATE_LAST)
-			{
-				global_filter.definition.type = FILTER_STATE_OFF;
-			}
-			filter_changed++;
-		}
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, FILTER_FREQUENCY))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, FILTER_FREQUENCY);
-		fixed_wide_t frequency_offset = ((fixed_wide_t)(FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY) * (fixed_wide_t)value) / (fixed_wide_t)MIDI_MAX_CONTROLLER_VALUE;
-		global_filter.definition.frequency = FILTER_MIN_FREQUENCY + frequency_offset;
-		filter_changed++;
-	}
-
-	if (midi_get_controller_changed(MIDI_CONTROL_CHANNEL, FILTER_Q))
-	{
-		int value = midi_get_controller_value(MIDI_CONTROL_CHANNEL, FILTER_Q);
-		global_filter.definition.q = FILTER_MIN_Q + ((FILTER_MAX_Q - FILTER_MIN_Q) * value) / MIDI_MAX_CONTROLLER_VALUE;
-		filter_changed++;
-	}
-
-	if (filter_changed)
-	{
-		filter_update(&global_filter);
-	}
+	process_midi_controllers();
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -539,6 +604,14 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 //
 int main(int argc, char **argv)
 {
+	config_init(&app_config);
+	if (config_read_file(&app_config, "resources/synth.cfg") != CONFIG_TRUE)
+	{
+		printf("Config error in %s at line %d:\n", config_error_file(&app_config), config_error_line(&app_config));
+		printf("%s\n", config_error_text(&app_config));
+		exit(EXIT_FAILURE);
+	}
+
 	gfx_wave_render_initialise();
 	gfx_envelope_render_initialise();
 
@@ -547,15 +620,8 @@ int main(int argc, char **argv)
 	gfx_event_initialise();
 	gfx_initialise();
 
-	if (alsa_initialise("hw:1", 128) < 0)
-	{
-		exit(EXIT_FAILURE);
-	}
-
-	if (midi_initialise("/dev/midi2", "/dev/midi3") < 0)
-	{
-		exit(EXIT_FAILURE);
-	}
+	configure_audio();
+	configure_midi();
 
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
@@ -585,16 +651,16 @@ int main(int argc, char **argv)
 
 	while (1)
 	{
-		if (midi_get_controller_value(MIDI_CONTROL_CHANNEL, EXIT_CONTROLLER) > 63)
+		if (midi_get_controller_value(controller_channel, EXIT_CONTROLLER) > 63)
 		{
 			break;
 		}
 
 		process_midi_events();
 
-		if (!profiling && midi_get_controller_changed(MIDI_CONTROL_CHANNEL, PROFILE_CONTROLLER))
+		if (!profiling && midi_get_controller_changed(controller_channel, PROFILE_CONTROLLER))
 		{
-			if (argc > 1 && midi_get_controller_value(MIDI_CONTROL_CHANNEL, PROFILE_CONTROLLER) > 63)
+			if (argc > 1 && midi_get_controller_value(controller_channel, PROFILE_CONTROLLER) > 63)
 			{
 				ProfilerStart(argv[1]);
 				profiling = 1;
@@ -619,6 +685,7 @@ int main(int argc, char **argv)
 	gfx_wave_render_deinitialise();
 	alsa_deinitialise();
 	midi_deinitialise();
+	config_destroy(&app_config);
 
 	printf("Done: %d xruns\n", alsa_get_xruns_count());
 	return 0;

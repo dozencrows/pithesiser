@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<rexpfd>
+    <destination path="ubuntu12-desktop.RPi_512Mb:/home/pi"/>
+    <options createDirectoryStructure="false" createSelectedOnly="true" descriptionFilePath="/synth-test/resources.rexpfd" overWriteExistingFiles="true" reviewSynchronize="false" saveSettings="true"/>
+    <selectedElements>
+        <folder path="/synth-test/resources"/>
+    </selectedElements>
+</rexpfd>

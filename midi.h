@@ -13,6 +13,7 @@
 #define MIDI_MAX_CONTROLLER_VALUE	127
 #define MIDI_MID_CONTROLLER_VALUE	63
 #define MIDI_MIDDLE_C				60
+#define MAX_MIDI_DEVICES			16
 
 #define MIDI_EVENT_DATA_SIZE	3
 typedef struct midi_event_t
@@ -21,7 +22,7 @@ typedef struct midi_event_t
 	unsigned char data[MIDI_EVENT_DATA_SIZE];
 } midi_event_t;
 
-extern int midi_initialise(const char* device1_name, const char* device2_name);
+extern int midi_initialise(int device_count, const char** device_name);
 extern void midi_deinitialise();
 extern int midi_get_controller_changed(int channel_index, int controller_index);
 extern int midi_get_controller_value(int channel_index, int controller_index);

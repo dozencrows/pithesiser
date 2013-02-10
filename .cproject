@@ -77,6 +77,7 @@
 									<listOptionValue builtIn="false" value="vcos"/>
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="pthread"/>
+									<listOptionValue builtIn="false" value="config"/>
 									<listOptionValue builtIn="false" value="profiler"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1385601344" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
@@ -168,6 +169,7 @@
 									<listOptionValue builtIn="false" value="vcos"/>
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="pthread"/>
+									<listOptionValue builtIn="false" value="config"/>
 									<listOptionValue builtIn="false" value="profiler"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.54546842" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
