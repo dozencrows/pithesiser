@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#include <libgen.h>
 #include <libconfig.h>
 #include <gperftools/profiler.h>
 #include "system_constants.h"
@@ -495,7 +496,7 @@ void create_ui()
 	image_renderer->y = 0;
 	image_renderer->width = 157;
 	image_renderer->height = 140;
-	image_renderer->image_file = RESOURCES_PITHESISER_ALPHA_PNG;
+	image_renderer->image_file = (char*)RESOURCES_PITHESISER_ALPHA_PNG;
 }
 
 void tune_oscilloscope_to_note(int note)
@@ -524,11 +525,20 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 //
 int main(int argc, char **argv)
 {
-	config_init(&app_config);
-	if (config_read_file(&app_config, RESOURCES_SYNTH_CFG) != CONFIG_TRUE)
+	const char* config_file = RESOURCES_SYNTH_CFG;
+	if (argc > 1)
 	{
-		printf("Config error in %s at line %d:\n", config_error_file(&app_config), config_error_line(&app_config));
-		printf("%s\n", config_error_text(&app_config));
+		config_file = argv[1];
+	}
+
+	char config_dir[PATH_MAX];
+	realpath(config_file, config_dir);
+	dirname(config_dir);
+	config_init(&app_config);
+	config_set_include_dir(&app_config, config_dir);
+	if (config_read_file(&app_config, config_file) != CONFIG_TRUE)
+	{
+		printf("Config error in %s at line %d: %s\n", config_error_file(&app_config), config_error_line(&app_config), config_error_text(&app_config));
 		exit(EXIT_FAILURE);
 	}
 
