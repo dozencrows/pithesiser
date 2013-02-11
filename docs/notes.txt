@@ -3,13 +3,19 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Implement envelope controls
-  * Make controller mechanism data-driven.
+* Create types for fixed values, and also some basic math funcs/macros for readability
+
+To do next
+==========
+* Investigate clicks when playing note sequences
+* Investigate clicks/jumps when changing master volume (suspect controller not smooth/precise enough)
+* Investigate volume jumps when playing note sequences with longer releases (suspect auto-ducking on mixer?)
+* Pitch bend control
+* Modulation wheen control (linked with LFO)
 * LFO: vibrato, tremelo, with envelope
   * delay/two stage attack on envelopes
   * Multiple envelopes -> need smarter control management 
   * two independent LFOs; target separate outputs & separate parameters, but triggered in step.
-* Create types for fixed values, and also some basic math funcs/macros for readability
 * Filters
   * Fix clicks on parameter changes (interpolation?)
   * Fix instability/distortio in HPF at lowest freq & low pitch notes
@@ -21,35 +27,25 @@ Underway
   * Add multiple filter stages
   * Make direct midi controls logarithmic
 
-To do next
-==========
-
 Blog ideas
 ==========
-* LFO progress
-* ADSR completion with UI
+* BCR 2000 controller
+* libconfig stuff
 * On the quality of digital audio
 * Fixed point math
 
 Ideas to try
 ============
 Feature support:
+ * Synchronising controller settings with synth settings on startup
  * Rendering:
-   * Of envelope shapes
    * Of settings
  * Better naming for oscillators & generators
  * Normalise range of phase accumulator across all waveform types
  * Multi-wave wavetable support 
  * Cubic interpolation with table lookup
- * Implementation of "whole synth" (see overall structure notes below)
  * Paired oscillators: modulation, mixing
- * Modulation tools:
-   * Envelope generator
-   * Amplitude modulation
-   * Frequency modulation
-   * LFOs
  * Noise channel
- * Filtering
 
 Performance:
  * More profiling of waveform generation loops
