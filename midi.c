@@ -240,7 +240,7 @@ int midi_initialise(int device_count, const char** device_name)
 	}
 }
 
-int midi_get_controller_changed(int channel_index, int controller_index)
+int midi_get_raw_controller_changed(int channel_index, int controller_index)
 {
 	int controller_changed = 0;
 
@@ -258,7 +258,7 @@ int midi_get_controller_changed(int channel_index, int controller_index)
 	return controller_changed;
 }
 
-int midi_get_controller_value(int channel_index, int controller_index)
+int midi_get_raw_controller_value(int channel_index, int controller_index)
 {
 	int controller_value = -1;
 

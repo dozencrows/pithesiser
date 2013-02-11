@@ -8,6 +8,8 @@
 #ifndef WAVEFORM_INTERNAL_H_
 #define WAVEFORM_INTERNAL_H_
 
+#include <sys/types.h>
+
 #define GENFLAG_NONE				0x00000000
 #define GENFLAG_LINEAR_INTERP		0x00000001
 

@@ -27,6 +27,7 @@
 #include "gfx_envelope_render.h"
 #include "gfx_image.h"
 #include "master_time.h"
+#include "synth_controllers.h"
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Commons
@@ -35,31 +36,16 @@
 #define ENVELOPE_RENDERER_ID	2
 #define IMAGE_RENDERER_ID		3
 
+#define EXIT_CONTROLLER			0x2e
+#define PROFILE_CONTROLLER		0x2c
+
 config_t app_config;
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Audio processing
 //
-#define MIN_FREQUENCY			55.0f
-#define MAX_FREQUENCY			1760.0f
-#define NOTE_LEVEL				32767
 #define NOTE_ENDING				-2
 #define NOTE_NOT_PLAYING		-1
-
-#define LFO_MIN_FREQUENCY		(FIXED_ONE / 10)
-#define LFO_MAX_FREQUENCY		(20 * FIXED_ONE)
-
-#define LFO_STATE_OFF			0
-#define LFO_STATE_VOLUME		1
-#define LFO_STATE_PITCH			2
-#define LFO_STATE_LAST			LFO_STATE_PITCH
-
-#define FILTER_STATE_OFF		FILTER_PASS
-#define FILTER_STATE_LAST		FILTER_HPF
-#define FILTER_MIN_FREQUENCY	(FIXED_ONE / 10)
-#define FILTER_MAX_FREQUENCY	(4186 * FIXED_ONE)
-#define FILTER_MIN_Q			(FIXED_ONE / 100)
-#define FILTER_MAX_Q			(FIXED_ONE)
 
 typedef struct
 {
@@ -96,7 +82,7 @@ envelope_stage_t envelope_stages[4] =
 
 envelope_t envelope = { 4, envelope_stages };
 
-float master_level = 1.0f;
+int32_t master_volume = LEVEL_MAX;
 waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;
 
 oscillator_t lf_oscillator;
@@ -158,7 +144,7 @@ void process_audio(int32_t timestep_ms)
 		if (voice[i].current_note != NOTE_NOT_PLAYING)
 		{
 			int32_t envelope_level = envelope_step(&voice[i].envelope_instance, timestep_ms);
-			int32_t note_level = (NOTE_LEVEL * envelope_level) / ENVELOPE_LEVEL_MAX;
+			int32_t note_level = (LEVEL_MAX * envelope_level) / ENVELOPE_LEVEL_MAX;
 
 			fixed_t base_frequency = oscillator[i].frequency;
 
@@ -172,7 +158,7 @@ void process_audio(int32_t timestep_ms)
 				oscillator[i].frequency = (((int64_t)base_frequency * (int64_t)(powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE)) >> FIXED_PRECISION);
 			}
 
-			oscillator[i].level = note_level * master_level;
+			oscillator[i].level = (note_level * master_volume) / LEVEL_MAX;
 			if (oscillator[i].level > 0)
 			{
 				if (first_audible_voice < 0)
@@ -230,33 +216,6 @@ void process_audio(int32_t timestep_ms)
 //-----------------------------------------------------------------------------------------------------------------------
 // Midi processing
 //
-#define WAVE_CONTROLLER			0x21
-#define EXIT_CONTROLLER			0x2e
-#define PROFILE_CONTROLLER		0x2c
-#define OSCILLOSCOPE_CONTROLLER	0x0e
-#define VOLUME_CONTROLLER		0x02
-
-#define ENVELOPE_ATTACK_LEVEL_CTRL	0x03	// slider 2
-#define ENVELOPE_ATTACK_TIME_CTRL	0x0f	// dial 2
-#define ENVELOPE_DECAY_LEVEL_CTRL	0x04	// slider 3
-#define ENVELOPE_DECAY_TIME_CTRL	0x10	// dial 3
-#define ENVELOPE_SUSTAIN_TIME_CTRL	0x11	// dial 4
-#define ENVELOPE_RELEASE_TIME_CTRL	0x05	// slider 4
-
-#define LFO_TOGGLE					0x1b	// upper switch 5
-#define LFO_WAVEFORM				0x25	// lower switch 5
-#define LFO_FREQUENCY				0x12	// dial 5
-#define LFO_LEVEL					0x06	// slider 5
-
-#define ENVELOPE_ATTACK_DURATION_SCALE	10
-#define ENVELOPE_DECAY_DURATION_SCALE	10
-#define ENVELOPE_SUSTAIN_DURATION_SCALE	10
-#define ENVELOPE_RELEASE_DURATION_SCALE	10
-
-#define FILTER_TOGGLE				0x1c	// upper switch 6
-#define FILTER_FREQUENCY			0x13	// dial 6
-#define FILTER_Q					0x08	// slider 6
-
 int controller_channel = 0;
 
 void configure_midi()
@@ -297,6 +256,8 @@ void configure_midi()
 	{
 		exit(EXIT_FAILURE);
 	}
+
+	synth_controllers_initialise(controller_channel);
 }
 
 void process_midi_events()
@@ -355,83 +316,57 @@ extern void tune_oscilloscope_to_note(int note);
 
 void process_midi_controllers()
 {
-	master_level = (float) midi_get_controller_value(controller_channel, VOLUME_CONTROLLER) / MIDI_MAX_CONTROLLER_VALUE;
+	int param_value;
 
-	if (midi_get_controller_changed(controller_channel, WAVE_CONTROLLER))
+	midi_controller_update(&master_volume_controller, &master_volume);
+	if (midi_controller_update(&waveform_controller, &param_value))
 	{
-		if (midi_get_controller_value(controller_channel, WAVE_CONTROLLER) > 63)
-		{
-			master_waveform++;
-			if (master_waveform > WAVE_LAST_AUDIBLE)
-			{
-				master_waveform = WAVE_FIRST_AUDIBLE;
-			}
-		}
+		master_waveform = param_value;
 	}
 
-	static int last_note = -1;
-	int oscilloscope_tuned_note = midi_get_controller_value(controller_channel, OSCILLOSCOPE_CONTROLLER);
-	if (last_note != oscilloscope_tuned_note)
+	if (midi_controller_update(&oscilloscope_controller, &param_value))
 	{
-		last_note = oscilloscope_tuned_note;
-		tune_oscilloscope_to_note(last_note);
+		tune_oscilloscope_to_note(param_value);
 	}
 
 	int envelope_updated = 0;
 
-	// Suggested data driven model:
-	//	Parameters: controller id, value calculation func & params, destination values.
-	if (midi_get_controller_changed(controller_channel, ENVELOPE_ATTACK_LEVEL_CTRL))
+	if (midi_controller_update(&envelope_attack_level_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, ENVELOPE_ATTACK_LEVEL_CTRL);
-		int32_t envelope_level = (ENVELOPE_LEVEL_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
-		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = envelope_level;
-		envelope.stages[ENVELOPE_STAGE_DECAY].start_level = envelope_level;
+		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = param_value;
+		envelope.stages[ENVELOPE_STAGE_DECAY].start_level = param_value;
 		envelope_updated = 1;
 	}
 
-	if (midi_get_controller_changed(controller_channel, ENVELOPE_ATTACK_TIME_CTRL))
+	if (midi_controller_update(&envelope_attack_time_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, ENVELOPE_ATTACK_TIME_CTRL);
-		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = value * ENVELOPE_ATTACK_DURATION_SCALE;
+		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = param_value;
 		envelope_updated = 1;
 	}
 
-	if (midi_get_controller_changed(controller_channel, ENVELOPE_DECAY_LEVEL_CTRL))
+	if (midi_controller_update(&envelope_decay_level_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, ENVELOPE_DECAY_LEVEL_CTRL);
-		int32_t envelope_level = (ENVELOPE_LEVEL_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
-		envelope.stages[ENVELOPE_STAGE_DECAY].end_level = envelope_level;
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].start_level = envelope_level;
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].end_level = envelope_level;
+		envelope.stages[ENVELOPE_STAGE_DECAY].end_level = param_value;
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].start_level = param_value;
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].end_level = param_value;
 		envelope_updated = 1;
 	}
 
-	if (midi_get_controller_changed(controller_channel, ENVELOPE_DECAY_TIME_CTRL))
+	if (midi_controller_update(&envelope_decay_time_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, ENVELOPE_DECAY_TIME_CTRL);
-		envelope.stages[ENVELOPE_STAGE_DECAY].duration = value * ENVELOPE_DECAY_DURATION_SCALE;
+		envelope.stages[ENVELOPE_STAGE_DECAY].duration = param_value;
 		envelope_updated = 1;
 	}
 
-	if (midi_get_controller_changed(controller_channel, ENVELOPE_SUSTAIN_TIME_CTRL))
+	if (midi_controller_update(&envelope_sustain_time_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, ENVELOPE_SUSTAIN_TIME_CTRL);
-		if (value < MIDI_MAX_CONTROLLER_VALUE)
-		{
-			envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = value * ENVELOPE_SUSTAIN_DURATION_SCALE;
-		}
-		else
-		{
-			envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = DURATION_HELD;
-		}
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = param_value;
 		envelope_updated = 1;
 	}
 
-	if (midi_get_controller_changed(controller_channel, ENVELOPE_RELEASE_TIME_CTRL))
+	if (midi_controller_update(&envelope_release_time_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, ENVELOPE_RELEASE_TIME_CTRL);
-		envelope.stages[ENVELOPE_STAGE_RELEASE].duration = value * ENVELOPE_RELEASE_DURATION_SCALE;
+		envelope.stages[ENVELOPE_STAGE_RELEASE].duration = param_value;
 		envelope_updated = 1;
 	}
 
@@ -443,69 +378,43 @@ void process_midi_controllers()
 		gfx_send_event(&gfx_event);
 	}
 
-	if (midi_get_controller_changed(controller_channel, LFO_TOGGLE))
+	if (midi_controller_update(&lfo_state_controller, &param_value))
 	{
-		if (midi_get_controller_value(controller_channel, LFO_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
-		{
-			lfo_state++;
-			if (lfo_state > LFO_STATE_LAST)
-			{
-				lfo_state = LFO_STATE_OFF;
-			}
-		}
+		lfo_state = param_value;
 	}
 
-	if (midi_get_controller_changed(controller_channel, LFO_WAVEFORM))
+	if (midi_controller_update(&lfo_waveform_controller, &param_value))
 	{
-		if (midi_get_controller_value(controller_channel, LFO_WAVEFORM) > MIDI_MID_CONTROLLER_VALUE)
-		{
-			lf_oscillator.waveform++;
-			if (lf_oscillator.waveform > WAVE_LAST_LFO)
-			{
-				lf_oscillator.waveform = WAVE_FIRST_LFO;
-			}
-		}
+		lf_oscillator.waveform = param_value;
 	}
 
-	if (midi_get_controller_changed(controller_channel, LFO_LEVEL))
+	if (midi_controller_update(&lfo_level_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, LFO_LEVEL);
-		lf_oscillator.level = (SHRT_MAX * value) / MIDI_MAX_CONTROLLER_VALUE;
+		lf_oscillator.level = param_value;
 	}
 
-	if (midi_get_controller_changed(controller_channel, LFO_FREQUENCY))
+	if (midi_controller_update(&lfo_frequency_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, LFO_FREQUENCY);
-		lf_oscillator.frequency = LFO_MIN_FREQUENCY + ((LFO_MAX_FREQUENCY - LFO_MIN_FREQUENCY) * value) / MIDI_MAX_CONTROLLER_VALUE;
+		lf_oscillator.frequency = param_value;
 	}
 
 	int filter_changed = 0;
 
-	if (midi_get_controller_changed(controller_channel, FILTER_TOGGLE))
+	if (midi_controller_update(&filter_state_controller, &param_value))
 	{
-		if (midi_get_controller_value(controller_channel, FILTER_TOGGLE) > MIDI_MID_CONTROLLER_VALUE)
-		{
-			global_filter.definition.type++;;
-			if (global_filter.definition.type > FILTER_STATE_LAST)
-			{
-				global_filter.definition.type = FILTER_STATE_OFF;
-			}
-			filter_changed++;
-		}
-	}
-
-	if (midi_get_controller_changed(controller_channel, FILTER_FREQUENCY))
-	{
-		int value = midi_get_controller_value(controller_channel, FILTER_FREQUENCY);
-		fixed_wide_t frequency_offset = ((fixed_wide_t)(FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY) * (fixed_wide_t)value) / (fixed_wide_t)MIDI_MAX_CONTROLLER_VALUE;
-		global_filter.definition.frequency = FILTER_MIN_FREQUENCY + frequency_offset;
+		global_filter.definition.type = param_value;
 		filter_changed++;
 	}
 
-	if (midi_get_controller_changed(controller_channel, FILTER_Q))
+	if (midi_controller_update(&filter_frequency_controller, &param_value))
 	{
-		int value = midi_get_controller_value(controller_channel, FILTER_Q);
-		global_filter.definition.q = FILTER_MIN_Q + ((FILTER_MAX_Q - FILTER_MIN_Q) * value) / MIDI_MAX_CONTROLLER_VALUE;
+		global_filter.definition.frequency = param_value;
+		filter_changed++;
+	}
+
+	if (midi_controller_update(&filter_q_controller, &param_value))
+	{
+		global_filter.definition.q = param_value;
 		filter_changed++;
 	}
 
@@ -651,16 +560,16 @@ int main(int argc, char **argv)
 
 	while (1)
 	{
-		if (midi_get_controller_value(controller_channel, EXIT_CONTROLLER) > 63)
+		if (midi_get_raw_controller_value(controller_channel, EXIT_CONTROLLER) > 63)
 		{
 			break;
 		}
 
 		process_midi_events();
 
-		if (!profiling && midi_get_controller_changed(controller_channel, PROFILE_CONTROLLER))
+		if (!profiling && midi_get_raw_controller_changed(controller_channel, PROFILE_CONTROLLER))
 		{
-			if (argc > 1 && midi_get_controller_value(controller_channel, PROFILE_CONTROLLER) > 63)
+			if (argc > 1 && midi_get_raw_controller_value(controller_channel, PROFILE_CONTROLLER) > 63)
 			{
 				ProfilerStart(argv[1]);
 				profiling = 1;

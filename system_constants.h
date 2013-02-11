@@ -9,6 +9,7 @@
 #define SYSTEM_CONSTANTS_H_
 
 #include <sys/types.h>
+#include <limits.h>
 
 #define SYSTEM_SAMPLE_RATE			44100
 #define SYSTEM_FRAME_RATE			60
@@ -22,6 +23,7 @@ typedef int16_t	sample_t;
 typedef int32_t	fixed_t;
 typedef int64_t	fixed_wide_t;
 
+#define LEVEL_MAX			SHRT_MAX
 #define SAMPLE_MAX			SHRT_MAX
 #define BYTES_PER_CHANNEL	(sizeof(sample_t))
 #define CHANNELS_PER_SAMPLE	2

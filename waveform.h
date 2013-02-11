@@ -8,8 +8,6 @@
 #ifndef WAVEFORM_H_
 #define WAVEFORM_H_
 
-#include <sys/types.h>
-
 typedef enum
 {
 	WAVETABLE_SINE = 0,
