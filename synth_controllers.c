@@ -6,6 +6,8 @@
  */
 
 #include "synth_controllers.h"
+#include <stdarg.h>
+#include <string.h>
 #include "system_constants.h"
 #include "midi.h"
 #include "envelope.h"
@@ -22,31 +24,7 @@
 #define FILTER_MAX_FREQUENCY	(4186 * FIXED_ONE)
 #define FILTER_MIN_Q			(FIXED_ONE / 100)
 #define FILTER_MAX_Q			(FIXED_ONE)
-
-#define WAVE_CONTROLLER			0x21
-#define OSCILLOSCOPE_CONTROLLER	0x0e
-#define VOLUME_CONTROLLER		0x02
-
-#define ENVELOPE_ATTACK_LEVEL_CTRL	0x03	// slider 2
-#define ENVELOPE_ATTACK_TIME_CTRL	0x0f	// dial 2
-#define ENVELOPE_DECAY_LEVEL_CTRL	0x04	// slider 3
-#define ENVELOPE_DECAY_TIME_CTRL	0x10	// dial 3
-#define ENVELOPE_SUSTAIN_TIME_CTRL	0x11	// dial 4
-#define ENVELOPE_RELEASE_TIME_CTRL	0x05	// slider 4
-
-#define LFO_TOGGLE					0x1b	// upper switch 5
-#define LFO_WAVEFORM				0x25	// lower switch 5
-#define LFO_FREQUENCY				0x12	// dial 5
-#define LFO_LEVEL					0x06	// slider 5
-
-#define ENVELOPE_ATTACK_DURATION_SCALE	10
-#define ENVELOPE_DECAY_DURATION_SCALE	10
-#define ENVELOPE_SUSTAIN_DURATION_SCALE	10
-#define ENVELOPE_RELEASE_DURATION_SCALE	10
-
-#define FILTER_TOGGLE				0x1c	// upper switch 6
-#define FILTER_FREQUENCY			0x13	// dial 6
-#define FILTER_Q					0x08	// slider 6
+#define ENVELOPE_TIME_SCALE				10
 
 midi_controller_t master_volume_controller;
 midi_controller_t waveform_controller;
@@ -68,162 +46,276 @@ midi_controller_t filter_state_controller;
 midi_controller_t filter_frequency_controller;
 midi_controller_t filter_q_controller;
 
-void synth_controllers_initialise(int controller_channel)
+static const char* CFG_TYPE_SETTING = "type";
+static const char* CFG_CONTINUOUS_CONTROLLER = "continuous";
+static const char* CFG_CONTINUOUS_WITH_HELD_CONTROLLER = "continuous_with_held";
+static const char* CFG_TOGGLE_CONTROLLER = "toggle";
+static const char* CFG_MIN = "min";
+static const char* CFG_MAX = "max";
+static const char* CFG_THRESHOLD = "threshold";
+
+static void report_config_error(config_setting_t *setting, const char* message, ...)
 {
-	midi_controller_create(&master_volume_controller);
-	master_volume_controller.type = CONTINUOUS;
-	master_volume_controller.midi_channel = controller_channel;
-	master_volume_controller.midi_cc[0] = VOLUME_CONTROLLER;
-	master_volume_controller.midi_range.min = 0;
-	master_volume_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	master_volume_controller.output_min = 0;
-	master_volume_controller.output_max = LEVEL_MAX;
-	midi_controller_init(&master_volume_controller);
+	va_list arg_list;
+	va_start(arg_list, message);
+	vprintf(message, arg_list);
+	va_end(arg_list);
+	printf(" at line %d in %s\n", config_setting_source_line(setting), config_setting_source_file(setting));
+}
 
-	midi_controller_create(&waveform_controller);
-	waveform_controller.type = TOGGLE;
-	waveform_controller.midi_channel = controller_channel;
-	waveform_controller.midi_cc[0] = WAVE_CONTROLLER;
-	waveform_controller.midi_threshold = MIDI_MID_CONTROLLER_VALUE;
-	waveform_controller.output_min = WAVE_FIRST_AUDIBLE;
-	waveform_controller.output_max = WAVE_LAST_AUDIBLE;
-	midi_controller_init(&waveform_controller);
+static int parse_midi_cc(config_setting_t *config, midi_controller_t *controller)
+{
+	config_setting_t *setting_midi_cc = config_setting_get_member(config, "midi_cc");
 
-	midi_controller_create(&oscilloscope_controller);
-	oscilloscope_controller.type = CONTINUOUS;
-	oscilloscope_controller.midi_channel = controller_channel;
-	oscilloscope_controller.midi_cc[0] = OSCILLOSCOPE_CONTROLLER;
-	oscilloscope_controller.midi_range.min = 0;
-	oscilloscope_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	oscilloscope_controller.output_min = 0;
-	oscilloscope_controller.output_max = MIDI_MAX_CONTROLLER_VALUE;
-	midi_controller_init(&oscilloscope_controller);
+	if (setting_midi_cc == NULL)
+	{
+		report_config_error(config, "Missing midi_cc data");
+		return 0;
+	}
 
-	midi_controller_create(&envelope_attack_time_controller);
-	envelope_attack_time_controller.type = CONTINUOUS;
-	envelope_attack_time_controller.midi_channel = controller_channel;
-	envelope_attack_time_controller.midi_cc[0] = ENVELOPE_ATTACK_TIME_CTRL;
-	envelope_attack_time_controller.midi_range.min = 0;
-	envelope_attack_time_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	envelope_attack_time_controller.output_min = 0;
-	envelope_attack_time_controller.output_max = ENVELOPE_ATTACK_DURATION_SCALE * MIDI_MAX_CONTROLLER_VALUE;
-	midi_controller_init(&envelope_attack_time_controller);
+	int midi_cc_count = config_setting_length(setting_midi_cc);
 
-	midi_controller_create(&envelope_attack_level_controller);
-	envelope_attack_level_controller.type = CONTINUOUS;
-	envelope_attack_level_controller.midi_channel = controller_channel;
-	envelope_attack_level_controller.midi_cc[0] = ENVELOPE_ATTACK_LEVEL_CTRL;
-	envelope_attack_level_controller.midi_range.min = 0;
-	envelope_attack_level_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	envelope_attack_level_controller.output_min = 0;
-	envelope_attack_level_controller.output_max = ENVELOPE_LEVEL_MAX;
-	midi_controller_init(&envelope_attack_level_controller);
+	if (midi_cc_count < 1 || midi_cc_count > 2)
+	{
+		report_config_error(config, "Only 1 or 2 midi_cc allowed - got %d", midi_cc_count);
+		return 0;
+	}
 
-	midi_controller_create(&envelope_decay_time_controller);
-	envelope_decay_time_controller.type = CONTINUOUS;
-	envelope_decay_time_controller.midi_channel = controller_channel;
-	envelope_decay_time_controller.midi_cc[0] = ENVELOPE_DECAY_TIME_CTRL;
-	envelope_decay_time_controller.midi_range.min = 0;
-	envelope_decay_time_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	envelope_decay_time_controller.output_min = 0;
-	envelope_decay_time_controller.output_max = ENVELOPE_DECAY_DURATION_SCALE * MIDI_MAX_CONTROLLER_VALUE;
-	midi_controller_init(&envelope_decay_time_controller);
+	for (int i = 0; i < midi_cc_count; i++)
+	{
+		controller->midi_cc[i] = config_setting_get_int_elem(setting_midi_cc, i);
+	}
 
-	midi_controller_create(&envelope_decay_level_controller);
-	envelope_decay_level_controller.type = CONTINUOUS;
-	envelope_decay_level_controller.midi_channel = controller_channel;
-	envelope_decay_level_controller.midi_cc[0] = ENVELOPE_DECAY_LEVEL_CTRL;
-	envelope_decay_level_controller.midi_range.min = 0;
-	envelope_decay_level_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	envelope_decay_level_controller.output_min = 0;
-	envelope_decay_level_controller.output_max = ENVELOPE_LEVEL_MAX;
-	midi_controller_init(&envelope_decay_level_controller);
+	return 1;
+}
 
-	midi_controller_create(&envelope_sustain_time_controller);
-	envelope_sustain_time_controller.type = CONTINUOUS_WITH_END;
-	envelope_sustain_time_controller.midi_channel = controller_channel;
-	envelope_sustain_time_controller.midi_cc[0] = ENVELOPE_SUSTAIN_TIME_CTRL;
-	envelope_sustain_time_controller.midi_range.min = 0;
-	envelope_sustain_time_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE - 1;
-	envelope_sustain_time_controller.midi_range.end = DURATION_HELD;
-	envelope_sustain_time_controller.output_min = 0;
-	envelope_sustain_time_controller.output_max = ENVELOPE_SUSTAIN_DURATION_SCALE * MIDI_MAX_CONTROLLER_VALUE;
-	midi_controller_init(&envelope_sustain_time_controller);
+static int parse_midi_max_min(config_setting_t *config, midi_controller_t *controller)
+{
+	if (config_setting_lookup_int(config, CFG_MIN, &(controller->midi_range.min)) != CONFIG_TRUE)
+	{
+		report_config_error(config, "Missing or invalid min");
+		return 0;
+	}
 
-	midi_controller_create(&envelope_release_time_controller);
-	envelope_release_time_controller.type = CONTINUOUS;
-	envelope_release_time_controller.midi_channel = controller_channel;
-	envelope_release_time_controller.midi_cc[0] = ENVELOPE_RELEASE_TIME_CTRL;
-	envelope_release_time_controller.midi_range.min = 0;
-	envelope_release_time_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	envelope_release_time_controller.output_min = 0;
-	envelope_release_time_controller.output_max = ENVELOPE_RELEASE_DURATION_SCALE * MIDI_MAX_CONTROLLER_VALUE;
-	midi_controller_init(&envelope_release_time_controller);
+	if (config_setting_lookup_int(config, CFG_MAX, &(controller->midi_range.max)) != CONFIG_TRUE)
+	{
+		report_config_error(config, "Missing or invalid max");
+		return 0;
+	}
 
-	midi_controller_create(&lfo_state_controller);
-	lfo_state_controller.type = TOGGLE;
-	lfo_state_controller.midi_channel = controller_channel;
-	lfo_state_controller.midi_cc[0] = LFO_TOGGLE;
-	lfo_state_controller.midi_threshold = MIDI_MID_CONTROLLER_VALUE;
-	lfo_state_controller.output_min = LFO_STATE_OFF;
-	lfo_state_controller.output_max = LFO_STATE_LAST;
-	midi_controller_init(&lfo_state_controller);
+	return 1;
+}
 
-	midi_controller_create(&lfo_waveform_controller);
-	lfo_waveform_controller.type = TOGGLE;
-	lfo_waveform_controller.midi_channel = controller_channel;
-	lfo_waveform_controller.midi_cc[0] = LFO_WAVEFORM;
-	lfo_waveform_controller.midi_threshold = MIDI_MID_CONTROLLER_VALUE;
-	lfo_waveform_controller.output_min = WAVE_FIRST_LFO;
-	lfo_waveform_controller.output_max = WAVE_LAST_LFO;
-	midi_controller_init(&lfo_waveform_controller);
+static int parse_continuous_controller(config_setting_t *config, midi_controller_t *controller)
+{
+	controller->type = CONTINUOUS;
+	if (!parse_midi_cc(config, controller))
+	{
+		return 0;
+	}
 
-	midi_controller_create(&lfo_frequency_controller);
-	lfo_frequency_controller.type = CONTINUOUS;
-	lfo_frequency_controller.midi_channel = controller_channel;
-	lfo_frequency_controller.midi_cc[0] = LFO_FREQUENCY;
-	lfo_frequency_controller.midi_range.min = 0;
-	lfo_frequency_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	lfo_frequency_controller.output_min = LFO_MIN_FREQUENCY;
-	lfo_frequency_controller.output_max = LFO_MAX_FREQUENCY;
-	midi_controller_init(&lfo_frequency_controller);
+	return parse_midi_max_min(config, controller);
+}
 
-	midi_controller_create(&lfo_level_controller);
-	lfo_level_controller.type = CONTINUOUS;
-	lfo_level_controller.midi_channel = controller_channel;
-	lfo_level_controller.midi_cc[0] = LFO_LEVEL;
-	lfo_level_controller.midi_range.min = 0;
-	lfo_level_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	lfo_level_controller.output_min = 0;
-	lfo_level_controller.output_max = LEVEL_MAX;
-	midi_controller_init(&lfo_level_controller);
+static int parse_continuous_with_end_controller(config_setting_t *config, midi_controller_t *controller)
+{
+	controller->type = CONTINUOUS_WITH_HELD;
+	if (!parse_midi_cc(config, controller))
+	{
+		return 0;
+	}
 
-	midi_controller_create(&filter_state_controller);
-	filter_state_controller.type = TOGGLE;
-	filter_state_controller.midi_channel = controller_channel;
-	filter_state_controller.midi_cc[0] = FILTER_TOGGLE;
-	filter_state_controller.midi_threshold = MIDI_MID_CONTROLLER_VALUE;
-	filter_state_controller.output_min = FILTER_STATE_OFF;
-	filter_state_controller.output_max = FILTER_STATE_LAST;
-	midi_controller_init(&filter_state_controller);
+	return parse_midi_max_min(config, controller);
+}
 
-	midi_controller_create(&filter_frequency_controller);
-	filter_frequency_controller.type = CONTINUOUS;
-	filter_frequency_controller.midi_channel = controller_channel;
-	filter_frequency_controller.midi_cc[0] = FILTER_FREQUENCY;
-	filter_frequency_controller.midi_range.min = 0;
-	filter_frequency_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	filter_frequency_controller.output_min = FILTER_MIN_FREQUENCY;
-	filter_frequency_controller.output_max = FILTER_MAX_FREQUENCY;
-	midi_controller_init(&filter_frequency_controller);
+static int parse_toggle_controller(config_setting_t *config, midi_controller_t *controller)
+{
+	controller->type = TOGGLE;
+	if (!parse_midi_cc(config, controller))
+	{
+		return 0;
+	}
 
-	midi_controller_create(&filter_q_controller);
-	filter_q_controller.type = CONTINUOUS;
-	filter_q_controller.midi_channel = controller_channel;
-	filter_q_controller.midi_cc[0] = FILTER_Q;
-	filter_q_controller.midi_range.min = 0;
-	filter_q_controller.midi_range.max = MIDI_MAX_CONTROLLER_VALUE;
-	filter_q_controller.output_min = FILTER_MIN_Q;
-	filter_q_controller.output_max = FILTER_MAX_Q;
-	midi_controller_init(&filter_q_controller);
+	if (config_setting_lookup_int(config, CFG_THRESHOLD, &(controller->midi_threshold)) != CONFIG_TRUE)
+	{
+		report_config_error(config, "Missing or invalid threshold");
+		return 0;
+	}
+
+	return 1;
+}
+
+static int parse_controller_config(config_setting_t *config, midi_controller_t *controller)
+{
+	const char* type_setting;
+
+	if (config_setting_lookup_string(config, CFG_TYPE_SETTING, &type_setting) != CONFIG_TRUE)
+	{
+		report_config_error(config, "Controller needs type");
+	}
+
+	if (strcasecmp(type_setting, CFG_CONTINUOUS_CONTROLLER) == 0)
+	{
+		return parse_continuous_controller(config, controller);
+	}
+	else if (strcasecmp(type_setting, CFG_CONTINUOUS_WITH_HELD_CONTROLLER) == 0)
+	{
+		return parse_continuous_with_end_controller(config, controller);
+	}
+	else if (strcasecmp(type_setting, CFG_TOGGLE_CONTROLLER) == 0)
+	{
+		return parse_toggle_controller(config, controller);
+	}
+	else
+	{
+		report_config_error(config, "Unsupported controller type %s", type_setting);
+	}
+
+	return 0;
+}
+
+typedef struct controller_parser_t
+{
+	const char *config_setting_name;
+	midi_controller_t *controller;
+	void(*set_output)(midi_controller_t *controller);
+} controller_parser_t;
+
+static void master_volume_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = 0;
+	controller->output_max = LEVEL_MAX;
+}
+
+static void waveform_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = WAVE_FIRST_AUDIBLE;
+	controller->output_max = WAVE_LAST_AUDIBLE;
+}
+
+static void midi_resolution_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = 0;
+	controller->output_max = MIDI_MAX_CONTROLLER_VALUE;
+}
+
+static void envelope_level_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = 0;
+	controller->output_max = ENVELOPE_LEVEL_MAX;
+}
+
+static void envelope_time_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = 0;
+	controller->output_max = ENVELOPE_TIME_SCALE * MIDI_MAX_CONTROLLER_VALUE;
+}
+
+static void envelope_time_held_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = 0;
+	controller->output_max = ENVELOPE_TIME_SCALE * MIDI_MAX_CONTROLLER_VALUE;
+	controller->output_held = DURATION_HELD;
+}
+
+static void lfo_state_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = LFO_STATE_OFF;
+	controller->output_max = LFO_STATE_LAST;
+}
+
+static void lfo_waveform_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = WAVE_FIRST_LFO;
+	controller->output_max = WAVE_LAST_LFO;
+}
+
+static void lfo_frequency_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = LFO_MIN_FREQUENCY;
+	controller->output_max = LFO_MAX_FREQUENCY;
+}
+
+static void level_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = 0;
+	controller->output_max = LEVEL_MAX;
+}
+
+static void filter_state_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = FILTER_STATE_OFF;
+	controller->output_max = FILTER_STATE_LAST;
+}
+
+static void filter_frequency_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = FILTER_MIN_FREQUENCY;
+	controller->output_max = FILTER_MAX_FREQUENCY;
+}
+
+static void filter_q_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = FILTER_MIN_Q;
+	controller->output_max = FILTER_MAX_Q;
+}
+
+controller_parser_t controller_parser[] =
+{
+	{ "master_volume", &master_volume_controller, master_volume_controller_set_output },
+	{ "waveform_select", &waveform_controller, waveform_controller_set_output },
+	{ "oscilloscope_frequency", &oscilloscope_controller, midi_resolution_controller_set_output },
+	{ "volume_envelope_attack_time", &envelope_attack_time_controller, envelope_time_controller_set_output },
+	{ "volume_envelope_attack_level", &envelope_attack_level_controller, envelope_level_controller_set_output },
+	{ "volume_envelope_decay_time", &envelope_decay_time_controller, envelope_time_controller_set_output },
+	{ "volume_envelope_decay_level", &envelope_decay_level_controller, envelope_level_controller_set_output },
+	{ "volume_envelope_sustain_time", &envelope_sustain_time_controller, envelope_time_held_controller_set_output },
+	{ "volume_envelope_release_time", &envelope_release_time_controller, envelope_time_controller_set_output },
+	{ "lfo_state", &lfo_state_controller, lfo_state_controller_set_output },
+	{ "lfo_waveform_select", &lfo_waveform_controller, lfo_waveform_controller_set_output },
+	{ "lfo_frequency", &lfo_frequency_controller, lfo_frequency_controller_set_output },
+	{ "lfo_level", &lfo_level_controller, level_controller_set_output },
+	{ "filter_state", &filter_state_controller, filter_state_controller_set_output },
+	{ "filter_frequency", &filter_frequency_controller, filter_frequency_controller_set_output },
+	{ "filter_q", &filter_q_controller, filter_q_controller_set_output },
+};
+
+#define CONTROLLER_PARSER_COUNT	(sizeof(controller_parser) / sizeof(controller_parser[0]))
+
+int synth_controllers_initialise(int controller_channel, config_setting_t *config)
+{
+	if (config == NULL)
+	{
+		printf("Missing controller configuration\n");
+		return 0;
+	}
+
+	int error_count = 0;
+
+	for (int i = 0; i < CONTROLLER_PARSER_COUNT; i++)
+	{
+		config_setting_t *setting_controller = config_setting_get_member(config, controller_parser[i].config_setting_name);
+		if (setting_controller == NULL)
+		{
+			report_config_error(config, "Controller config section %s missing", controller_parser[i].config_setting_name);
+			error_count++;
+		}
+		else
+		{
+			midi_controller_create(controller_parser[i].controller);
+			controller_parser[i].controller->midi_channel = controller_channel;
+
+			if (parse_controller_config(setting_controller, controller_parser[i].controller))
+			{
+				controller_parser[i].set_output(controller_parser[i].controller);
+				midi_controller_init(controller_parser[i].controller);
+			}
+			else
+			{
+				error_count++;
+			}
+		}
+	}
+
+	return error_count == 0;
 }

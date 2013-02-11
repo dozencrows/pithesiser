@@ -12,7 +12,7 @@ typedef enum
 {
 	NONE = -1,
 	CONTINUOUS,
-	CONTINUOUS_WITH_END,
+	CONTINUOUS_WITH_HELD,
 	TOGGLE
 } controller_type_t;
 
@@ -27,12 +27,12 @@ typedef struct midi_controller_t
 		{
 			int			min;
 			int			max;
-			int			end;
 		} midi_range;
 		int				midi_threshold;
 	};
 	int					output_min;
 	int					output_max;
+	int					output_held;
 	int					last_output;
 } midi_controller_t;
 

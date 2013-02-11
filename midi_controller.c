@@ -69,7 +69,7 @@ static int process_continuous_controller_with_end(midi_controller_t *controller,
 
 		if (midi_value > controller->midi_range.max)
 		{
-			controller->last_output = controller->midi_range.end;
+			controller->last_output = controller->output_held;
 		}
 		else
 		{
@@ -127,7 +127,7 @@ int midi_controller_update(midi_controller_t *controller, int *value)
 			break;
 		}
 
-		case CONTINUOUS_WITH_END:
+		case CONTINUOUS_WITH_HELD:
 		{
 			*value = process_continuous_controller_with_end(controller, &changed);
 			break;

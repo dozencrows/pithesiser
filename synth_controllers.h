@@ -9,6 +9,7 @@
 #define SYNTH_CONTROLLERS_H_
 
 #include "midi_controller.h"
+#include "libconfig.h"
 
 #define LFO_STATE_OFF			0
 #define LFO_STATE_VOLUME		1
@@ -34,6 +35,5 @@ extern midi_controller_t filter_state_controller;
 extern midi_controller_t filter_frequency_controller;
 extern midi_controller_t filter_q_controller;
 
-extern void synth_controllers_initialise(int midi_channel);
-
+extern int synth_controllers_initialise(int controller_channel, config_setting_t *config);
 #endif /* SYNTH_CONTROLLERS_H_ */

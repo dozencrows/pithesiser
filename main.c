@@ -39,6 +39,14 @@
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
 
+static const char* CFG_DEVICES_AUDIO_OUTPUT = "devices.audio.output";
+static const char* RESOURCES_PITHESISER_ALPHA_PNG = "resources/pithesiser_alpha.png";
+static const char* RESOURCES_SYNTH_CFG = "resources/synth.cfg";
+static const char* CFG_DEVICES_MIDI_NOTE_CHANNEL = "devices.midi.note_channel";
+static const char* CFG_DEVICES_MIDI_CONTROLLER_CHANNEL = "devices.midi.controller_channel";
+static const char* CFG_CONTROLLERS = "controllers";
+static const char* CFG_DEVICES_MIDI_INPUT = "devices.midi.input";
+
 config_t app_config;
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -94,7 +102,7 @@ void configure_audio()
 {
 	const char *setting_devices_audio_output = NULL;
 
-	if (config_lookup_string(&app_config, "devices.audio.output", &setting_devices_audio_output) != CONFIG_TRUE)
+	if (config_lookup_string(&app_config, CFG_DEVICES_AUDIO_OUTPUT, &setting_devices_audio_output) != CONFIG_TRUE)
 	{
 		printf("Missing audio output device in config\n");
 		exit(EXIT_FAILURE);
@@ -222,15 +230,15 @@ void configure_midi()
 {
 	int note_channel = 0;
 
-	config_lookup_int(&app_config, "devices.midi.controller_channel", &controller_channel);
-	config_lookup_int(&app_config, "devices.midi.note_channel", &note_channel);
+	config_lookup_int(&app_config, CFG_DEVICES_MIDI_CONTROLLER_CHANNEL, &controller_channel);
+	config_lookup_int(&app_config, CFG_DEVICES_MIDI_NOTE_CHANNEL, &note_channel);
 
 	for (int i = 0 ; i < VOICE_COUNT; i++)
 	{
 		voice[i].midi_channel = note_channel;
 	}
 
-	config_setting_t *setting_devices_midi_input = config_lookup(&app_config, "devices.midi.input");
+	config_setting_t *setting_devices_midi_input = config_lookup(&app_config, CFG_DEVICES_MIDI_INPUT);
 
 	if (setting_devices_midi_input == NULL)
 	{
@@ -257,7 +265,10 @@ void configure_midi()
 		exit(EXIT_FAILURE);
 	}
 
-	synth_controllers_initialise(controller_channel);
+	if (!synth_controllers_initialise(controller_channel, config_lookup(&app_config, CFG_CONTROLLERS)))
+	{
+		exit(EXIT_FAILURE);
+	}
 }
 
 void process_midi_events()
@@ -484,7 +495,7 @@ void create_ui()
 	image_renderer->y = 0;
 	image_renderer->width = 157;
 	image_renderer->height = 140;
-	image_renderer->image_file = "resources/pithesiser_alpha.png";
+	image_renderer->image_file = RESOURCES_PITHESISER_ALPHA_PNG;
 }
 
 void tune_oscilloscope_to_note(int note)
@@ -514,7 +525,7 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 int main(int argc, char **argv)
 {
 	config_init(&app_config);
-	if (config_read_file(&app_config, "resources/synth.cfg") != CONFIG_TRUE)
+	if (config_read_file(&app_config, RESOURCES_SYNTH_CFG) != CONFIG_TRUE)
 	{
 		printf("Config error in %s at line %d:\n", config_error_file(&app_config), config_error_line(&app_config));
 		printf("%s\n", config_error_text(&app_config));
