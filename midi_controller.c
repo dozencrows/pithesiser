@@ -11,17 +11,27 @@
 
 static int read_midi_controller(midi_controller_t *controller, int *value)
 {
-	// TODO: expand to handle 14-bit controller pairs
+	int changed = 0;
 	if (controller->midi_cc[0] != -1)
 	{
-		if (midi_get_raw_controller_changed(controller->midi_channel, controller->midi_cc[0]))
+		if (controller->midi_cc[1] != -1)
+		{
+			int msb, lsb;
+
+			changed = midi_get_raw_controller_changed(controller->midi_channel, controller->midi_cc[0]);
+			msb = midi_get_raw_controller_value(controller->midi_channel, controller->midi_cc[0]);
+			changed |= midi_get_raw_controller_changed(controller->midi_channel, controller->midi_cc[1]);
+			lsb = midi_get_raw_controller_value(controller->midi_channel, controller->midi_cc[1]);
+			*value = lsb | msb << 7;
+		}
+		else if (midi_get_raw_controller_changed(controller->midi_channel, controller->midi_cc[0]))
 		{
 			*value = midi_get_raw_controller_value(controller->midi_channel, controller->midi_cc[0]);
-			return 1;
+			changed = 1;
 		}
 	}
 
-	return 0;
+	return changed;
 }
 
 static int process_continuous_controller(midi_controller_t *controller, int *changed)

@@ -7,9 +7,9 @@ Underway
 
 To do next
 ==========
-* Investigate clicks when playing note sequences
-* Investigate clicks/jumps when changing master volume (suspect controller not smooth/precise enough)
+* Investigate clicks when playing note sequences (suspect auto-ducking on mixer?)
 * Investigate volume jumps when playing note sequences with longer releases (suspect auto-ducking on mixer?)
+* Investigate aliasing on notes with fast attack and/or release
 * Pitch bend control
 * Modulation wheen control (linked with LFO)
 * LFO: vibrato, tremelo, with envelope
@@ -145,6 +145,8 @@ Useful info:
   * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=216
   * http://www.musicdsp.org/showArchiveComment.php?ArchiveID=217
 
+Audo Quality Notes
+==================
 Bandlimited Waves
 -----------------
 Tried out bandlimited saw wave by summing sine waves (see http://www.musicdsp.org/files/waveforms.txt and
@@ -154,6 +156,36 @@ a lot because of wide range of playback frequencies.
 Aliasing reduced further by creating wavetable of higher pitched note; however this made lower pitches
 "duller".
 
+Audio Quality Issues
+--------------------
+* Clicks/steps when raising or lowering master volume.
+This appears to be lack of resolution with basic MIDI controller allowing only 127 levels; certainly at higher levels,
+the step between each is audible.
+Resolution: use 14-bit MIDI controller with greater precision & range - e.g. 4096 levels.
+
+* Strange harmonics on sine wave with fast attack or release
+Slowing down attack/release reduces this effect.
+
+* Clicks when playing new notes, or when notes end
+Suspect the automatic volume ducking is behind this; immediately lowering/raising volume level based on number of voices.
+Current implementation scales the post-mix signal between two voices by 0.75 as each voice is processed, so scaling is
+automatically proportional to number of voices
+  * Switch to float and use interpolated normalisation?
+  * Pre-calculate scale factor based on number of voices each buffer, and apply that interpolated between last & new value?
+  * Pre-calculate scale factor for a voice at start based on number of voices & keep that for each voice?
+
+* Clicks/glitches when changing filter parameters
+Discontinuities in the math? Address by interpolating across a buffer between old & new?
+
+* Strange harmonics on various waves, particularly at higher pitches
+Likely general digital aliasing.
+  * Try higher internal sample rate (e.g. 88kHz) and downsample on output (average)
+  * Use more band-limited waveforms.
+  * Use multi-sampled wave tables.
+  * Use precalculated filtering.
+
+Performance Notes
+=================
 Profiling Notes
 ---------------
 Tried out gperftools cpu profiling, in debug and release - with monophonic/polyphonic, wavetable/procedural.
