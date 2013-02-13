@@ -173,11 +173,11 @@ void process_audio(int32_t timestep_ms)
 				if (first_audible_voice < 0)
 				{
 					first_audible_voice = i;
-					osc_output(&oscillator[i], buffer_samples, buffer_data);
+					osc_output(&oscillator[i], buffer_data, buffer_samples);
 				}
 				else
 				{
-					osc_mix_output(&oscillator[i], buffer_samples, buffer_data);
+					osc_mix_output(&oscillator[i], buffer_data, buffer_samples);
 				}
 			}
 			else if (voice[i].current_note == NOTE_ENDING)
@@ -193,7 +193,7 @@ void process_audio(int32_t timestep_ms)
 		}
 	}
 
-	filter_apply(&global_filter, buffer_samples, buffer_data);
+	filter_apply(&global_filter, buffer_data, buffer_samples);
 
 	if (first_audible_voice < 0)
 	{

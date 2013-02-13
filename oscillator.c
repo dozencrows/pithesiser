@@ -18,7 +18,7 @@ void osc_init(oscillator_t* osc)
 	osc->level 				= 0;
 }
 
-void osc_output(oscillator_t* osc, int sample_count, void *sample_data)
+void osc_output(oscillator_t* osc, sample_t *sample_data, int sample_count)
 {
 	waveform_generator_t *generator = &generators[osc->waveform];
 	if (generator->output_func != NULL)
@@ -27,7 +27,7 @@ void osc_output(oscillator_t* osc, int sample_count, void *sample_data)
 	}
 }
 
-void osc_mix_output(oscillator_t* osc, int sample_count, void *sample_data)
+void osc_mix_output(oscillator_t* osc, sample_t *sample_data, int sample_count)
 {
 	waveform_generator_t *generator = &generators[osc->waveform];
 	if (generator->mix_func != NULL)
@@ -36,7 +36,7 @@ void osc_mix_output(oscillator_t* osc, int sample_count, void *sample_data)
 	}
 }
 
-void osc_mid_output(oscillator_t* osc, int sample_count, void *sample_data)
+void osc_mid_output(oscillator_t* osc, sample_t *sample_data, int sample_count)
 {
 	waveform_generator_t *generator = &generators[osc->waveform];
 	if (generator->mid_func != NULL)

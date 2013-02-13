@@ -38,6 +38,6 @@ typedef struct filter_t
 
 extern void filter_init(filter_t *filter);
 extern void filter_update(filter_t *filter);
-extern void filter_apply(filter_t *filter, int sample_count, sample_t *sample_data);
+extern void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count);
 
 #endif /* FILTER_H_ */

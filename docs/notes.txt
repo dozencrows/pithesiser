@@ -7,18 +7,20 @@ Underway
 
 To do next
 ==========
+* Parameterise channel count/stride on sample buffer operations; proper stereo operations
+* Switch all sample buffer operation functions & macros to use sample_t and put sample buffer ptr before count
 * Investigate clicks when playing note sequences (suspect auto-ducking on mixer?)
 * Investigate volume jumps when playing note sequences with longer releases (suspect auto-ducking on mixer?)
 * Investigate aliasing on notes with fast attack and/or release
 * Pitch bend control
-* Modulation wheen control (linked with LFO)
+* Modulation wheel control (linked with LFO)
 * LFO: vibrato, tremelo, with envelope
   * delay/two stage attack on envelopes
   * Multiple envelopes -> need smarter control management 
   * two independent LFOs; target separate outputs & separate parameters, but triggered in step.
 * Filters
   * Fix clicks on parameter changes (interpolation?)
-  * Fix instability/distortio in HPF at lowest freq & low pitch notes
+  * Fix instability/distortion in HPF at lowest freq & low pitch notes
   * Add overall gain control to LPF and HPF
   * Add more filter types (BPF, 1-POLE LPF & HPF, notch)
   * Drive filter param from envelope
@@ -31,7 +33,6 @@ Blog ideas
 ==========
 * BCR 2000 controller
 * libconfig stuff
-* On the quality of digital audio
 * Fixed point math
 
 Ideas to try
@@ -165,6 +166,8 @@ Resolution: use 14-bit MIDI controller with greater precision & range - e.g. 409
 
 * Strange harmonics on sine wave with fast attack or release
 Slowing down attack/release reduces this effect.
+Might be caused by the fact that envelope processing precision is per buffer, not per sample; fast attack/release means
+more dramatic changes in volume. Suggest trying interpolation of level across buffer.
 
 * Clicks when playing new notes, or when notes end
 Suspect the automatic volume ducking is behind this; immediately lowering/raising volume level based on number of voices.
@@ -173,6 +176,21 @@ automatically proportional to number of voices
   * Switch to float and use interpolated normalisation?
   * Pre-calculate scale factor based on number of voices each buffer, and apply that interpolated between last & new value?
   * Pre-calculate scale factor for a voice at start based on number of voices & keep that for each voice?
+  
+Taking out the auto-ducking stopped the clicks (but increased likelihood of clipping).
+Tried this method: mixed = A + B - (AB / SAMPLE_MAX) (see http://www.vttoth.com/CMS/index.php/technical-notes/68)
+  * Close, but introduced strange harmonics on sine waves, and still clipped nastily at the bottom.
+Other approaches would require structural changes:
+  * Switch to 32 bit integer or float sample buffers, and convert prior to output. This would allow summing beyond 16 bit output limit
+    which could be scaled & clipped in one pass.
+  * Keep separate buffer for each oscillator, and mix with scale as a step after initial sample generation.
+Idea to try:
+  * When voice starts note from silence, first mix should interpolate the mix scale factor from 1 to 0.75
+  * When voice goes to silence, last mix should interpolate the mix scale factor from 0.75 to 1. Or this may need to be a post-note pass scaling the original signal
+  * When voice just changes note, no mix scale interpolation should happen if mixed.
+  * Consider each mix pair as a unique scenario, even when original is likely to be a previously mixed buffer.
+  * Might still risk clicks - e.g. if very first voice in mix stops, the next in order will become the first, suddenly not be scaled and jump in volume?
+  * Might consider some more general scaling modification to voices that can be interpolated before summing? Interpolation state based on number of voices & order.
 
 * Clicks/glitches when changing filter parameters
 Discontinuities in the math? Address by interpolating across a buffer between old & new?

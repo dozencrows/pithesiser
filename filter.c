@@ -145,7 +145,7 @@ void filter_update(filter_t *filter)
 	clear_history(filter);
 }
 
-void filter_apply(filter_t *filter, int sample_count, sample_t *sample_data)
+void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 {
 	if (filter->definition.type != FILTER_PASS)
 	{
