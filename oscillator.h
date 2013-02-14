@@ -23,6 +23,7 @@ typedef struct oscillator_t
 	fixed_t				frequency;
 	fixed_t				phase_accumulator;
 	int32_t				level;
+	int32_t				last_level;
 } oscillator_t;
 
 extern void osc_init(oscillator_t* osc);

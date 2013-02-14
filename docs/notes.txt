@@ -168,6 +168,7 @@ Resolution: use 14-bit MIDI controller with greater precision & range - e.g. 409
 Slowing down attack/release reduces this effect.
 Might be caused by the fact that envelope processing precision is per buffer, not per sample; fast attack/release means
 more dramatic changes in volume. Suggest trying interpolation of level across buffer.
+Resolution: interpolate changes in oscillator level across sample buffer eliminated this.
 
 * Clicks when playing new notes, or when notes end
 Suspect the automatic volume ducking is behind this; immediately lowering/raising volume level based on number of voices.
@@ -184,13 +185,8 @@ Other approaches would require structural changes:
   * Switch to 32 bit integer or float sample buffers, and convert prior to output. This would allow summing beyond 16 bit output limit
     which could be scaled & clipped in one pass.
   * Keep separate buffer for each oscillator, and mix with scale as a step after initial sample generation.
-Idea to try:
-  * When voice starts note from silence, first mix should interpolate the mix scale factor from 1 to 0.75
-  * When voice goes to silence, last mix should interpolate the mix scale factor from 0.75 to 1. Or this may need to be a post-note pass scaling the original signal
-  * When voice just changes note, no mix scale interpolation should happen if mixed.
-  * Consider each mix pair as a unique scenario, even when original is likely to be a previously mixed buffer.
-  * Might still risk clicks - e.g. if very first voice in mix stops, the next in order will become the first, suddenly not be scaled and jump in volume?
-  * Might consider some more general scaling modification to voices that can be interpolated before summing? Interpolation state based on number of voices & order.
+Resolution: Factor modifier into oscillator level in main loop based on number of voices playing, utilise amplitude interpolation from
+    		issue #2 to resolve it.
 
 * Clicks/glitches when changing filter parameters
 Discontinuities in the math? Address by interpolating across a buffer between old & new?

@@ -48,6 +48,7 @@ static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* 
 	{
 		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
 		sample_t *sample_ptr = (sample_t*) sample_data;
+		CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 		while (sample_count > 0)
 		{
@@ -56,9 +57,10 @@ static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* 
 			{
 				WT_LINEAR_INTERP(waveform, osc, sample);
 			}
-			SCALE_AMPLITUDE(osc, sample);
+			SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 			STORE_SAMPLE(sample, sample_ptr);
 			WT_ADVANCE_PHASE(osc, waveform, phase_step);
+			INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 			sample_count--;
 		}
 	}
@@ -72,6 +74,7 @@ static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator
 	{
 		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
 		sample_t *sample_ptr = (sample_t*) sample_data;
+		CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 		while (sample_count > 0)
 		{
@@ -80,10 +83,11 @@ static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator
 			{
 				WT_LINEAR_INTERP(waveform, osc, sample);
 			}
-			SCALE_AMPLITUDE(osc, sample);
+			SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 			MIX((int32_t)*sample_ptr, sample, mixed);
 			STORE_SAMPLE(mixed, sample_ptr);
 			WT_ADVANCE_PHASE(osc, waveform, phase_step);
+			INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 			sample_count--;
 		}
 	}

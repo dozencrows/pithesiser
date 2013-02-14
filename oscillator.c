@@ -16,6 +16,7 @@ void osc_init(oscillator_t* osc)
 	osc->frequency			= 440;
 	osc->phase_accumulator 	= 0;
 	osc->level 				= 0;
+	osc->last_level			= 0;
 }
 
 void osc_output(oscillator_t* osc, sample_t *sample_data, int sample_count)

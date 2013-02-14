@@ -65,24 +65,27 @@ static void procedural_sine_output(waveform_generator_def_t *generator, oscillat
 {
 	PR_CALC_PHASE_STEP(osc, phase_step);
 	sample_t *sample_ptr = (sample_t*) sample_data;
+	CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 	while (sample_count > 0)
 	{
 		while (osc->phase_accumulator < PHASE_HALF_LIMIT && sample_count > 0)
 		{
 			int32_t PR_CALC_SINE_POSITIVE(osc, sample);
-			SCALE_AMPLITUDE(osc, sample)
+			SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 			STORE_SAMPLE(sample, sample_ptr);
 			PR_ADVANCE_PHASE(osc, phase_step);
+			INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 			sample_count--;
 		}
 
 		while (osc->phase_accumulator < PHASE_LIMIT && sample_count > 0)
 		{
 			int32_t PR_CALC_SINE_NEGATIVE(osc, sample);
-			SCALE_AMPLITUDE(osc, sample)
+			SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 			STORE_SAMPLE(sample, sample_ptr);
 			PR_ADVANCE_PHASE(osc, phase_step);
+			INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 			sample_count--;
 		}
 
@@ -110,7 +113,7 @@ static void procedural_sine_mid_output(waveform_generator_def_t * generator, osc
 		PR_CALC_SINE_NEGATIVE(osc, sample);
 	}
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -130,7 +133,7 @@ static void procedural_halfsine_mid_output(waveform_generator_def_t * generator,
 
 	PR_CALC_HALFSINE(osc, sample);
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -141,26 +144,29 @@ static void procedural_sine_mix_output(waveform_generator_def_t *generator, osci
 {
 	PR_CALC_PHASE_STEP(osc, phase_step);
 	sample_t *sample_ptr = (sample_t*) sample_data;
+	CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 	while (sample_count > 0)
 	{
 		while (osc->phase_accumulator < PHASE_HALF_LIMIT && sample_count > 0)
 		{
 			int32_t PR_CALC_SINE_POSITIVE(osc, sample);
-			SCALE_AMPLITUDE(osc, sample)
+			SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 			MIX((int32_t)*sample_ptr, sample, mixed);
 			STORE_SAMPLE(mixed, sample_ptr);
 			PR_ADVANCE_PHASE(osc, phase_step);
+			INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 			sample_count--;
 		}
 
 		while (osc->phase_accumulator < PHASE_LIMIT && sample_count > 0)
 		{
 			int32_t PR_CALC_SINE_NEGATIVE(osc, sample);
-			SCALE_AMPLITUDE(osc, sample)
+			SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 			MIX((int32_t)*sample_ptr, sample, mixed);
 			STORE_SAMPLE(mixed, sample_ptr);
 			PR_ADVANCE_PHASE(osc, phase_step);
+			INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 			sample_count--;
 		}
 
@@ -172,13 +178,15 @@ static void procedural_saw_output(waveform_generator_def_t *generator, oscillato
 {
 	PR_CALC_PHASE_STEP(osc, phase_step);
 	sample_t *sample_ptr = (sample_t*) sample_data;
+	CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 	while (sample_count > 0)
 	{
 		int32_t PR_CALC_SAW_DOWN(osc, sample);
-		SCALE_AMPLITUDE(osc, sample);
+		SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 		STORE_SAMPLE(sample, sample_ptr);
 		PR_ADVANCE_PHASE(osc, phase_step);
+		INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 		sample_count--;
 
 		PR_LOOP_PHASE(osc);
@@ -196,7 +204,7 @@ static void procedural_saw_mid_output(waveform_generator_def_t * generator, osci
 
 	int32_t PR_CALC_SAW_DOWN(osc, sample);
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -214,7 +222,7 @@ static void procedural_sawup_mid_output(waveform_generator_def_t * generator, os
 
 	int32_t PR_CALC_SAW_UP(osc, sample);
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -225,14 +233,16 @@ static void procedural_saw_mix_output(waveform_generator_def_t *generator, oscil
 {
 	PR_CALC_PHASE_STEP(osc, phase_step);
 	sample_t *sample_ptr = (sample_t*) sample_data;
+	CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 	while (sample_count > 0)
 	{
 		int32_t PR_CALC_SAW_DOWN(osc, sample);
-		SCALE_AMPLITUDE(osc, sample);
+		SCALE_AMPLITUDE((amp_scale >> AMPL_INTERP_PRECISION), sample);
 		MIX((int32_t)*sample_ptr, sample, mixed);
 		STORE_SAMPLE(mixed, sample_ptr);
 		PR_ADVANCE_PHASE(osc, phase_step);
+		INTERPOLATE_AMPLITUDE(amp_scale, amp_delta);
 		sample_count--;
 
 		PR_LOOP_PHASE(osc);
@@ -269,7 +279,7 @@ static void procedural_triangle_mid_output(waveform_generator_def_t * generator,
 		sample = -sample;
 	}
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -287,7 +297,7 @@ static void procedural_square_mid_output(waveform_generator_def_t * generator, o
 
 	int32_t sample = (((osc->phase_accumulator - PHASE_HALF_LIMIT) >> (sizeof(osc->phase_accumulator) * 8 - 1)) | 1) * SAMPLE_MAX;
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -306,7 +316,7 @@ static void procedural_halfsawdown_mid_output(waveform_generator_def_t * generat
 
 	int32_t PR_CALC_HALFSAW_DOWN(osc, sample);
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -324,7 +334,7 @@ static void procedural_halfsawup_mid_output(waveform_generator_def_t * generator
 
 	int32_t PR_CALC_HALFSAW_UP(osc, sample);
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);
@@ -351,7 +361,7 @@ static void procedural_halftriangle_mid_output(waveform_generator_def_t * genera
 		PR_CALC_HALFTRI_DOWN(osc, sample);
 	}
 
-	SCALE_AMPLITUDE(osc, sample)
+	SCALE_AMPLITUDE(osc->level, sample)
 	*sample_ptr = sample;
 
 	PR_ADVANCE_PHASE(osc, phase_step);

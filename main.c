@@ -115,6 +115,8 @@ void configure_audio()
 	}
 }
 
+static int32_t duck_level_by_voice_count[] = { LEVEL_MAX, LEVEL_MAX, LEVEL_MAX * 0.65f, LEVEL_MAX * 0.49f, LEVEL_MAX * 0.40f,
+											   LEVEL_MAX * 0.34f, LEVEL_MAX * 0.29f, LEVEL_MAX * 0.25f, LEVEL_MAX * 0.22f};
 void process_audio(int32_t timestep_ms)
 {
 	int write_buffer_index = alsa_lock_next_write_buffer();
@@ -126,10 +128,11 @@ void process_audio(int32_t timestep_ms)
 
 	if (lfo_state)
 	{
-		osc_mid_output(&lf_oscillator, buffer_samples, &lfo_value);
+		osc_mid_output(&lf_oscillator, &lfo_value, buffer_samples);
 	}
 
 	int first_audible_voice = -1;
+	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
@@ -168,7 +171,9 @@ void process_audio(int32_t timestep_ms)
 			}
 
 			oscillator[i].level = (note_level * master_volume) / LEVEL_MAX;
-			if (oscillator[i].level > 0)
+			oscillator[i].level = (oscillator[i].level * auto_duck_level) / LEVEL_MAX;
+
+			if (oscillator[i].level > 0 || oscillator[i].last_level != 0)
 			{
 				if (first_audible_voice < 0)
 				{
@@ -179,6 +184,8 @@ void process_audio(int32_t timestep_ms)
 				{
 					osc_mix_output(&oscillator[i], buffer_data, buffer_samples);
 				}
+
+				oscillator[i].last_level = oscillator[i].level;
 			}
 			else if (voice[i].current_note == NOTE_ENDING)
 			{

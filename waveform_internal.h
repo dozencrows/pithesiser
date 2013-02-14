@@ -32,10 +32,17 @@ typedef struct
 
 extern waveform_generator_t generators[];
 
-#define SCALE_AMPLITUDE(osc, sample)				sample = (sample * osc->level) / SAMPLE_MAX;
+#define AMPL_INTERP_PRECISION	15
+
+#define CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count)	\
+													int32_t amp_delta = ((osc->level - osc->last_level) << AMPL_INTERP_PRECISION) / sample_count; \
+													int32_t amp_scale = osc->last_level << AMPL_INTERP_PRECISION;
+
+#define INTERPOLATE_AMPLITUDE(amp_scale, amp_delta)	amp_scale += amp_delta;
+
+#define SCALE_AMPLITUDE(amp_scale, sample)			sample = (sample * amp_scale) / SAMPLE_MAX;
 
 #define MIX(original, sample, mixed)				int32_t mixed = original + sample;	\
-													mixed = (mixed * 75) / 100;			\
 													if (mixed < -SAMPLE_MAX)				\
 														mixed = -SAMPLE_MAX;				\
 													else if (mixed > SAMPLE_MAX)			\
