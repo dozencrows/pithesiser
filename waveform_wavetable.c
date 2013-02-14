@@ -40,14 +40,14 @@ static waveform_t saw_wave_bandlimited;
 													if (osc->phase_accumulator > waveform->phase_limit) 	\
 														osc->phase_accumulator -= waveform->phase_limit
 
-static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
+static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* osc, sample_t *sample_data, int sample_count)
 {
 	waveform_t *waveform = (waveform_t*) generator->waveform_data;
 
 	if (waveform != NULL)
 	{
 		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
-		sample_t *sample_ptr = (sample_t*) sample_data;
+		sample_t *sample_ptr = sample_data;
 		CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 		while (sample_count > 0)
@@ -66,14 +66,14 @@ static void wavetable_output(waveform_generator_def_t *generator, oscillator_t* 
 	}
 }
 
-static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator_t* osc, int sample_count, void *sample_data)
+static void wavetable_mix_output(waveform_generator_def_t *generator, oscillator_t* osc, sample_t *sample_data, int sample_count)
 {
 	waveform_t *waveform = (waveform_t*) generator->waveform_data;
 
 	if (waveform != NULL)
 	{
 		WT_CALC_PHASE_STEP(phase_step, osc, waveform);
-		sample_t *sample_ptr = (sample_t*) sample_data;
+		sample_t *sample_ptr = sample_data;
 		CALC_AMPLITUDE_INTERPOLATION(osc, amp_scale, amp_delta, sample_count);
 
 		while (sample_count > 0)

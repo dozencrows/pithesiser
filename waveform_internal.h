@@ -20,7 +20,7 @@ typedef struct
 } waveform_generator_def_t;
 
 typedef struct oscillator_t oscillator_t;
-typedef void (*generator_output_func_t)(waveform_generator_def_t *generator_def, oscillator_t* osc, int sample_count, void *sample_data);
+typedef void (*generator_output_func_t)(waveform_generator_def_t *generator_def, oscillator_t* osc, sample_t *sample_data, int sample_count);
 
 typedef struct
 {
