@@ -30,6 +30,7 @@
 #include "gfx_image.h"
 #include "master_time.h"
 #include "synth_controllers.h"
+#include "code_timing_tests.h"
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Commons
@@ -48,6 +49,8 @@ static const char* CFG_DEVICES_MIDI_NOTE_CHANNEL = "devices.midi.note_channel";
 static const char* CFG_DEVICES_MIDI_CONTROLLER_CHANNEL = "devices.midi.controller_channel";
 static const char* CFG_CONTROLLERS = "controllers";
 static const char* CFG_DEVICES_MIDI_INPUT = "devices.midi.input";
+static const char* CFG_TESTS = "tests";
+static const char* CFG_CODE_TIMING_TESTS = "code_timing";
 
 config_t app_config;
 
@@ -530,27 +533,17 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
-// Entrypoint
+// Synth setup and main loop
 //
-int main(int argc, char **argv)
+const char *profile_file = NULL;
+
+void configure_profiling()
 {
-	const char* config_file = RESOURCES_SYNTH_CFG;
-	if (argc > 1)
-	{
-		config_file = argv[1];
-	}
+	config_lookup_string(&app_config, "profiling.output_file", &profile_file);
+}
 
-	char config_dir[PATH_MAX];
-	realpath(config_file, config_dir);
-	dirname(config_dir);
-	config_init(&app_config);
-	config_set_include_dir(&app_config, config_dir);
-	if (config_read_file(&app_config, config_file) != CONFIG_TRUE)
-	{
-		printf("Config error in %s at line %d: %s\n", config_error_file(&app_config), config_error_line(&app_config), config_error_text(&app_config));
-		exit(EXIT_FAILURE);
-	}
-
+void synth_main()
+{
 	gfx_wave_render_initialise();
 	gfx_envelope_render_initialise();
 
@@ -561,6 +554,7 @@ int main(int argc, char **argv)
 
 	configure_audio();
 	configure_midi();
+	configure_profiling();
 
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
@@ -599,9 +593,9 @@ int main(int argc, char **argv)
 
 		if (!profiling && midi_get_raw_controller_changed(controller_channel, PROFILE_CONTROLLER))
 		{
-			if (argc > 1 && midi_get_raw_controller_value(controller_channel, PROFILE_CONTROLLER) > 63)
+			if (profile_file != NULL && midi_get_raw_controller_value(controller_channel, PROFILE_CONTROLLER) > 63)
 			{
-				ProfilerStart(argv[1]);
+				ProfilerStart(profile_file);
 				profiling = 1;
 			}
 		}
@@ -613,7 +607,7 @@ int main(int argc, char **argv)
 		last_timestamp = timestamp;
 	}
 
-	if (argc > 1)
+	if (profiling)
 	{
 		ProfilerStop();
 	}
@@ -627,5 +621,44 @@ int main(int argc, char **argv)
 	config_destroy(&app_config);
 
 	printf("Done: %d xruns\n", alsa_get_xruns_count());
+}
+
+//-----------------------------------------------------------------------------------------------------------------------
+// Entrypoint
+//
+int main(int argc, char **argv)
+{
+	const char* config_file = RESOURCES_SYNTH_CFG;
+	if (argc > 1)
+	{
+		config_file = argv[1];
+	}
+
+	char config_dir[PATH_MAX];
+	realpath(config_file, config_dir);
+	dirname(config_dir);
+	config_init(&app_config);
+	config_set_include_dir(&app_config, config_dir);
+	if (config_read_file(&app_config, config_file) != CONFIG_TRUE)
+	{
+		printf("Config error in %s at line %d: %s\n", config_error_file(&app_config), config_error_line(&app_config), config_error_text(&app_config));
+		exit(EXIT_FAILURE);
+	}
+
+	config_setting_t *setting_tests = config_lookup(&app_config, CFG_TESTS);
+
+	if (setting_tests != NULL)
+	{
+		config_setting_t *setting_code_timing_tests = config_setting_get_member(setting_tests, CFG_CODE_TIMING_TESTS);
+		if (setting_code_timing_tests != NULL)
+		{
+			code_timing_tests_main(setting_code_timing_tests);
+		}
+	}
+	else
+	{
+		synth_main();
+	}
+
 	return 0;
 }

@@ -7,13 +7,7 @@
 
 #include "filter.h"
 #include <memory.h>
-#include <math.h>
-
-//#define FLOAT_FILTER
-
-#if !defined(FLOAT_FILTER)
 #include "fixed_point_math.h"
-#endif
 
 static void clear_history(filter_t *filter)
 {
@@ -30,62 +24,6 @@ void filter_init(filter_t *filter)
 
 void filter_update(filter_t *filter)
 {
-#if defined(FLOAT_FILTER)
-	double frequency	= (double)filter->definition.frequency/(double)FIXED_ONE;
-	double q = (double)filter->definition.q/(double)FIXED_ONE;
-
-	double w0 = 2.0f * M_PI * frequency / (double)SYSTEM_SAMPLE_RATE;
-	double cos_w0	= cos(w0);
-	double sin_w0	= sin(w0);
-	double alpha	= sin_w0 / (q + q);
-
-	double a[3];
-	double b[3];
-
-	switch(filter->definition.type)
-	{
-		case FILTER_LPF:
-		{
-			double tmp = 1.0f - cos_w0;
-			b[0] = tmp * 0.5f;
-			b[1] = tmp;
-			b[2] = tmp * 0.5f;
-
-			a[0] = 1.0f + alpha;
-			a[1] = -2.0f * cos_w0;
-			a[2] = 1.0f - alpha;
-			break;
-		}
-
-		case FILTER_HPF:
-		{
-			double tmp = 1.0f + cos_w0;
-			b[0] = tmp * 0.5f;
-			b[1] = -tmp;
-			b[2] = tmp * 0.5f;
-
-			a[0] = 1.0f + alpha;
-			a[1] = -2.0f * cos_w0;
-			a[2] = 1.0f - alpha;
-			break;
-		}
-
-		default:
-		{
-			b[0] = a[0] = 1.0f;
-			a[1] = a[2] = 0.0f;
-			b[1] = b[2] = 0.0f;
-			break;
-		}
-	}
-
-	filter->state.input_coeff[0] = (fixed_wide_t)((b[0] / a[0]) * (double)FIXED_ONE);
-	filter->state.input_coeff[1] = (fixed_wide_t)((b[1] / a[0]) * (double)FIXED_ONE);
-	filter->state.input_coeff[2] = (fixed_wide_t)((b[2] / a[0]) * (double)FIXED_ONE);
-
-	filter->state.output_coeff[0] = (fixed_wide_t)((a[1] / a[0]) * (double)FIXED_ONE);
-	filter->state.output_coeff[1] = (fixed_wide_t)((a[2] / a[0]) * (double)FIXED_ONE);
-#else
 	fixed_wide_t w0 = fixed_mul_wide_start(FIXED_PI, filter->definition.frequency);
 	w0 = (w0 + w0) / (fixed_wide_t)SYSTEM_SAMPLE_RATE;
 	fixed_t cos_w0, sin_w0;
@@ -140,7 +78,7 @@ void filter_update(filter_t *filter)
 
 	filter->state.output_coeff[0] = fixed_divide_wide(a[1], a[0]);
 	filter->state.output_coeff[1] = fixed_divide_wide(a[2], a[0]);
-#endif
+
 	clear_history(filter);
 }
 
