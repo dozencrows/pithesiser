@@ -86,13 +86,13 @@ void filter_update(filter_t *filter)
 	filter->state.output_coeff[0] = (fixed_wide_t)((a[1] / a[0]) * (double)FIXED_ONE);
 	filter->state.output_coeff[1] = (fixed_wide_t)((a[2] / a[0]) * (double)FIXED_ONE);
 #else
-	fixed_wide_t w0 = (((fixed_wide_t)(FIXED_PI) * (fixed_wide_t)filter->definition.frequency)) >> FIXED_PRECISION;
-	w0 = (2 * w0) / (fixed_wide_t)SYSTEM_SAMPLE_RATE;
+	fixed_wide_t w0 = fixed_mul_wide_start(FIXED_PI, filter->definition.frequency);
+	w0 = (w0 + w0) / (fixed_wide_t)SYSTEM_SAMPLE_RATE;
 	fixed_t cos_w0, sin_w0;
 
 	fixed_sin_cos((fixed_t)w0, &sin_w0, &cos_w0);
 
-	fixed_t alpha	= ((fixed_wide_t)sin_w0 << FIXED_PRECISION) / ((fixed_wide_t)(filter->definition.q) * 2);
+	fixed_t alpha	= fixed_divide(sin_w0, filter->definition.q * 2);
 
 	fixed_wide_t a[3];
 	fixed_wide_t b[3];
@@ -134,13 +134,12 @@ void filter_update(filter_t *filter)
 		}
 	}
 
+	filter->state.input_coeff[0] = fixed_divide_wide(b[0], a[0]);
+	filter->state.input_coeff[1] = fixed_divide_wide(b[1], a[0]);
+	filter->state.input_coeff[2] = fixed_divide_wide(b[2], a[0]);
 
-	filter->state.input_coeff[0] = (b[0] << FIXED_PRECISION) / a[0];
-	filter->state.input_coeff[1] = (b[1] << FIXED_PRECISION) / a[0];
-	filter->state.input_coeff[2] = (b[2] << FIXED_PRECISION) / a[0];
-
-	filter->state.output_coeff[0] = (a[1] << FIXED_PRECISION)/ a[0];
-	filter->state.output_coeff[1] = (a[2] << FIXED_PRECISION)/ a[0];
+	filter->state.output_coeff[0] = fixed_divide_wide(a[1], a[0]);
+	filter->state.output_coeff[1] = fixed_divide_wide(a[2], a[0]);
 #endif
 	clear_history(filter);
 }
@@ -151,20 +150,20 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 	{
 		for (int i = 0; i < sample_count; i++)
 		{
-			fixed_wide_t sample = (fixed_wide_t)(*sample_data);
+			fixed_wide_t sample = (fixed_wide_t)*sample_data;
 			fixed_wide_t new_sample;
 			new_sample =  sample * filter->state.input_coeff[0];
-			new_sample += (filter->state.input_coeff[1] * filter->state.history[0]) >> FIXED_PRECISION;
-			new_sample += (filter->state.input_coeff[2] * filter->state.history[1]) >> FIXED_PRECISION;
-			new_sample -= (filter->state.output_coeff[0] * filter->state.output[0]) >> FIXED_PRECISION;
-			new_sample -= (filter->state.output_coeff[1] * filter->state.output[1]) >> FIXED_PRECISION;
+			new_sample += fixed_mul_wide(filter->state.input_coeff[1], filter->state.history[0]);
+			new_sample += fixed_mul_wide(filter->state.input_coeff[2], filter->state.history[1]);
+			new_sample -= fixed_mul_wide(filter->state.output_coeff[0], filter->state.output[0]);
+			new_sample -= fixed_mul_wide(filter->state.output_coeff[1], filter->state.output[1]);
 
 			filter->state.history[1] = filter->state.history[0];
 			filter->state.history[0] = sample << FIXED_PRECISION;
 			filter->state.output[1] = filter->state.output[0];
 			filter->state.output[0] = new_sample;
 
-			sample_t output = (sample_t)((new_sample + FIXED_HALF) >> FIXED_PRECISION);
+			sample_t output = (sample_t)fixed_wide_round_to_int(new_sample);
 			*sample_data++ = output;
 			*sample_data++ = output;
 		}
@@ -172,7 +171,7 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 	else
 	{
 		int last_sample_index = (sample_count - 1) * 2;
-		fixed_wide_t sample = (fixed_wide_t)(sample_data[last_sample_index]) << FIXED_PRECISION;
+		fixed_wide_t sample = fixed_wide_from_int(sample_data[last_sample_index]);
 
 		filter->state.history[1] = filter->state.history[0];
 		filter->state.history[0] = sample;

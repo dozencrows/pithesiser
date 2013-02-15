@@ -25,8 +25,6 @@ static int32_t calculate_level(envelope_instance_t *instance, envelope_stage_t* 
 
 	int32_t stage_delta = 0;
 	if (stage->duration > 0) {
-		//int64_t level_scale = (((int64_t)elapsed_time_ms) << ENV_FIXED_PRECISION) / stage->duration;
-		//stage_delta = ((int64_t)(stage->end_level - start_level) * level_scale) >> ENV_FIXED_PRECISION;
 		fixed_t level_scale = fixed_divide_at(elapsed_time_ms, stage->duration, ENV_FIXED_PRECISION);
 		stage_delta = fixed_mul_at(stage->end_level - start_level, level_scale, ENV_FIXED_PRECISION);
 	}

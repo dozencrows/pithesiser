@@ -19,14 +19,26 @@ extern fixed_t const FIXED_HALF_PI;
 extern void fixed_sin_cos(fixed_t const theta, fixed_t *s, fixed_t *c);
 
 #define fixed_from_int(a) fixed_from_int_at(a, FIXED_PRECISION)
+#define fixed_wide_from_int(a) fixed_wide_from_int_at(a, FIXED_PRECISION)
 #define fixed_mul(a, b) fixed_mul_at(a, b, FIXED_PRECISION)
+#define fixed_mul_wide_start(a, b) fixed_mul_wide_start_at(a, b, FIXED_PRECISION)
+#define fixed_mul_wide(a, b) fixed_mul_wide_at(a, b, FIXED_PRECISION)
+#define fixed_mul_wide_end(a, b) fixed_mul_wide_end_at(a, b, FIXED_PRECISION)
 #define fixed_divide(a, b) fixed_divide_at(a, b, FIXED_PRECISION)
+#define fixed_divide_wide(a, b) fixed_divide_wide_at(a, b, FIXED_PRECISION)
 #define fixed_trunc_to_int(a) fixed_trunc_to_int_at(a, FIXED_PRECISION)
 #define fixed_round_to_int(a) fixed_round_to_int_at(a, FIXED_PRECISION)
+#define fixed_wide_trunc_to_int(a) fixed_wide_trunc_to_int_at(a, FIXED_PRECISION)
+#define fixed_wide_round_to_int(a) fixed_wide_round_to_int_at(a, FIXED_PRECISION)
 
 __attribute__((always_inline)) inline fixed_t fixed_from_int_at(int a, int precision)
 {
 	return (fixed_t)a << precision;
+}
+
+__attribute__((always_inline)) inline fixed_wide_t fixed_wide_from_int_at(int a, int precision)
+{
+	return (fixed_wide_t)a << precision;
 }
 
 __attribute__((always_inline)) inline fixed_t fixed_mul_at(fixed_t a, fixed_t b, int precision)
@@ -34,9 +46,29 @@ __attribute__((always_inline)) inline fixed_t fixed_mul_at(fixed_t a, fixed_t b,
 	return ((fixed_wide_t)a * (fixed_wide_t)b) >> precision;
 }
 
+__attribute__((always_inline)) inline fixed_wide_t fixed_mul_wide_start_at(fixed_t a, fixed_t b, int precision)
+{
+	return ((fixed_wide_t)a * (fixed_wide_t)b) >> precision;
+}
+
+__attribute__((always_inline)) inline fixed_wide_t fixed_mul_wide_at(fixed_wide_t a, fixed_wide_t b, int precision)
+{
+	return (a * b) >> precision;
+}
+
+__attribute__((always_inline)) inline fixed_t fixed_mul_wide_end_at(fixed_wide_t a, fixed_wide_t b, int precision)
+{
+	return (a * b) >> precision;
+}
+
 __attribute__((always_inline)) inline fixed_t fixed_divide_at(fixed_t a, fixed_t b, int precision)
 {
 	return ((fixed_wide_t)a << precision) / (fixed_wide_t)b;
+}
+
+__attribute__((always_inline)) inline fixed_wide_t fixed_divide_wide_at(fixed_wide_t a, fixed_wide_t b, int precision)
+{
+	return (a << precision) / b;
 }
 
 __attribute__((always_inline)) inline int fixed_trunc_to_int_at(fixed_t a, int precision)
@@ -45,6 +77,16 @@ __attribute__((always_inline)) inline int fixed_trunc_to_int_at(fixed_t a, int p
 }
 
 __attribute__((always_inline)) inline int fixed_round_to_int_at(fixed_t a, int precision)
+{
+	return (a + (1 << (precision - 1))) >> precision;
+}
+
+__attribute__((always_inline)) inline int fixed_wide_trunc_to_int_at(fixed_wide_t a, int precision)
+{
+	return a >> precision;
+}
+
+__attribute__((always_inline)) inline int fixed_wide_round_to_int_at(fixed_wide_t a, int precision)
 {
 	return (a + (1 << (precision - 1))) >> precision;
 }
