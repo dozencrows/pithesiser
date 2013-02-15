@@ -41,6 +41,5 @@ typedef enum
 } waveform_type_t;
 
 extern void waveform_initialise();
-extern void waveform_normalise(sample_t *buffer, int sample_count, int last_note_count, int current_note_count);
 
 #endif /* WAVEFORM_H_ */

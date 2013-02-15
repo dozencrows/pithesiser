@@ -8,8 +8,9 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <math.h>
-#include "system_constants.h"
 #include "waveform_wavetable.h"
+#include "system_constants.h"
+#include "fixed_point_math.h"
 #include "oscillator.h"
 
 #define WAVETABLE_SAMPLE_RATE		((float)SYSTEM_SAMPLE_RATE)
@@ -31,10 +32,10 @@ static waveform_t saw_wave_bandlimited;
 
 #define WT_CALC_PHASE_STEP(phase_step, osc, waveform) 	fixed_t phase_step = osc->frequency / (fixed_t)waveform->frequency;
 
-#define WT_GET_SAMPLE(osc, sample) 		   			int wave_index = osc->phase_accumulator >> FIXED_PRECISION; \
+#define WT_GET_SAMPLE(osc, sample) 		   			int wave_index = fixed_round_to_int(osc->phase_accumulator); \
 													int32_t sample = waveform->samples[wave_index]
 
-#define WT_LINEAR_INTERP(waveform, osc, sample) 	sample += (((int32_t) waveform->linear_deltas[wave_index]) * (osc->phase_accumulator & FIXED_FRACTION_MASK)) >> FIXED_PRECISION
+#define WT_LINEAR_INTERP(waveform, osc, sample) 	sample += fixed_mul(waveform->linear_deltas[wave_index], osc->phase_accumulator & FIXED_FRACTION_MASK)
 
 #define WT_ADVANCE_PHASE(osc, waveform, phase_step)	osc->phase_accumulator += phase_step; 					\
 													if (osc->phase_accumulator > waveform->phase_limit) 	\

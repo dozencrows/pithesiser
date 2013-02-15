@@ -15,6 +15,7 @@
 #include <libconfig.h>
 #include <gperftools/profiler.h>
 #include "system_constants.h"
+#include "fixed_point_math.h"
 #include "alsa.h"
 #include "midi.h"
 #include "waveform.h"
@@ -167,7 +168,8 @@ void process_audio(int32_t timestep_ms)
 			else if (lfo_state == LFO_STATE_PITCH)
 			{
 				// TODO: use a proper fixed point power function!
-				oscillator[i].frequency = (((int64_t)base_frequency * (int64_t)(powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE)) >> FIXED_PRECISION);
+				//oscillator[i].frequency = (((fixed_wide_t)base_frequency * (fixed_wide_t)(powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE)) >> FIXED_PRECISION);
+				oscillator[i].frequency = fixed_mul(base_frequency, powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE);
 			}
 
 			oscillator[i].level = (note_level * master_volume) / LEVEL_MAX;

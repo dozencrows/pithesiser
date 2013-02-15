@@ -7,54 +7,55 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include "system_constants.h"
 #include "waveform_procedural.h"
+#include "system_constants.h"
+#include "fixed_point_math.h"
 #include "oscillator.h"
 
 #define PHASE_LIMIT			(4 * FIXED_ONE)
 #define PHASE_HALF_LIMIT	(2 * FIXED_ONE)
 #define PHASE_QUARTER_LIMIT	(FIXED_ONE)
 
-#define PR_CALC_PHASE_STEP(osc, phase_step)	fixed_t	phase_step = (((fixed_wide_t)PHASE_LIMIT * (fixed_wide_t)osc->frequency) >> FIXED_PRECISION) / SYSTEM_SAMPLE_RATE
+#define PR_CALC_PHASE_STEP(osc, phase_step)	fixed_t	phase_step = fixed_mul(PHASE_LIMIT, osc->frequency) / SYSTEM_SAMPLE_RATE
 
 // Formulae (input is phase, t):
 // 	0  to 2: 1 - (1-t)^2
 // 	2> to 4: (1-(t-2))^2 - 1
 #define PR_CALC_SINE_POSITIVE(osc, sample)	sample = FIXED_ONE - osc->phase_accumulator; \
-											sample = ((fixed_wide_t)sample * (fixed_wide_t)sample) >> FIXED_PRECISION; \
-											sample = (fixed_wide_t)(FIXED_ONE - sample) * SAMPLE_MAX >> FIXED_PRECISION
+											sample = fixed_mul(sample, sample); \
+											sample = fixed_mul(FIXED_ONE - sample, SAMPLE_MAX)
 
 #define PR_CALC_SINE_NEGATIVE(osc, sample)	sample = FIXED_ONE - (osc->phase_accumulator - PHASE_HALF_LIMIT); \
-											sample = ((fixed_wide_t)sample * (fixed_wide_t)sample) >> FIXED_PRECISION; \
-											sample = (fixed_wide_t)(sample - FIXED_ONE) * SAMPLE_MAX >> FIXED_PRECISION
+											sample = fixed_mul(sample, sample); \
+											sample = fixed_mul(sample - FIXED_ONE, SAMPLE_MAX)
 
 #define PR_CALC_HALFSINE(osc, sample)		sample = FIXED_ONE - (osc->phase_accumulator >> 1); \
-											sample = ((fixed_wide_t)sample * (fixed_wide_t)sample) >> FIXED_PRECISION; \
-											sample = (fixed_wide_t)(FIXED_ONE - sample) * SAMPLE_MAX >> FIXED_PRECISION
+											sample = fixed_mul(sample, sample); \
+											sample = fixed_mul(FIXED_ONE - sample, SAMPLE_MAX)
 
 #define PR_CALC_SAW_DOWN(osc, sample)		sample = FIXED_ONE - (osc->phase_accumulator >> 1);	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_CALC_SAW_UP(osc, sample)			sample = osc->phase_accumulator >> 1;	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_CALC_HALFSAW_DOWN(osc, sample)	sample = FIXED_ONE - (osc->phase_accumulator >> 2);	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_CALC_HALFSAW_UP(osc, sample)		sample = osc->phase_accumulator >> 2;	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_CALC_TRI_DOWN(osc, offs, sample)	sample = FIXED_ONE - (osc->phase_accumulator - offs);	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_CALC_TRI_UP(osc, offs, sample)	sample = (osc->phase_accumulator - offs);	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_CALC_HALFTRI_DOWN(osc, sample)	sample = FIXED_ONE - ((osc->phase_accumulator - PHASE_HALF_LIMIT) >> 1);	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_CALC_HALFTRI_UP(osc, sample)		sample = (osc->phase_accumulator >> 1);	\
-											sample = ((fixed_wide_t)sample * SAMPLE_MAX) >> FIXED_PRECISION;
+											sample = fixed_mul(sample, SAMPLE_MAX);
 
 #define PR_ADVANCE_PHASE(osc, phase_step)	osc->phase_accumulator += phase_step
 

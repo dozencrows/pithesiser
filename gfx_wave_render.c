@@ -15,6 +15,7 @@
 #include "gfx_event.h"
 #include "gfx_event_types.h"
 #include "system_constants.h"
+#include "fixed_point_math.h"
 
 typedef struct wave_renderer_state_t
 {
@@ -257,14 +258,18 @@ void gfx_wave_render_wavelength(wave_renderer_t *renderer, fixed_t wavelength_sa
 	else {
 		renderer_int->definition.tuned_wavelength_fx = wavelength_samples_fx;
 
-		int64_t wave_max_samples_fx = renderer_int->definition.width << FIXED_PRECISION;
+		fixed_wide_t wave_max_samples_fx = fixed_from_int(renderer_int->definition.width);
 
 		if (wavelength_samples_fx < wave_max_samples_fx)
 		{
 			// Wavelength count is result of a truncation so rendering does not overflow maximum area
-			int64_t wavelengths_count = ((wave_max_samples_fx << FIXED_PRECISION) / (int64_t)wavelength_samples_fx) + FIXED_ONE;
-			int samples_count = (((wavelengths_count * (int64_t)wavelength_samples_fx) >> FIXED_PRECISION) + FIXED_HALF) >> FIXED_PRECISION;
-			renderer_int->state.max_rendered_samples = samples_count;
+//			fixed_wide_t wavelengths_count = ((wave_max_samples_fx << FIXED_PRECISION) / (fixed_wide_t)wavelength_samples_fx) + FIXED_ONE;
+//			int samples_count = (((wavelengths_count * (fixed_wide_t)wavelength_samples_fx) >> FIXED_PRECISION) + FIXED_HALF) >> FIXED_PRECISION;
+//			renderer_int->state.max_rendered_samples = samples_count;
+
+			fixed_t wavelengths_count = fixed_divide(wave_max_samples_fx, wavelength_samples_fx) + FIXED_ONE;
+			fixed_t samples_count = fixed_mul(wavelengths_count, wavelength_samples_fx);
+			renderer_int->state.max_rendered_samples = fixed_round_to_int(samples_count);
 		}
 		else
 		{
