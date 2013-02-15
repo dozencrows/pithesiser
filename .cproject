@@ -143,7 +143,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc/interface/vcos/pthreads}&quot;"/>
 								</option>
-								<option id="gnu.c.compiler.option.misc.other.1442520081" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
+								<option id="gnu.c.compiler.option.misc.other.1442520081" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99 -Wa,-a,-aln=$*.s" valueType="string"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2041202764" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.815851615" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

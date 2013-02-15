@@ -3,15 +3,12 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Create types for fixed values, and also some basic math funcs/macros for readability
 
 To do next
 ==========
+* Bring fixed point precision down to 15 bits and check quality
+* With 15-bit precision, revise filter to not use fixed_wide, check correctness then performance vs float 
 * Parameterise channel count/stride on sample buffer operations; proper stereo operations
-* Switch all sample buffer operation functions & macros to use sample_t and put sample buffer ptr before count
-* Investigate clicks when playing note sequences (suspect auto-ducking on mixer?)
-* Investigate volume jumps when playing note sequences with longer releases (suspect auto-ducking on mixer?)
-* Investigate aliasing on notes with fast attack and/or release
 * Pitch bend control
 * Modulation wheel control (linked with LFO)
 * LFO: vibrato, tremelo, with envelope
@@ -31,9 +28,7 @@ To do next
 
 Blog ideas
 ==========
-* BCR 2000 controller
-* libconfig stuff
-* Fixed point math
+* Fixed point math: difficulties, tricks, performance vs float on RPi
 
 Ideas to try
 ============
@@ -162,13 +157,13 @@ Audio Quality Issues
 * Clicks/steps when raising or lowering master volume.
 This appears to be lack of resolution with basic MIDI controller allowing only 127 levels; certainly at higher levels,
 the step between each is audible.
-Resolution: use 14-bit MIDI controller with greater precision & range - e.g. 4096 levels.
+RESOLUTION: use 14-bit MIDI controller with greater precision & range - e.g. 4096 levels.
 
 * Strange harmonics on sine wave with fast attack or release
 Slowing down attack/release reduces this effect.
 Might be caused by the fact that envelope processing precision is per buffer, not per sample; fast attack/release means
 more dramatic changes in volume. Suggest trying interpolation of level across buffer.
-Resolution: interpolate changes in oscillator level across sample buffer eliminated this.
+RESOLUTION: interpolate changes in oscillator level across sample buffer eliminated this.
 
 * Clicks when playing new notes, or when notes end
 Suspect the automatic volume ducking is behind this; immediately lowering/raising volume level based on number of voices.
@@ -185,7 +180,7 @@ Other approaches would require structural changes:
   * Switch to 32 bit integer or float sample buffers, and convert prior to output. This would allow summing beyond 16 bit output limit
     which could be scaled & clipped in one pass.
   * Keep separate buffer for each oscillator, and mix with scale as a step after initial sample generation.
-Resolution: Factor modifier into oscillator level in main loop based on number of voices playing, utilise amplitude interpolation from
+RESOLUTION: Factor modifier into oscillator level in main loop based on number of voices playing, utilise amplitude interpolation from
     		issue #2 to resolve it.
 
 * Clicks/glitches when changing filter parameters
@@ -220,6 +215,12 @@ output, nearly half CPU time is spent in the output mixing, then ~20% in ioctl, 
 output. With strictly defined testing config (voice setup, test duration) this would be a basis for
 measuring impact of optimisation efforts.
 
+Added a basic framework for "offline" code timing tests, and tried out an initial "float v fixed" filter
+implementation test. Interestingly this showed that the floating point version was nearly 3x faster than
+fixed point!
+
+Design Notes
+============
 Envelope Generator Notes
 ------------------------
 Basic operation:

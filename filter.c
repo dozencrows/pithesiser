@@ -86,6 +86,49 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 {
 	if (filter->definition.type != FILTER_PASS)
 	{
+		// Possible assembler implementation, using precision that avoids need for 64 bits (e.g. 15 bit?)
+		// Registers needed:
+		//	sample ptr					r1
+		//	sample counter				r2
+		//	filter structure ptr		r0
+		//	original sample x 1
+		//	new sample x 2
+		//  multiplication temps x 4
+		//
+		//		ldrsh 	r3, [r1]				// read in sample
+		//		ldr 	r4, [r0 + in_coeff0]
+		//		smull 	r5, r6, r3, r4			// mult by in_coeff0, make into fixed pt wide
+
+		//		ldr		r7, [r0 + in_coeff1]
+		//		ldr		r8, [r0 + history0]
+		//		mul		r9, r7, r8
+		//		add		r5,	r5, r9
+
+		//		ldr		r7, [r0 + in_coeff2]
+		//		ldr		r8, [r0 + history1]
+		//		mul		r9, r7, r8
+		//		add		r5,	r5, r9
+
+		//		ldr		r7, [r0 + out_coeff0]
+		//		ldr		r8, [r0 + out0]
+		//		mul		r9, r7, r8
+		//		mov		r10, r9, lsr #PRECISION
+		//		sub		r5,	r5, r10
+
+		//		ldr		r7, [r0 + out_coeff1]
+		//		ldr		r8, [r0 + out1]
+		//		mul		r9, r7, r8
+		//		mov		r10, r9, lsr #PRECISION
+		//		sub		r5,	r5, r10
+
+		//		ldr		r11, [r0 + history0]
+		//		str		r11, [r0 + history1]
+		//		str		r3, [r0 + history0]
+
+		//		ldr		r11, [r0 + output0]
+		//		str		r11, [r0 + output1]
+		//		str		r5, [r0 + output0]
+
 		for (int i = 0; i < sample_count; i++)
 		{
 			fixed_wide_t sample = (fixed_wide_t)*sample_data;
