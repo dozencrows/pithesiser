@@ -6,8 +6,12 @@ Underway
 
 To do next
 ==========
-* Bring fixed point precision down to 15 bits and check quality
+* Bring fixed point precision down to 15 bits in filter code and check quality
 * With 15-bit precision, revise filter to not use fixed_wide, check correctness then performance vs float 
+* Try optimising the float-to-int conversion
+  * Mantissa shift-&-mask trick (assuming range of -1 to +1, separate cases for positive & negative)
+* Check ALSA hardware caps to see if float or int32 output formats supported
+  
 * Parameterise channel count/stride on sample buffer operations; proper stereo operations
 * Pitch bend control
 * Modulation wheel control (linked with LFO)
@@ -218,6 +222,14 @@ measuring impact of optimisation efforts.
 Added a basic framework for "offline" code timing tests, and tried out an initial "float v fixed" filter
 implementation test. Interestingly this showed that the floating point version was nearly 3x faster than
 fixed point!
+
+Created test implementations of procedural sine and wavetable sine using floating point:
+* Procedural around 15% to 30% faster with float
+* Wavetable started off slower with float; but switching to fixed point phase accumulator, got around a 15% speedup
+  * Looked like float to int conversion was the slowest part
+  
+Created test implementation converting float to int16_t for output:
+* Using simple multiply-&-cast, this was seriously slow - around 100ms for a single 128 sample stereo buffer!
 
 Design Notes
 ============
