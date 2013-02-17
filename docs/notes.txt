@@ -222,11 +222,23 @@ measuring impact of optimisation efforts.
 Added a basic framework for "offline" code timing tests, and tried out an initial "float v fixed" filter
 implementation test. Interestingly this showed that the floating point version was nearly 3x faster than
 fixed point!
+* Study of fixed point code generated showed that the routine was a great deal bigger than the float version;
+  suspect a lot of the 64 bit integer manipulation is behind this. Reducing precision of fixed pt may improve this.
 
 Created test implementations of procedural sine and wavetable sine using floating point:
 * Procedural around 15% to 30% faster with float
 * Wavetable started off slower with float; but switching to fixed point phase accumulator, got around a 15% speedup
   * Looked like float to int conversion was the slowest part
+* Originally had the float implementations as static functions in same module; when moving these to a separate
+  module for reuse, that slowed down the float tests:
+  * Procedural float now around 38% to 56% slower.
+  * Wavetable float output only was ~1.5% slower, wavetable float mix still faster ~19% 
+* As a test, put procedural float sine back in same module - both as static and non-static
+  * Now about 3%-5% faster than fixed, but around 40% quicker than when in own module.
+  * Looking at the generated code, the function-in-same-module configuration has inlined the code inside the loop,
+    eliminating the call & cache overhead.
+  * So this might suggest fixed point is a lot faster... however, rigging the test to make the fixed point code
+    inline didn't show any significant performance change compared to calling it.
   
 Created test implementation converting float to int16_t for output:
 * Using simple multiply-&-cast, this was seriously slow - around 100ms for a single 128 sample stereo buffer!
