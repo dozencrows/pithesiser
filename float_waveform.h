@@ -29,7 +29,7 @@ typedef struct
 } float_waveform_t;
 
 extern void float_generate_sine(float_waveform_t *waveform, float sample_rate, float frequency);
-//extern void waveform_float_procedural_sine(float_oscillator_t *osc, float *sample_buffer, int sample_count);
+extern void waveform_float_procedural_sine(float_oscillator_t *osc, float *sample_buffer, int sample_count);
 extern void waveform_float_procedural_sine_mix(float_oscillator_t *osc, float *sample_buffer, int sample_count);
 extern void waveform_float_wavetable_sine(float_waveform_t *waveform, float_oscillator_t *osc, float *sample_buffer, int sample_count);
 extern void waveform_float_wavetable_sine_mix(float_waveform_t *waveform, float_oscillator_t *osc, float *sample_buffer, int sample_count);

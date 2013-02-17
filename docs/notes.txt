@@ -239,9 +239,34 @@ Created test implementations of procedural sine and wavetable sine using floatin
     eliminating the call & cache overhead.
   * So this might suggest fixed point is a lot faster... however, rigging the test to make the fixed point code
     inline didn't show any significant performance change compared to calling it.
+  * Maybe float version has better caching behaviour when inlined?
+
+Note that this is across a large number of repeats (100k) in order to significant time values, so although this
+should average out spikes, it might be influenced by other factors such as calling costs & caching.
+
+Using a smaller number of repeats (128) shows very short times of sub 1ms to 2ms for the various. Generally fixed
+pt <= float for these.
   
 Created test implementation converting float to int16_t for output:
-* Using simple multiply-&-cast, this was seriously slow - around 100ms for a single 128 sample stereo buffer!
+* Using simple multiply-&-cast, this was somewhat slow - around 0.03ms to 0.1ms for a single 128 sample stereo buffer.
+  Not the end of the world, but one of the slowest operations (similar to unoptimised fixed point filter).
+  
+Made a simple performance model spreadsheet which suggested:
+* Not much difference between float for wavetable model
+* Procedural float oscillator is about 50% slower than fixed version
+* No signal path took more than 0.2ms in the model; suggests there is plenty of headroom for more work
+  (such as more envelopes, filters and oscillators, proper stereo).
+  * Assume 50% error in timings suggests a max of 0.3ms - allowing for other operations (such as rendering) then could
+    possibly push the synth to about 3x to 5x of current load (i.e. up to about 1.5ms of the 3ms needed for each buffer).
+* Increasing filter count to one-per-voice plus global shows float implementation ahead
+* Increasing oscillator count to two-per-voice puts fixed point ahead for procedural, but a little behind on wavetable.  
+
+Suggested strategy:
+* Try optimising fixed point filter to see if it can be got closer to float performance; if so, stay fixed point.
+* If not, try optimising float->int conversion to reduce that.
+* Also consider optimising float procedural oscillators.
+
+Then look at more oscillators, envelopes and filters.
 
 Design Notes
 ============

@@ -19,44 +19,44 @@ extern waveform_generator_t generators[];
 
 static const int TEST_BUFFER_SIZE = 128;
 
-static void waveform_float_procedural_sine(float_oscillator_t *osc, float *sample_buffer, int sample_count)
-{
-	float phase_step = osc->frequency / SYSTEM_SAMPLE_RATE;
-	float amplitude_step = (osc->level - osc->last_level) / sample_count;
-	float amplitude_scale = osc->last_level;
-
-	while (sample_count > 0)
-	{
-		while (osc->phase < 0.5f && sample_count > 0)
-		{
-			float sample = 1.0f - osc->phase;
-			sample = 1.0f - (sample * sample);
-			sample *= amplitude_scale;
-			*sample_buffer++ = sample;
-			*sample_buffer++ = sample;
-			osc->phase += phase_step;
-			amplitude_scale += amplitude_step;
-			sample_count--;
-		}
-
-		while (osc->phase < 1.0f && sample_count > 0)
-		{
-			float sample = 1.0f - (osc->phase - 0.5f);
-			sample = (sample * sample) - 1.0f;
-			sample *= amplitude_scale;
-			*sample_buffer++ = sample;
-			*sample_buffer++ = sample;
-			osc->phase += phase_step;
-			amplitude_scale += amplitude_step;
-			sample_count--;
-		}
-
-		if (osc->phase >= 1.0f)
-		{
-			osc->phase -= 1.0f;
-		}
-	}
-}
+//static void waveform_float_procedural_sine(float_oscillator_t *osc, float *sample_buffer, int sample_count)
+//{
+//	float phase_step = osc->frequency / SYSTEM_SAMPLE_RATE;
+//	float amplitude_step = (osc->level - osc->last_level) / sample_count;
+//	float amplitude_scale = osc->last_level;
+//
+//	while (sample_count > 0)
+//	{
+//		while (osc->phase < 0.5f && sample_count > 0)
+//		{
+//			float sample = 1.0f - osc->phase;
+//			sample = 1.0f - (sample * sample);
+//			sample *= amplitude_scale;
+//			*sample_buffer++ = sample;
+//			*sample_buffer++ = sample;
+//			osc->phase += phase_step;
+//			amplitude_scale += amplitude_step;
+//			sample_count--;
+//		}
+//
+//		while (osc->phase < 1.0f && sample_count > 0)
+//		{
+//			float sample = 1.0f - (osc->phase - 0.5f);
+//			sample = (sample * sample) - 1.0f;
+//			sample *= amplitude_scale;
+//			*sample_buffer++ = sample;
+//			*sample_buffer++ = sample;
+//			osc->phase += phase_step;
+//			amplitude_scale += amplitude_step;
+//			sample_count--;
+//		}
+//
+//		if (osc->phase >= 1.0f)
+//		{
+//			osc->phase -= 1.0f;
+//		}
+//	}
+//}
 
 //#define PHASE_LIMIT			(4 * FIXED_ONE)
 //#define PHASE_HALF_LIMIT	(2 * FIXED_ONE)
