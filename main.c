@@ -574,7 +574,7 @@ void synth_main()
 
 	filter_init(&global_filter);
 	global_filter.definition.type = FILTER_PASS;
-	global_filter.definition.frequency = midi_get_note_frequency(81);
+	global_filter.definition.frequency = 9000 * FILTER_FIXED_ONE;
 	global_filter.definition.q = FIXED_HALF;
 	filter_update(&global_filter);
 

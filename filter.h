@@ -14,6 +14,9 @@
 #define FILTER_LPF	1
 #define FILTER_HPF	2
 
+#define FILTER_FIXED_PRECISION	14
+#define FILTER_FIXED_ONE		(1 << FILTER_FIXED_PRECISION)
+
 typedef struct filter_definition_t
 {
 	int		type;

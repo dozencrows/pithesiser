@@ -15,14 +15,12 @@ To do next
   * two independent LFOs; target separate outputs & separate parameters, but triggered in step.
 * Filters
   * Fix clicks on parameter changes (interpolation?)
-  * Fix instability/distortion in HPF at lowest freq & low pitch notes
   * Add overall gain control to LPF and HPF
   * Add more filter types (BPF, 1-POLE LPF & HPF, notch)
   * Drive filter param from envelope
   * Add per-voice filters
   * Render filter frequency response in UI
   * Add multiple filter stages
-  * Make direct midi controls logarithmic or high res
 
 Blog ideas
 ==========

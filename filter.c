@@ -9,8 +9,6 @@
 #include <memory.h>
 #include "fixed_point_math.h"
 
-#define FILTER_FIXED_PRECISION	14
-#define FILTER_FIXED_ONE		(1 << FILTER_FIXED_PRECISION)
 #define FILTER_PRECISION_DELTA  (FIXED_PRECISION - FILTER_FIXED_PRECISION)
 
 static void clear_history(filter_t *filter)
@@ -28,7 +26,7 @@ void filter_init(filter_t *filter)
 
 void filter_update(filter_t *filter)
 {
-	fixed_wide_t w0 = fixed_mul_wide(FIXED_PI, filter->definition.frequency);
+	fixed_wide_t w0 = fixed_mul_wide(FIXED_PI, ((fixed_wide_t)filter->definition.frequency) << FILTER_PRECISION_DELTA);
 	w0 = (w0 + w0) / SYSTEM_SAMPLE_RATE;
 	fixed_t cos_w0, sin_w0;
 
