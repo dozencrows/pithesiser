@@ -24,10 +24,10 @@ typedef struct filter_definition_t
 
 typedef struct filter_state_t
 {
-	fixed_wide_t input_coeff[3];
-	fixed_wide_t output_coeff[2];
-	fixed_wide_t history[2];
-	fixed_wide_t output[2];
+	fixed_t input_coeff[3];
+	fixed_t output_coeff[2];
+	fixed_t history[2];
+	fixed_t output[2];
 } filter_state_t;
 
 typedef struct filter_t

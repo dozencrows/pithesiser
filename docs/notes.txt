@@ -6,12 +6,6 @@ Underway
 
 To do next
 ==========
-* Bring fixed point precision down to 15 bits in filter code and check quality
-* With 15-bit precision, revise filter to not use fixed_wide, check correctness then performance vs float 
-* Try optimising the float-to-int conversion
-  * Mantissa shift-&-mask trick (assuming range of -1 to +1, separate cases for positive & negative)
-* Check ALSA hardware caps to see if float or int32 output formats supported
-  
 * Parameterise channel count/stride on sample buffer operations; proper stereo operations
 * Pitch bend control
 * Modulation wheel control (linked with LFO)
@@ -28,7 +22,7 @@ To do next
   * Add per-voice filters
   * Render filter frequency response in UI
   * Add multiple filter stages
-  * Make direct midi controls logarithmic
+  * Make direct midi controls logarithmic or high res
 
 Blog ideas
 ==========
@@ -266,8 +260,12 @@ Suggested strategy:
 * If not, try optimising float->int conversion to reduce that.
 * Also consider optimising float procedural oscillators.
 
-Then look at more oscillators, envelopes and filters.
-
+Results:
+* By reducing fixed point filter precision to 14 bits from 18, was able to make that implementation ~13% faster than
+  the float form; strongly suggesting I stick with fixed point when scaling up functionality, as on average each
+  functional stage is faster in fixed point. Where it isn't, the difference is small enough to be dwarfed by the need
+  to convert float to integer for output.  
+  
 Design Notes
 ============
 Envelope Generator Notes

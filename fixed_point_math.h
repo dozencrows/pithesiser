@@ -46,6 +46,11 @@ __attribute__((always_inline)) inline fixed_t fixed_mul_at(fixed_t a, fixed_t b,
 	return ((fixed_wide_t)a * (fixed_wide_t)b) >> precision;
 }
 
+__attribute__((always_inline)) inline fixed_t fixed_mul_short_at(fixed_t a, fixed_t b, int precision)
+{
+	return (a * b) >> precision;
+}
+
 __attribute__((always_inline)) inline fixed_wide_t fixed_mul_wide_start_at(fixed_t a, fixed_t b, int precision)
 {
 	return ((fixed_wide_t)a * (fixed_wide_t)b) >> precision;
