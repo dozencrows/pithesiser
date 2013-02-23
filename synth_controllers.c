@@ -46,10 +46,14 @@ midi_controller_t filter_state_controller;
 midi_controller_t filter_frequency_controller;
 midi_controller_t filter_q_controller;
 
+midi_controller_t exit_controller;
+midi_controller_t profile_controller;
+
 static const char* CFG_TYPE_SETTING = "type";
 static const char* CFG_CONTINUOUS_CONTROLLER = "continuous";
 static const char* CFG_CONTINUOUS_WITH_HELD_CONTROLLER = "continuous_with_held";
 static const char* CFG_TOGGLE_CONTROLLER = "toggle";
+static const char* CFG_EVENT_CONTROLLER = "event";
 static const char* CFG_MIN = "min";
 static const char* CFG_MAX = "max";
 static const char* CFG_THRESHOLD = "threshold";
@@ -106,6 +110,17 @@ static int parse_midi_max_min(config_setting_t *config, midi_controller_t *contr
 	return 1;
 }
 
+static int parse_midi_threshold(config_setting_t *config, midi_controller_t *controller)
+{
+	if (config_setting_lookup_int(config, CFG_THRESHOLD, &(controller->midi_threshold)) != CONFIG_TRUE)
+	{
+		report_config_error(config, "Missing or invalid threshold");
+		return 0;
+	}
+
+	return 1;
+}
+
 static int parse_continuous_controller(config_setting_t *config, midi_controller_t *controller)
 {
 	controller->type = CONTINUOUS;
@@ -136,14 +151,20 @@ static int parse_toggle_controller(config_setting_t *config, midi_controller_t *
 		return 0;
 	}
 
-	if (config_setting_lookup_int(config, CFG_THRESHOLD, &(controller->midi_threshold)) != CONFIG_TRUE)
+	return parse_midi_threshold(config, controller);
+}
+
+static int parse_event_controller(config_setting_t *config, midi_controller_t *controller)
+{
+	controller->type = EVENT;
+	if (!parse_midi_cc(config, controller))
 	{
-		report_config_error(config, "Missing or invalid threshold");
 		return 0;
 	}
 
-	return 1;
+	return parse_midi_threshold(config, controller);
 }
+
 
 static int parse_controller_config(config_setting_t *config, midi_controller_t *controller)
 {
@@ -165,6 +186,10 @@ static int parse_controller_config(config_setting_t *config, midi_controller_t *
 	else if (strcasecmp(type_setting, CFG_TOGGLE_CONTROLLER) == 0)
 	{
 		return parse_toggle_controller(config, controller);
+	}
+	else if (strcasecmp(type_setting, CFG_EVENT_CONTROLLER) == 0)
+	{
+		return parse_event_controller(config, controller);
 	}
 	else
 	{
@@ -278,6 +303,8 @@ controller_parser_t controller_parser[] =
 	{ "filter_state", &filter_state_controller, filter_state_controller_set_output },
 	{ "filter_frequency", &filter_frequency_controller, filter_frequency_controller_set_output },
 	{ "filter_q", &filter_q_controller, filter_q_controller_set_output },
+	{ "exit", &exit_controller, NULL },
+	{ "profile", &profile_controller, NULL },
 };
 
 #define CONTROLLER_PARSER_COUNT	(sizeof(controller_parser) / sizeof(controller_parser[0]))
@@ -307,7 +334,10 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 
 			if (parse_controller_config(setting_controller, controller_parser[i].controller))
 			{
-				controller_parser[i].set_output(controller_parser[i].controller);
+				if (controller_parser[i].set_output != NULL)
+				{
+					controller_parser[i].set_output(controller_parser[i].controller);
+				}
 				midi_controller_init(controller_parser[i].controller);
 			}
 			else

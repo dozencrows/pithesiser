@@ -112,6 +112,30 @@ static int process_toggle_controller(midi_controller_t *controller, int *changed
 	return controller->last_output;
 }
 
+static int process_event_controller(midi_controller_t *controller, int *changed)
+{
+	int midi_value;
+
+	if (read_midi_controller(controller, &midi_value))
+	{
+		if (midi_value > controller->midi_threshold && controller->last_output < controller->midi_threshold)
+		{
+			*changed = 1;
+		}
+
+		controller->last_output = midi_value;
+	}
+
+	if (*changed)
+	{
+		return controller->last_output;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 void midi_controller_create(midi_controller_t *controller)
 {
 	memset(controller, 0, sizeof(midi_controller_t));
@@ -146,6 +170,12 @@ int midi_controller_update(midi_controller_t *controller, int *value)
 		case TOGGLE:
 		{
 			*value = process_toggle_controller(controller, &changed);
+			break;
+		}
+
+		case EVENT:
+		{
+			*value = process_event_controller(controller, &changed);
 			break;
 		}
 

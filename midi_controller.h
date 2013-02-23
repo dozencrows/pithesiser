@@ -13,7 +13,8 @@ typedef enum
 	NONE = -1,
 	CONTINUOUS,
 	CONTINUOUS_WITH_HELD,
-	TOGGLE
+	TOGGLE,
+	EVENT
 } controller_type_t;
 
 typedef struct midi_controller_t

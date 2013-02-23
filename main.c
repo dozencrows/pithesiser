@@ -584,16 +584,18 @@ void synth_main()
 
 	while (1)
 	{
-		if (midi_get_raw_controller_value(controller_channel, EXIT_CONTROLLER) > 63)
+		int midi_controller_value;
+
+		if (midi_controller_update(&exit_controller, &midi_controller_value))
 		{
 			break;
 		}
 
 		process_midi_events();
 
-		if (!profiling && midi_get_raw_controller_changed(controller_channel, PROFILE_CONTROLLER))
+		if (!profiling && midi_controller_update(&profile_controller, &midi_controller_value))
 		{
-			if (profile_file != NULL && midi_get_raw_controller_value(controller_channel, PROFILE_CONTROLLER) > 63)
+			if (profile_file != NULL)
 			{
 				ProfilerStart(profile_file);
 				profiling = 1;
