@@ -26,9 +26,11 @@
 #include "midi.h"
 #include "system_constants.h"
 
-#define CHANNEL_COUNT	16
-#define MIDI_NOTE_COUNT	128
+#define CHANNEL_COUNT		16
+#define MIDI_NOTE_COUNT		128
+#define SYSEX_SLEEP_DELAY	200		// Sleep time in ms after sending sysex on one channel to help read thread keep up
 
+static const char* MIDI_SYSEX_WRITE_ERROR = "MIDI sysex write error";
 typedef struct
 {
 	int		channel;
@@ -218,7 +220,7 @@ int midi_initialise(int device_count, const char** device_name)
 
 	for (int i = 0; i < device_count; i++)
 	{
-		midi_handle[midi_handle_count] = open(device_name[i], O_RDONLY);
+		midi_handle[midi_handle_count] = open(device_name[i], O_RDWR);
 		if (midi_handle[midi_handle_count] == -1)
 		{
 			printf("Midi error: cannot open device %s\n", device_name[i]);
@@ -273,6 +275,26 @@ int midi_get_raw_controller_value(int channel_index, int controller_index)
 	}
 
 	return controller_value;
+}
+
+const unsigned char SYSEX_START = 0xf0;
+const unsigned char SYSEX_END = 0xf7;
+
+void midi_send_sysex(const char *sysex_message, size_t message_length)
+{
+	char *buffer = alloca(message_length + 2);
+	buffer[0] = SYSEX_START;
+	memcpy(buffer + 1, sysex_message, message_length);
+	buffer[message_length + 1] = SYSEX_END;
+	for (int i = 0; i < midi_handle_count; i++)
+	{
+		if (write(midi_handle[i], buffer, message_length + 2) != message_length + 2)
+		{
+			perror(MIDI_SYSEX_WRITE_ERROR);
+		}
+
+		usleep(SYSEX_SLEEP_DELAY);
+	}
 }
 
 void midi_deinitialise()

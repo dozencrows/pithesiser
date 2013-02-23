@@ -51,6 +51,7 @@ static const char* CFG_CONTROLLERS = "controllers";
 static const char* CFG_DEVICES_MIDI_INPUT = "devices.midi.input";
 static const char* CFG_TESTS = "tests";
 static const char* CFG_CODE_TIMING_TESTS = "code_timing";
+static const char* CFG_SYSEX_INIT = "sysex.init_message";
 
 config_t app_config;
 
@@ -281,6 +282,19 @@ void configure_midi()
 	if (!synth_controllers_initialise(controller_channel, config_lookup(&app_config, CFG_CONTROLLERS)))
 	{
 		exit(EXIT_FAILURE);
+	}
+
+	config_setting_t *setting_sysex_init_message = config_lookup(&app_config, CFG_SYSEX_INIT);
+	if (setting_sysex_init_message != NULL)
+	{
+		int message_len = config_setting_length(setting_sysex_init_message);
+		char *message_bytes = alloca(message_len);
+		for (int i = 0; i < message_len; i++)
+		{
+			message_bytes[i] = config_setting_get_int_elem(setting_sysex_init_message, i);
+		}
+
+		midi_send_sysex(message_bytes, message_len);
 	}
 }
 
