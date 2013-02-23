@@ -167,7 +167,14 @@ void process_audio(int32_t timestep_ms)
 
 			if (lfo_state == LFO_STATE_VOLUME)
 			{
-				note_level = (note_level * lfo_value) / SHRT_MAX;
+				if (lfo_value > 0)
+				{
+					note_level = (note_level * lfo_value) / SHRT_MAX;
+				}
+				else
+				{
+					note_level = 0;
+				}
 			}
 			else if (lfo_state == LFO_STATE_PITCH)
 			{

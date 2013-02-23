@@ -276,7 +276,7 @@ static void procedural_triangle_mid_output(waveform_generator_def_t * generator,
 	}
 	else
 	{
-		PR_CALC_TRI_DOWN(osc, PHASE_HALF_LIMIT + PHASE_QUARTER_LIMIT, sample);
+		PR_CALC_TRI_DOWN(osc, (PHASE_HALF_LIMIT + PHASE_QUARTER_LIMIT), sample);
 		sample = -sample;
 	}
 
