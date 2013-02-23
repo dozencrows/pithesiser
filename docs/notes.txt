@@ -6,6 +6,8 @@ Underway
 
 To do next
 ==========
+* Fix auto-ducking with notes that are held but no longer audible (detect end of envelope & treat as "note ending").
+* Fixed point power function
 * Parameterise channel count/stride on sample buffer operations; proper stereo operations
 * Pitch bend control
 * Modulation wheel control (linked with LFO)
@@ -24,7 +26,6 @@ To do next
 
 Blog ideas
 ==========
-* Fixed point math: difficulties, tricks, performance vs float on RPi
 
 Ideas to try
 ============
@@ -263,7 +264,16 @@ Results:
   the float form; strongly suggesting I stick with fixed point when scaling up functionality, as on average each
   functional stage is faster in fixed point. Where it isn't, the difference is small enough to be dwarfed by the need
   to convert float to integer for output.  
-  
+
+Thread Timing
+-------------
+When introduced an "init" sysex message send for dumping controller snapshots during post-midi initialisation 
+but before the main loop, early messages returned from this were dropped.
+
+Attempted to yield main thread around sysex send - this didn't work in various places, but changed the timing a bit.
+Attempted to synchronise midi thread initialisation with semaphore - this didn't work.
+Added a usleep delay of 200ms after each per-channel sysex send - this worked.
+
 Design Notes
 ============
 Envelope Generator Notes
