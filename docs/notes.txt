@@ -22,6 +22,8 @@ To do next
   * Add per-voice filters
   * Render filter frequency response in UI
   * Add multiple filter stages
+* Memory management
+  * Eliminate heap allocations during synth loop: (gfx event buffers)
 
 Blog ideas
 ==========
@@ -29,7 +31,6 @@ Blog ideas
 Ideas to try
 ============
 Feature support:
- * Synchronising controller settings with synth settings on startup
  * Rendering:
    * Of settings
  * Better naming for oscillators & generators
@@ -38,20 +39,21 @@ Feature support:
  * Cubic interpolation with table lookup
  * Paired oscillators: modulation, mixing
  * Noise channel
+ * Configuration of synth signal path & components via config file
+
+Testing:
+  * Whole synth tests: some form of sequencer?
+  * Benchmarking
+  * Clip testing
 
 Performance:
- * More profiling of waveform generation loops
- * Examine asm code generated for waveform gen loops; look for calls vs inlined code
- * Float based implementation (wavetable & procedural)
-   * Rationales:
-     * See if it produces output closer to sine for the approximate sine procedural
-     * See if it produces less aliased output for saw wave (wavetable or procedural)
  * Threading setup
    * Move "synth engine" to its own thread, allow main thread to be idle?
    * Set non-main thread priorities accordingly.
 
 Advanced:
  * Phase Distortion control (simple linear)
+ * Sample playback
 
 Pitch Difference Issue (resolved)
 ----------------------
@@ -117,14 +119,14 @@ What needs to be done to achieve this:
 * Add more waveform shapes (square, triangle, pulse)
 * Ensure waveform generation minimises aliasing
 * Implement voice relative oscillators
-* Implement LFOs
-* Implement envelope generators
 * Implement noise generation
-* Implement filtering
 * Implement generic buffer mixing
-* Data-driven mechanism for configuring (i.e. patches)
 * UI for displaying & editing patch settings
-* Extend MIDI handling to read note on/off for voice triggering
+* STARTED: Implement filtering
+* DONE: Data-driven mechanism for configuring (i.e. patches)
+* DONE: Extend MIDI handling to read note on/off for voice triggering
+* DONE: Implement LFOs
+* DONE: Implement envelope generators
 
 Useful info:
 * Filters:
