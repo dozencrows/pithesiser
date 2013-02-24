@@ -43,6 +43,7 @@
 #define PROFILE_CONTROLLER		0x2c
 
 static const char* CFG_DEVICES_AUDIO_OUTPUT = "devices.audio.output";
+static const char* CFG_DEVICES_AUDIO_AUTO_DUCK = "devices.audio.auto_duck";
 static const char* RESOURCES_PITHESISER_ALPHA_PNG = "resources/pithesiser_alpha.png";
 static const char* RESOURCES_SYNTH_CFG = "resources/synth.cfg";
 static const char* CFG_DEVICES_MIDI_NOTE_CHANNEL = "devices.midi.note_channel";
@@ -105,6 +106,9 @@ int lfo_state;
 
 filter_t global_filter;
 
+static int32_t duck_level_by_voice_count[] = { LEVEL_MAX, LEVEL_MAX, LEVEL_MAX * 0.65f, LEVEL_MAX * 0.49f, LEVEL_MAX * 0.40f,
+											   LEVEL_MAX * 0.34f, LEVEL_MAX * 0.29f, LEVEL_MAX * 0.25f, LEVEL_MAX * 0.22f};
+
 void configure_audio()
 {
 	const char *setting_devices_audio_output = NULL;
@@ -119,10 +123,41 @@ void configure_audio()
 	{
 		exit(EXIT_FAILURE);
 	}
+
+	config_setting_t *setting_auto_duck = config_lookup(&app_config, CFG_DEVICES_AUDIO_AUTO_DUCK);
+
+	if (setting_auto_duck != NULL)
+	{
+		int duck_setting_count = config_setting_length(setting_auto_duck);
+
+		if (duck_setting_count != VOICE_COUNT)
+		{
+			printf("Invalid number of auto duck levels %d - should be %d\n", duck_setting_count, VOICE_COUNT);
+			exit(EXIT_FAILURE);
+		}
+
+		for (int i = 0; i < duck_setting_count; i++)
+		{
+			float duck_level_factor = config_setting_get_float_elem(setting_auto_duck, i);
+			if (duck_level_factor < 0.0f || duck_level_factor > 1.0f)
+			{
+				printf("Invalid auto duck level %d of %f - should be between 0 and 1\n", i + 1, duck_level_factor);
+				exit(EXIT_FAILURE);
+			}
+
+			int32_t duck_level = LEVEL_MAX * duck_level_factor;
+
+			if (duck_level > duck_level_by_voice_count[i])
+			{
+				printf("Invalid auto duck level %d of %f - values should be decreasing\n", i + 1, duck_level_factor);
+				exit(EXIT_FAILURE);
+			}
+
+			duck_level_by_voice_count[i + 1] = duck_level;
+		}
+	}
 }
 
-static int32_t duck_level_by_voice_count[] = { LEVEL_MAX, LEVEL_MAX, LEVEL_MAX * 0.65f, LEVEL_MAX * 0.49f, LEVEL_MAX * 0.40f,
-											   LEVEL_MAX * 0.34f, LEVEL_MAX * 0.29f, LEVEL_MAX * 0.25f, LEVEL_MAX * 0.22f};
 void process_audio(int32_t timestep_ms)
 {
 	int write_buffer_index = alsa_lock_next_write_buffer();
@@ -138,6 +173,7 @@ void process_audio(int32_t timestep_ms)
 	}
 
 	int first_audible_voice = -1;
+	int last_active_voices = active_voices;
 	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
 
 	for (int i = 0; i < VOICE_COUNT; i++)
@@ -180,7 +216,6 @@ void process_audio(int32_t timestep_ms)
 			else if (lfo_state == LFO_STATE_PITCH)
 			{
 				// TODO: use a proper fixed point power function!
-				//oscillator[i].frequency = (((fixed_wide_t)base_frequency * (fixed_wide_t)(powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE)) >> FIXED_PRECISION);
 				oscillator[i].frequency = fixed_mul(base_frequency, powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE);
 			}
 
@@ -201,7 +236,7 @@ void process_audio(int32_t timestep_ms)
 
 				oscillator[i].last_level = oscillator[i].level;
 			}
-			else if (voice[i].current_note == NOTE_ENDING || envelope_completed(&voice[i].envelope_instance))
+			else if (voice[i].current_note == NOTE_ENDING || (envelope_completed(&voice[i].envelope_instance)))
 			{
 				voice[i].current_note = NOTE_NOT_PLAYING;
 				active_voices--;
@@ -241,6 +276,14 @@ void process_audio(int32_t timestep_ms)
 	}
 
 	alsa_unlock_buffer(write_buffer_index);
+
+	if (last_active_voices != active_voices)
+	{
+		if (active_voices < 0)
+		{
+			printf("Voice underflow: %d\n", active_voices);
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
