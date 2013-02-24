@@ -60,6 +60,7 @@ config_t app_config;
 //
 #define NOTE_ENDING				-2
 #define NOTE_NOT_PLAYING		-1
+#define PLAYING_NOTE(x)			(x >= 0)
 
 typedef struct
 {
@@ -200,7 +201,7 @@ void process_audio(int32_t timestep_ms)
 
 				oscillator[i].last_level = oscillator[i].level;
 			}
-			else if (voice[i].current_note == NOTE_ENDING)
+			else if (voice[i].current_note == NOTE_ENDING || envelope_completed(&voice[i].envelope_instance))
 			{
 				voice[i].current_note = NOTE_NOT_PLAYING;
 				active_voices--;

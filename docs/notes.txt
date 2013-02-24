@@ -6,7 +6,6 @@ Underway
 
 To do next
 ==========
-* Fix auto-ducking with notes that are held but no longer audible (detect end of envelope & treat as "note ending").
 * Fixed point power function
 * Parameterise channel count/stride on sample buffer operations; proper stereo operations
 * Pitch bend control

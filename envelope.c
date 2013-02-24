@@ -88,6 +88,11 @@ int32_t envelope_step(envelope_instance_t *instance, int32_t timestep_ms)
 	return level;
 }
 
+int envelope_completed(envelope_instance_t *instance)
+{
+	return instance->stage == ENVELOPE_STAGE_INACTIVE;
+}
+
 void envelope_go_to_stage(envelope_instance_t *instance, int32_t stage_id)
 {
 	instance->stage 		= stage_id;

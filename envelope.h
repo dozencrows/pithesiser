@@ -48,6 +48,7 @@ typedef struct envelope_instance_t
 extern void envelope_init(envelope_instance_t *instance, envelope_t* envelope);
 extern void envelope_start(envelope_instance_t *instance);
 extern int32_t envelope_step(envelope_instance_t *instance, int32_t timestep_ms);
+extern int envelope_completed(envelope_instance_t *instance);
 extern void envelope_go_to_stage(envelope_instance_t *instance, int32_t stage_id);
 
 #endif /* ENVELOPE_H_ */
