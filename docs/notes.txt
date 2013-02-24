@@ -6,7 +6,6 @@ Underway
 
 To do next
 ==========
-* Find and fix "voice underrun"
 * Fixed point power function
 * Parameterise channel count/stride on sample buffer operations; proper stereo operations
 * Pitch bend control

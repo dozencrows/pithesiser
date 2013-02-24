@@ -236,7 +236,7 @@ void process_audio(int32_t timestep_ms)
 
 				oscillator[i].last_level = oscillator[i].level;
 			}
-			else if (voice[i].current_note == NOTE_ENDING || (envelope_completed(&voice[i].envelope_instance)))
+			else if (voice[i].current_note == NOTE_ENDING || envelope_completed(&voice[i].envelope_instance))
 			{
 				voice[i].current_note = NOTE_NOT_PLAYING;
 				active_voices--;
@@ -391,7 +391,7 @@ void process_midi_events()
 		{
 			for (int i = 0; i < VOICE_COUNT; i++)
 			{
-				if (voice[i].last_note == midi_event.data[0])
+				if (voice[i].current_note == midi_event.data[0])
 				{
 					voice[i].current_note = NOTE_ENDING;
 					envelope_go_to_stage(&voice[i].envelope_instance, ENVELOPE_STAGE_RELEASE);
