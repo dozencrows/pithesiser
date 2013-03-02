@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include "gfx_object.h"
 
+#define GFX_EVENT_FLAG_OWNPTR	1		// indicates event owns dynamic memory at ptr, should free after processing
+
 typedef unsigned int gfx_event_type_t;
 
 typedef struct gfx_event_t
@@ -18,6 +20,7 @@ typedef struct gfx_event_t
 	gfx_event_type_t 	type;
 	object_id_t			receiver_id;
 	size_t			 	size;
+	int					flags;
 	union
 	{
 		void *ptr;

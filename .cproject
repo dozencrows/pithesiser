@@ -78,6 +78,11 @@
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="config"/>
+									<listOptionValue builtIn="false" value="FLAC"/>
+									<listOptionValue builtIn="false" value="ogg"/>
+									<listOptionValue builtIn="false" value="vorbis"/>
+									<listOptionValue builtIn="false" value="vorbisenc"/>
+									<listOptionValue builtIn="false" value="sndfile"/>
 									<listOptionValue builtIn="false" value="profiler"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1385601344" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
@@ -170,6 +175,11 @@
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="config"/>
+									<listOptionValue builtIn="false" value="FLAC"/>
+									<listOptionValue builtIn="false" value="ogg"/>
+									<listOptionValue builtIn="false" value="vorbis"/>
+									<listOptionValue builtIn="false" value="vorbisenc"/>
+									<listOptionValue builtIn="false" value="sndfile"/>
 									<listOptionValue builtIn="false" value="profiler"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.54546842" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
@@ -212,4 +222,5 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 </cproject>

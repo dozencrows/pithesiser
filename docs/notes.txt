@@ -6,6 +6,11 @@ Underway
 
 To do next
 ==========
+* Avoid chunk volume interpolation when starting new envelope - losing small bit of attack as a result
+* Optimise WAV output
+** Ensure good buffering
+** Add own buffering, with lower priority thread writing out smaller chunks
+* Generalise gfx event system as it is being used to also save audio to disk 
 * Fixed point power function
 * Parameterise channel count/stride on sample buffer operations; proper stereo operations
 * Pitch bend control

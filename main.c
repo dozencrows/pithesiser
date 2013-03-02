@@ -257,6 +257,7 @@ void process_audio(int32_t timestep_ms)
 
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_SILENCE;
+		gfx_event.flags = 0;
 		gfx_event.size = buffer_bytes;
 		gfx_event.receiver_id = WAVE_RENDERER_ID;
 		gfx_send_event(&gfx_event);
@@ -265,6 +266,7 @@ void process_audio(int32_t timestep_ms)
 	{
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_WAVE;
+		gfx_event.flags = GFX_EVENT_FLAG_OWNPTR;
 		gfx_event.ptr = malloc(buffer_bytes);
 		gfx_event.receiver_id = WAVE_RENDERER_ID;
 		if (gfx_event.ptr != NULL)
@@ -463,6 +465,7 @@ void process_midi_controllers()
 	{
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.flags = 0;
 		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
 		gfx_send_event(&gfx_event);
 	}
@@ -724,7 +727,9 @@ int main(int argc, char **argv)
 	}
 	else
 	{
+		recording_initialise(&app_config, WAVE_RENDERER_ID);
 		synth_main();
+		recording_deinitialise();
 	}
 
 	return 0;

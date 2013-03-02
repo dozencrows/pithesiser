@@ -190,7 +190,6 @@ static void update_display(wave_renderer_internal_t *renderer)
 static void vector_wave_event_handler(gfx_event_t *event, gfx_object_t *receiver)
 {
 	render_waveform_data((wave_renderer_internal_t*)receiver, event->size / BYTES_PER_SAMPLE, (sample_t*)event->ptr);
-	free(event->ptr);
 }
 
 static void vector_silence_event_handler(gfx_event_t *event, gfx_object_t *receiver)
