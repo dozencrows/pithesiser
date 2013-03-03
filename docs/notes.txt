@@ -6,28 +6,14 @@ Underway
 
 To do next
 ==========
-* Optimise WAV output
-** Ensure good buffering
-** Add own buffering, with lower priority thread writing out smaller chunks
-* Generalise gfx event system as it is being used to also save audio to disk 
-* Fixed point power function
-* Parameterise channel count/stride on sample buffer operations; proper stereo operations
-* Pitch bend control
-* Modulation wheel control (linked with LFO)
-* LFO: vibrato, tremelo, with envelope
-  * delay/two stage attack on envelopes
-  * Multiple envelopes -> need smarter control management 
-  * two independent LFOs; target separate outputs & separate parameters, but triggered in step.
+* Improve waveform quality
+** Multi-waveform wavetables with bandlimited generation
+** More variety of waveforms
+** Pre-filtered procedural waveforms
+** Cubic interpolation with table lookup
+** Normalise range of phase accumulator across all waveform types
 * Filters
   * Improve precision particularly at low values for Q and frequency (doesn't appear to be controller precision)
-  * Add overall gain control to LPF and HPF
-  * Add more filter types (BPF, 1-POLE LPF & HPF, notch)
-  * Drive filter param from envelope
-  * Add per-voice filters
-  * Render filter frequency response in UI
-  * Add multiple filter stages
-* Memory management
-  * Eliminate heap allocations during synth loop: (gfx event buffers)
 
 Blog ideas
 ==========
@@ -38,12 +24,31 @@ Feature support:
  * Rendering:
    * Of settings
  * Better naming for oscillators & generators
- * Normalise range of phase accumulator across all waveform types
- * Multi-wave wavetable support 
- * Cubic interpolation with table lookup
  * Paired oscillators: modulation, mixing
  * Noise channel
  * Configuration of synth signal path & components via config file
+ * Parameterise channel count/stride on sample buffer operations; proper stereo operations
+ * Filtering:
+  * Add overall gain control to LPF and HPF
+  * Add more filter types (BPF, 1-POLE LPF & HPF, notch)
+  * Drive filter param from envelope
+  * Add per-voice filters
+  * Render filter frequency response in UI
+  * Add multiple filter stages
+ * Pitch bend control
+ * Modulation wheel control (linked with LFO)
+ * LFO: vibrato, tremelo, with envelope
+  * delay/two stage attack on envelopes
+  * Multiple envelopes -> need smarter control management 
+  * two independent LFOs; target separate outputs & separate parameters, but triggered in step.
+ 
+Performance & quality:
+ * Optimise WAV output
+ ** Ensure good buffering
+ ** Add own buffering, with lower priority thread writing out smaller chunks
+ * Generalise gfx event system as it is being used to also save audio to disk 
+ * Fixed point power function
+ * Eliminate heap allocations during synth loop: (gfx event buffers)
 
 Testing:
   * Whole synth tests: some form of sequencer?
