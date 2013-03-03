@@ -192,6 +192,11 @@ void process_audio(int32_t timestep_ms)
 				envelope_start(&voice[i].envelope_instance);
 			}
 
+			if (voice[i].last_note == NOTE_NOT_PLAYING)
+			{
+				oscillator[i].last_level = -1;
+			}
+
 			voice[i].last_note = voice[i].current_note;
 		}
 
@@ -221,6 +226,12 @@ void process_audio(int32_t timestep_ms)
 
 			oscillator[i].level = (note_level * master_volume) / LEVEL_MAX;
 			oscillator[i].level = (oscillator[i].level * auto_duck_level) / LEVEL_MAX;
+
+			// If this is a new note from scratch, avoid interpolating the initial level across the chunk.
+			if (oscillator[i].last_level < 0)
+			{
+				oscillator[i].last_level = oscillator[i].level;
+			}
 
 			if (oscillator[i].level > 0 || oscillator[i].last_level != 0)
 			{

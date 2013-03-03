@@ -23,13 +23,15 @@ static int32_t calculate_level(envelope_instance_t *instance, envelope_stage_t* 
 		start_level = stage->start_level;
 	}
 
-	int32_t stage_delta = 0;
 	if (stage->duration > 0) {
 		fixed_t level_scale = fixed_divide_at(elapsed_time_ms, stage->duration, ENV_FIXED_PRECISION);
-		stage_delta = fixed_mul_at(stage->end_level - start_level, level_scale, ENV_FIXED_PRECISION);
+		int32_t stage_delta = fixed_mul_at(stage->end_level - start_level, level_scale, ENV_FIXED_PRECISION);
+		return start_level + stage_delta;
 	}
-
-	return start_level + stage_delta;
+	else
+	{
+		return stage->end_level;
+	}
 }
 
 void envelope_init(envelope_instance_t *instance, envelope_t* envelope)
