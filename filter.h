@@ -36,7 +36,10 @@ typedef struct filter_state_t
 typedef struct filter_t
 {
 	filter_definition_t	definition;
+	int					updated;
 	filter_state_t		state;
+	int					last_type;
+	filter_state_t		last_state;
 } filter_t;
 
 extern void filter_init(filter_t *filter);
