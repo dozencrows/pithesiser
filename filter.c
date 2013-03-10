@@ -92,10 +92,10 @@ void filter_update(filter_t *filter)
 	}
 	else
 	{
-		clear_state(&filter->last_state);
 		filter->last_type = filter->definition.type;
 		filter->updated = 0;
 	}
+	clear_state(&filter->state);
 
 	filter->state.input_coeff[0] = fixed_divide_at(b[0], a[0], FILTER_FIXED_PRECISION);
 	filter->state.input_coeff[1] = fixed_divide_at(b[1], a[0], FILTER_FIXED_PRECISION);
@@ -103,23 +103,34 @@ void filter_update(filter_t *filter)
 
 	filter->state.output_coeff[0] = fixed_divide_at(a[1], a[0], FILTER_FIXED_PRECISION);
 	filter->state.output_coeff[1] = fixed_divide_at(a[2], a[0], FILTER_FIXED_PRECISION);
+
+	//	printf("%d,%d,%Ld,%d,%d,%d,", filter->definition.frequency, filter->definition.q, w0, cos_w0, sin_w0, alpha);
+	//	printf("%d,%d,%d,%d,%d,%d,", a[0], a[1], a[2], b[0], b[1], b[2]);
+	//	printf("%d,%d,%d,", filter->state.input_coeff[0], filter->state.input_coeff[1], filter->state.input_coeff[2]);
+	//	printf("%d,%d\n", filter->state.output_coeff[0], filter->state.output_coeff[1]);
 }
 
 __attribute__((always_inline)) inline sample_t filter_sample(sample_t sample, filter_state_t *filter_state)
 {
 	fixed_t new_sample;
 	new_sample =  (fixed_t)sample * filter_state->input_coeff[0];
-	new_sample += fixed_mul_at(filter_state->input_coeff[1], filter_state->history[0], FILTER_FIXED_PRECISION);
-	new_sample += fixed_mul_at(filter_state->input_coeff[2], filter_state->history[1], FILTER_FIXED_PRECISION);
-	new_sample -= fixed_mul_at(filter_state->output_coeff[0], filter_state->output[0], FILTER_FIXED_PRECISION);
-	new_sample -= fixed_mul_at(filter_state->output_coeff[1], filter_state->output[1], FILTER_FIXED_PRECISION);
+	new_sample += filter_state->input_coeff[1] * filter_state->history[0];
+	new_sample += filter_state->input_coeff[2] * filter_state->history[1];
+	new_sample -= filter_state->output_coeff[0] * filter_state->output[0];
+	new_sample -= filter_state->output_coeff[1] * filter_state->output[1];
+	new_sample  = fixed_round_to_int_at(new_sample, FILTER_FIXED_PRECISION);
 
 	filter_state->history[1] = filter_state->history[0];
-	filter_state->history[0] = sample << FILTER_FIXED_PRECISION;
+	filter_state->history[0] = sample;
 	filter_state->output[1] = filter_state->output[0];
 	filter_state->output[0] = new_sample;
 
-	return (sample_t)fixed_round_to_int_at(new_sample, FILTER_FIXED_PRECISION);
+	return (sample_t)new_sample;
+}
+
+void filter_silence(filter_t *filter)
+{
+	clear_history(&filter->state);
 }
 
 #define INTERP_PRECISION	15
@@ -163,7 +174,7 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 	else
 	{
 		int last_sample_index = (sample_count - 1) * 2;
-		fixed_t sample = fixed_from_int_at(sample_data[last_sample_index], FILTER_FIXED_PRECISION);
+		fixed_t sample = (fixed_t)sample_data[last_sample_index];
 
 		filter->state.history[1] = filter->state.history[0];
 		filter->state.history[0] = sample;

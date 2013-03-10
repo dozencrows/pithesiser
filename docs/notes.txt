@@ -6,6 +6,8 @@ Underway
 
 To do next
 ==========
+* Resolve filtering & going to silence (eliminate bias & clicks)
+* Improve filter math precision while maintaining performance
 * Improve waveform quality
 ** Multi-waveform wavetables with bandlimited generation
 ** More variety of waveforms
@@ -191,7 +193,23 @@ RESOLUTION: Factor modifier into oscillator level in main loop based on number o
     		issue #2 to resolve it.
 
 * Clicks/glitches when changing filter parameters
-Discontinuities in the math? Address by interpolating across a buffer between old & new?
+RESOLUTION: Tried to address this by filtering buffer twice when parameters change, with old and new values, then interpolate the resulting buffer
+from old to new. This eliminated clicks & glitches.
+
+* "Steps" in filter depth at low values of frequency
+Printing out & analysing values in a spreadsheet shows this to be a precision issue; primarily the precision of the coefficients
+used in filter_apply (and implicitly the precision used to calculate those coefficients). The challenge will be to increase this
+precision suitably while avoiding overflows and keeping performance good.
+- have been able to switch history & output in filter state to non-fixed point, which may give some headroom for this...
+
+* Variable bias appearing in filtering at low frequencies
+This looks like the "output" part of filter state gets "poisoned" somehow, which then persists in further use of the filter. If the filter
+state is reset, this goes away (e.g. by changing filter type or explicitly clearing on silence).
+Suspect that this bias comes from the last few non-zero samples just before the output goes to silence when all notes end - because of
+the latency introduced by the filter, output silence happens a little later than voice silence. Temporarily addressed this by
+clearing the filter state when all voices silent - eliminates the bias, but can cause clicks (worse with notes close to being completely
+cut by the filter).
+The logic of the filtering algorithm may still require explicitly resetting on silence, with interpolation to avoid clicks. 
 
 * Strange harmonics on various waves, particularly at higher pitches
 Likely general digital aliasing.
@@ -273,7 +291,10 @@ Results:
 * By reducing fixed point filter precision to 14 bits from 18, was able to make that implementation ~13% faster than
   the float form; strongly suggesting I stick with fixed point when scaling up functionality, as on average each
   functional stage is faster in fixed point. Where it isn't, the difference is small enough to be dwarfed by the need
-  to convert float to integer for output.  
+  to convert float to integer for output.
+* By changing the filter application calculation to only use fixed point for the calculation and not in storing
+  the history or output values for later lookup, further performance was gained - now roughly ~45% faster than the
+  float form. However may have to give some of this back in order to increase filter precision.    
 
 Thread Timing
 -------------

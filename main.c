@@ -260,32 +260,28 @@ void process_audio(int32_t timestep_ms)
 		}
 	}
 
-	filter_apply(&global_filter, buffer_data, buffer_samples);
-
 	if (first_audible_voice < 0)
 	{
 		memset(buffer_data, 0, buffer_bytes);
-
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_SILENCE;
-		gfx_event.flags = 0;
-		gfx_event.size = buffer_bytes;
-		gfx_event.receiver_id = WAVE_RENDERER_ID;
-		gfx_send_event(&gfx_event);
+		// TO DO - resolve this better as may get click due to true silence has to account
+		// for filter latency.
+		filter_silence(&global_filter);
 	}
 	else
 	{
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_WAVE;
-		gfx_event.flags = GFX_EVENT_FLAG_OWNPTR;
-		gfx_event.ptr = malloc(buffer_bytes);
-		gfx_event.receiver_id = WAVE_RENDERER_ID;
-		if (gfx_event.ptr != NULL)
-		{
-			gfx_event.size = buffer_bytes;
-			memcpy(gfx_event.ptr, buffer_data, buffer_bytes);
-			gfx_send_event(&gfx_event);
-		}
+		filter_apply(&global_filter, buffer_data, buffer_samples);
+	}
+
+	gfx_event_t gfx_event;
+	gfx_event.type = GFX_EVENT_WAVE;
+	gfx_event.flags = GFX_EVENT_FLAG_OWNPTR;
+	gfx_event.ptr = malloc(buffer_bytes);
+	gfx_event.receiver_id = WAVE_RENDERER_ID;
+	if (gfx_event.ptr != NULL)
+	{
+		gfx_event.size = buffer_bytes;
+		memcpy(gfx_event.ptr, buffer_data, buffer_bytes);
+		gfx_send_event(&gfx_event);
 	}
 
 	alsa_unlock_buffer(write_buffer_index);
