@@ -384,3 +384,9 @@ each synthesis packet.
 * Useful to half both full waveforms (for pitch mostly) and positive only (biased) waveforms (for volume).
 * LFO is reset when no notes are playing (or reset on first note after silence) but stays uniform for all notes when playing.
 
+Development Notes
+=================
+Initially I found single stepping when remote debugging to be flakey - it would regularly lock up, and I would have to kill the
+remote process and start again.
+
+However, turning on "non stop" GDB which allows unsuspended threads to keep running seems to have solved this!

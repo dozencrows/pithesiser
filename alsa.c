@@ -43,6 +43,8 @@
  *			Send empty buffer signal.
  */
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <alsa/asoundlib.h>
@@ -101,6 +103,8 @@ static void create_audio_buffers()
 static void* audio_thread()
 {
 	int error = 0;
+
+	pthread_setname_np(audio_thread_handle, "pithesiser-aud");
 
 	while (error >= 0)
 	{

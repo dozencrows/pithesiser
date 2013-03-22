@@ -5,6 +5,8 @@
  *      Author: ntuckett
  */
 
+#define _GNU_SOURCE
+
 #include "gfx.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
@@ -142,6 +144,8 @@ static size_t frame_complete_threshold = 0;
 
 void *gfx_thread()
 {
+	pthread_setname_np(gfx_thread_handle, "pithesiser-gfx");
+
 	gfx_egl_init();
 	gfx_openvg_init();
 	sem_post(&gfx_init_semaphore);

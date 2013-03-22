@@ -17,6 +17,8 @@
  *  Channels 1-15: max number of controllers per channel is 17
  */
 
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -176,6 +178,8 @@ static void midi_read_packet(int handle)
 
 static void* midi_thread()
 {
+	pthread_setname_np(midi_thread_handle, "pithesiser-midi");
+
 	while (1)
 	{
 		fd_set rfds;
