@@ -101,8 +101,8 @@ void filter_update(filter_t *filter)
 	filter->state.input_coeff[1] = fixed_divide_at(b[1], a[0], FILTER_FIXED_PRECISION);
 	filter->state.input_coeff[2] = fixed_divide_at(b[2], a[0], FILTER_FIXED_PRECISION);
 
-	filter->state.output_coeff[0] = fixed_divide_at(a[1], a[0], FILTER_FIXED_PRECISION);
-	filter->state.output_coeff[1] = fixed_divide_at(a[2], a[0], FILTER_FIXED_PRECISION);
+	filter->state.output_coeff[0] = -fixed_divide_at(a[1], a[0], FILTER_FIXED_PRECISION);
+	filter->state.output_coeff[1] = -fixed_divide_at(a[2], a[0], FILTER_FIXED_PRECISION);
 
 	//	printf("%d,%d,%Ld,%d,%d,%d,", filter->definition.frequency, filter->definition.q, w0, cos_w0, sin_w0, alpha);
 	//	printf("%d,%d,%d,%d,%d,%d,", a[0], a[1], a[2], b[0], b[1], b[2]);
@@ -114,10 +114,10 @@ __attribute__((always_inline)) inline sample_t filter_sample(sample_t sample, fi
 {
 	fixed_t new_sample;
 	new_sample =  (fixed_t)sample * filter_state->input_coeff[0];
-	new_sample += filter_state->input_coeff[1] * filter_state->history[0];
 	new_sample += filter_state->input_coeff[2] * filter_state->history[1];
-	new_sample -= filter_state->output_coeff[0] * filter_state->output[0];
-	new_sample -= filter_state->output_coeff[1] * filter_state->output[1];
+	new_sample += filter_state->input_coeff[1] * filter_state->history[0];
+	new_sample += filter_state->output_coeff[1] * filter_state->output[1];
+	new_sample += filter_state->output_coeff[0] * filter_state->output[0];
 	new_sample  = fixed_round_to_int_at(new_sample, FILTER_FIXED_PRECISION);
 
 	filter_state->history[1] = filter_state->history[0];
@@ -131,6 +131,51 @@ __attribute__((always_inline)) inline sample_t filter_sample(sample_t sample, fi
 void filter_silence(filter_t *filter)
 {
 	clear_history(&filter->state);
+}
+
+__attribute__((always_inline)) inline sample_t filter_sample_asm(fixed_t sample, filter_state_t *filter_state)
+{
+	fixed_t new_sample;
+	fixed_t coeff;
+	fixed_t history;
+	fixed_t round_value = 1 << (FILTER_FIXED_PRECISION - 1);
+
+	asm volatile(
+		"		mov		%[new_sample],%[sample]\n"							// new_sample = sample * ic[0]
+		"		ldr		%[coeff],[%[filter]]\n"
+		"		mul		%[new_sample],%[coeff],%[sample]\n"
+
+		"		ldr		%[coeff],[%[filter], #8]\n"							// new_sample += h[1] * ic[2]
+		"		ldr		%[history],[%[filter], #24]\n"
+		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
+
+		"		ldr		%[coeff],[%[filter], #4]\n"							// new_sample += h[0] * ic[1]
+		"		ldr		%[history],[%[filter], #20]\n"
+		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
+
+		"		str		%[history],[%[filter], #24]\n"						// h[1] = h[0]
+		"		str		%[sample],[%[filter], #20]\n"						// h[0] = sample
+
+		"		ldr		%[coeff],[%[filter], #16]\n"						// new_sample += o[1] * oc[1]
+		"		ldr		%[history],[%[filter], #32]\n"
+		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
+
+		"		ldr		%[coeff],[%[filter], #12]\n"						// new_sample += o[0] * oc[0]
+		"		ldr		%[history],[%[filter], #28]\n"
+		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
+
+		"		add		%[new_sample], %[round_value], %[new_sample]\n"		// round new_sample
+		"		mov		%[new_sample], %[new_sample], ASR #14\n"
+
+		"		str		%[history],[%[filter], #32]\n"						// o[1] = o[0]
+		"		str		%[new_sample],[%[filter], #28]\n"					// o[0] = new_sample
+
+		: [coeff]"=r"(coeff), [history]"=r"(history), [new_sample]"=r"(new_sample)
+		: [filter]"r"(filter_state), [round_value]"r"(round_value), [sample]"r"(sample)
+		:
+	);
+
+	return (sample_t)new_sample;
 }
 
 #define INTERP_PRECISION	15
@@ -150,6 +195,8 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 			{
 				sample_t old_output = filter_sample(*sample_data, &filter->last_state);
 				sample_t new_output = filter_sample(*sample_data, &filter->state);
+				//sample_t old_output = filter_sample_asm(*sample_data, &filter->last_state);
+				//sample_t new_output = filter_sample_asm(*sample_data, &filter->state);
 
 				sample_t output = (((int32_t)new_output * interpolator_new) >> INTERP_PRECISION) + (((int32_t)old_output * interpolator_old) >> INTERP_PRECISION);
 				*sample_data++ = output;
@@ -166,6 +213,7 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 			for (int i = 0; i < sample_count; i++)
 			{
 				sample_t output = filter_sample(*sample_data, &filter->state);
+				//sample_t output = filter_sample_asm(*sample_data, &filter->state);
 				*sample_data++ = output;
 				*sample_data++ = output;
 			}

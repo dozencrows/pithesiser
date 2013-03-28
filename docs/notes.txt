@@ -3,19 +3,20 @@ Raspberry Pi Synth Project
 
 Underway
 ========
+* Filter precision improvements:
+  * Hand-coded assembly for filtering
 
 To do next
 ==========
 * Resolve filtering & going to silence (eliminate bias & clicks)
 * Improve filter math precision while maintaining performance
-* Improve waveform quality
-** Multi-waveform wavetables with bandlimited generation
-** More variety of waveforms
-** Pre-filtered procedural waveforms
-** Cubic interpolation with table lookup
-** Normalise range of phase accumulator across all waveform types
-* Filters
   * Improve precision particularly at low values for Q and frequency (doesn't appear to be controller precision)
+* Improve waveform quality
+  * Multi-waveform wavetables with bandlimited generation
+  * More variety of waveforms
+  * Pre-filtered procedural waveforms
+  * Cubic interpolation with table lookup
+  * Normalise range of phase accumulator across all waveform types
 
 Blog ideas
 ==========
