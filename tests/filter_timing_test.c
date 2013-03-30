@@ -18,6 +18,7 @@ static const int TEST_BUFFER_SIZE = 128;
 void filter_timing_test(int count)
 {
 	filter_t fixed_math_filter;
+	filter_t fixed_math_asm_filter;
 	sample_t int_sample_buffer[TEST_BUFFER_SIZE * 2];
 	float_filter_t float_math_filter;
 	float float_sample_buffer[TEST_BUFFER_SIZE * 2];
@@ -30,6 +31,7 @@ void filter_timing_test(int count)
 	fixed_math_filter.definition.frequency = DOUBLE_TO_FIXED(880.0);
 	fixed_math_filter.definition.q = FIXED_HALF;
 	filter_update(&fixed_math_filter);
+	fixed_math_asm_filter = fixed_math_filter;
 
 	float_filter_init(&float_math_filter);
 	float_math_filter.definition.type = FILTER_LPF;
@@ -44,6 +46,13 @@ void filter_timing_test(int count)
 		filter_apply(&fixed_math_filter, int_sample_buffer, TEST_BUFFER_SIZE);
 	}
 
+	int32_t start_asm_time = get_elapsed_time_ms();
+
+	for (int i = 0; i < count; i++)
+	{
+		filter_apply_asm(int_sample_buffer, TEST_BUFFER_SIZE, &fixed_math_asm_filter.state);
+	}
+
 	int32_t start_float_time = get_elapsed_time_ms();
 
 	for (int i = 0; i < count; i++)
@@ -53,5 +62,5 @@ void filter_timing_test(int count)
 
 	int32_t end_time = get_elapsed_time_ms();
 
-	printf("For %d iterations: fixed = %dms, float = %dms\n", count, start_float_time - start_fixed_time, end_time - start_float_time);
+	printf("For %d iterations: fixed = %dms, asm = %dms, float = %dms\n", count, start_asm_time - start_fixed_time, start_float_time - start_asm_time, end_time - start_float_time);
 }

@@ -4,53 +4,57 @@
 @ r1:	sample_count
 @ r2:	filter_state
 
-@ sample		r3
-@ coeff			r4
-@ new_sample	r5
-@ history		r6
-@ round_value	r7
-@ precision		14
-
 		.set	ROUNDING_OFFSET, 8192
 		.set	PRECISION, 14
 
 filter_apply_asm:
-		stmfd	sp!, {r4, r5, r6, r7, lr}
+		stmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, lr}
+		sub		sp, #4
 
-		ldr		r7,=ROUNDING_OFFSET
+		ldr		r8,[r2]									@ ic[0]
+		ldr		r9,[r2, #4]								@ ic[1]
+		ldr		r10,[r2, #8]							@ ic[2]
+		ldr		r11,[r2, #12]							@ oc[0]
+		ldr		r12,[r2, #16]							@ oc[1]
 
-.L1:	ldrsh	r3,[r0]
-		ldr		r4,[r2]									@ new_sample = sample * ic[0]
-		mul		r5,r4,r3
+		ldr		r3,[r2, #20]							@ h[0]
+		ldr		r4,[r2, #24]							@ h[1]
+		ldr		r5,[r2, #28]							@ o[0]
+		ldr		r6,[r2, #32]							@ o[1]
 
-		ldr		r4,[r2, #8]								@ new_sample += h[1] * ic[2]
-		ldr		r6,[r2, #24]
-		mla		r5,r4,r6,r5
+		str		r2,[sp]
+		b		.L1
 
-		ldr		r4,[r2, #4]								@ new_sample += h[0] * ic[1]
-		ldr		r6,[r2, #20]
-		mla		r5,r4,r6,r5
+.L0:	mov		r6, r5									@ o[1] = o[0]
+		mov		r4, r3									@ h[1] = h[0]
+		mov		r5, r7									@ o[0] = last output
+		mov		r3, r2									@ h[0] = last input
 
-		str		r6,[r2, #24]							@ h[1] = h[0]
-		str		r3,[r2, #20]							@ h[0] = sample
+.L1:	mul		r7,r10,r4								@ h[1] * ic[2]
 
-		ldr		r4,[r2, #16]							@ new_sample += o[1] * oc[1]
-		ldr		r6,[r2, #32]
-		mla		r5,r4,r6,r5
+		ldrsh	r2,[r0]									@ load new sample
+		subs	r1,r1,#1								@ decrement overall count (pipelining)
 
-		ldr		r4,[r2, #12]							@ new_sample += o[0] * oc[0]
-		ldr		r6,[r2, #28]
-		mla		r5,r4,r6,r5
+		mla		r7,r2,r8,r7								@ += sample * ic[0]
+		mla		r7,r3,r9,r7								@ += h[0] * ic[1]
 
-		add		r5, r7, r5								@ round new_sample
-		mov		r5, r5, ASR #PRECISION
+		mla		r7,r5,r11,r7							@ += o[0] * oc[0]
+		mla		r7,r6,r12,r7							@ += o[1] * oc[1]
 
-		str		r6,[r2, #32]							@ o[1] = o[0]
-		str		r5,[r2, #28]							@ o[0] = new_sample
+		add		r7, r7, #ROUNDING_OFFSET				@ round new_sample
+		mov		r7, r7, asr #PRECISION
 
-		strh	r5,[r0],#2
-		strh	r5,[r0],#2
-		subs	r1,r1,#1
-		bne		.L1
+		strh	r7,[r0],#2
+		strh	r7,[r0],#2
 
-		ldmfd	sp!, {r4, r5, r6, r7, pc}
+		bne		.L0										@ checks r1 for zero
+
+		ldr		r2, [sp]
+
+		str		r3, [r2, #20]							@ store final history & output state
+		str		r4, [r2, #24]
+		str		r5, [r2, #28]
+		str		r6, [r2, #32]
+
+		add		sp, #4
+		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, pc}

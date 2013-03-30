@@ -212,8 +212,8 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 		{
 //			for (int i = 0; i < sample_count; i++)
 //			{
-//				//sample_t output = filter_sample(*sample_data, &filter->state);
-//				sample_t output = filter_sample_asm(*sample_data, &filter->state);
+//				sample_t output = filter_sample(*sample_data, &filter->state);
+//				//sample_t output = filter_sample_asm(*sample_data, &filter->state);
 //				*sample_data++ = output;
 //				*sample_data++ = output;
 //			}
