@@ -91,6 +91,7 @@
 								</inputType>
 							</tool>
 							<tool command="arm-linux-gnueabihf-as" id="cdt.managedbuild.tool.gnu.assembler.exe.debug.1631266620" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
+								<option id="gnu.both.asm.option.flags.1304553944" superClass="gnu.both.asm.option.flags" value="-g" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1780943094" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>

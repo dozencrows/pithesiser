@@ -178,58 +178,6 @@ __attribute__((always_inline)) inline sample_t filter_sample_asm(fixed_t sample,
 	return (sample_t)new_sample;
 }
 
-// Note - this doesn't work in release, as the compiler still inlines it but makes a bad register selection - uses
-// r5 for %[filter_state] AND for %[sample] - need to code this in an assembler module separately
-
-static __attribute__((no_inline)) void filter_apply_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state)
-{
-	fixed_t sample;
-	fixed_t new_sample;
-	fixed_t coeff;
-	fixed_t history;
-	fixed_t round_value = 1 << (FILTER_FIXED_PRECISION - 1);
-
-	asm volatile(
-		".L1:	ldrsh	%[sample],[%[sample_data]]\n"
-		"		ldr		%[coeff],[%[filter]]\n"								// new_sample = sample * ic[0]
-		"		mul		%[new_sample],%[coeff],%[sample]\n"
-
-		"		ldr		%[coeff],[%[filter], #8]\n"							// new_sample += h[1] * ic[2]
-		"		ldr		%[history],[%[filter], #24]\n"
-		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
-
-		"		ldr		%[coeff],[%[filter], #4]\n"							// new_sample += h[0] * ic[1]
-		"		ldr		%[history],[%[filter], #20]\n"
-		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
-
-		"		str		%[history],[%[filter], #24]\n"						// h[1] = h[0]
-		"		str		%[sample],[%[filter], #20]\n"						// h[0] = sample
-
-		"		ldr		%[coeff],[%[filter], #16]\n"						// new_sample += o[1] * oc[1]
-		"		ldr		%[history],[%[filter], #32]\n"
-		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
-
-		"		ldr		%[coeff],[%[filter], #12]\n"						// new_sample += o[0] * oc[0]
-		"		ldr		%[history],[%[filter], #28]\n"
-		"		mla		%[new_sample],%[coeff],%[history],%[new_sample]\n"
-
-		"		add		%[new_sample], %[round_value], %[new_sample]\n"		// round new_sample
-		"		mov		%[new_sample], %[new_sample], ASR %[precision]\n"
-
-		"		str		%[history],[%[filter], #32]\n"						// o[1] = o[0]
-		"		str		%[new_sample],[%[filter], #28]\n"					// o[0] = new_sample
-
-		"		strh	%[new_sample],[%[sample_data]],#2\n"
-		"		strh	%[new_sample],[%[sample_data]],#2\n"
-		"		subs	%[sample_count],%[sample_count],#1\n"
-		"		bne		.L1"
-
-		: [coeff]"=r"(coeff), [history]"=r"(history), [new_sample]"=r"(new_sample), [sample]"=r"(sample)
-		: [filter]"r"(filter_state), [round_value]"r"(round_value), [sample_data]"r"(sample_data), [sample_count]"r"(sample_count), [precision]"M" (FILTER_FIXED_PRECISION)
-		:
-	);
-}
-
 #define INTERP_PRECISION	15
 #define INTERP_ONE			(1 << INTERP_PRECISION)
 
