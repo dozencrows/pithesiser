@@ -27,7 +27,7 @@ Feature support:
  * Rendering:
    * Of settings
  * Better naming for oscillators & generators
- * Paired oscillators: modulation, mixing
+ * Paired oscillators: (cross) modulation, mixing, detuning
  * Noise channel
  * Configuration of synth signal path & components via config file
  * Parameterise channel count/stride on sample buffer operations; proper stereo operations
@@ -44,6 +44,10 @@ Feature support:
   * delay/two stage attack on envelopes
   * Multiple envelopes -> need smarter control management 
   * two independent LFOs; target separate outputs & separate parameters, but triggered in step.
+ * Pulse waveform
+   * variable pulse width
+   * LFO driving pulse width
+ * Ring modulator
  
 Performance & quality:
  * Optimise WAV output
@@ -202,6 +206,14 @@ Printing out & analysing values in a spreadsheet shows this to be a precision is
 used in filter_apply (and implicitly the precision used to calculate those coefficients). The challenge will be to increase this
 precision suitably while avoiding overflows and keeping performance good.
 - have been able to switch history & output in filter state to non-fixed point, which may give some headroom for this...
+- have been able to implement 32-bit sized filtering code in assembler that's quicker than optimised C, giving some CPU headroom for increasing precision
+- study of values in LPF & HPF filtering suggests the following approach:
+  - coefficients can be stored as 32 bit values up to fixed precision of 29 before causing an overflow
+  - coefficient calculations in filter_update need to use fixed_wide_t (64 bits) throughout to avoid overflow
+  - ARM smull and smlal instructions can be used for multiply/multiply-accumulate operations - require additional register for high 32 bits
+  - conversion from 64 bit back to 16 bit samples can be done using shift on low 32 bits or'd with rotated & masked high 32 bits. But need add values first to round it...
+  - could move sample count into local on stack and use r1 for high 32 bits
+  - test implementation by temporarily converting 14-bit coefficients to higher precision through shift & add before increasing filter_update precision?  
 
 * Variable bias appearing in filtering at low frequencies
 This looks like the "output" part of filter state gets "poisoned" somehow, which then persists in further use of the filter. If the filter
@@ -211,6 +223,8 @@ the latency introduced by the filter, output silence happens a little later than
 clearing the filter state when all voices silent - eliminates the bias, but can cause clicks (worse with notes close to being completely
 cut by the filter).
 The logic of the filtering algorithm may still require explicitly resetting on silence, with interpolation to avoid clicks. 
+
+* Glitches & instability with an HPF with low cutoff frequency when changing Q or frequency 
 
 * Strange harmonics on various waves, particularly at higher pitches
 Likely general digital aliasing.
