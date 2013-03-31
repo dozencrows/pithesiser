@@ -187,24 +187,26 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 	{
 		if (filter->updated)
 		{
-			int32_t interpolation_delta = (1 << INTERP_PRECISION) / sample_count;
-			int32_t interpolator_old = INTERP_ONE;
-			int32_t interpolator_new = 0;
+			filter_apply_interp_asm(sample_data, sample_count, &filter->state, &filter->last_state);
 
-			for (int i = 0; i < sample_count; i++)
-			{
-				sample_t old_output = filter_sample(*sample_data, &filter->last_state);
-				sample_t new_output = filter_sample(*sample_data, &filter->state);
-				//sample_t old_output = filter_sample_asm(*sample_data, &filter->last_state);
-				//sample_t new_output = filter_sample_asm(*sample_data, &filter->state);
-
-				sample_t output = (((int32_t)new_output * interpolator_new) >> INTERP_PRECISION) + (((int32_t)old_output * interpolator_old) >> INTERP_PRECISION);
-				*sample_data++ = output;
-				*sample_data++ = output;
-
-				interpolator_new += interpolation_delta;
-				interpolator_old -= interpolation_delta;
-			}
+//			int32_t interpolation_delta = (1 << INTERP_PRECISION) / sample_count;
+//			int32_t interpolator_old = INTERP_ONE;
+//			int32_t interpolator_new = 0;
+//
+//			for (int i = 0; i < sample_count; i++)
+//			{
+//				sample_t old_output = filter_sample(*sample_data, &filter->last_state);
+//				sample_t new_output = filter_sample(*sample_data, &filter->state);
+//				//sample_t old_output = filter_sample_asm(*sample_data, &filter->last_state);
+//				//sample_t new_output = filter_sample_asm(*sample_data, &filter->state);
+//
+//				sample_t output = (((int32_t)new_output * interpolator_new) >> INTERP_PRECISION) + (((int32_t)old_output * interpolator_old) >> INTERP_PRECISION);
+//				*sample_data++ = output;
+//				*sample_data++ = output;
+//
+//				interpolator_new += interpolation_delta;
+//				interpolator_old -= interpolation_delta;
+//			}
 
 			filter->updated = 0;
 		}
