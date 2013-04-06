@@ -1,6 +1,7 @@
 .globl	filter_apply_asm
 .globl	filter_apply_interp_asm
 .globl	filter_apply_hp_asm
+.globl	filter_apply_interp_hp_asm
 .globl	__aeabi_idiv
 
 @ r0:	signed positive numerator
@@ -300,3 +301,150 @@ filter_apply_hp_asm:
 		add		sp, #4
 		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, lr}
 		mov		pc, lr
+
+filter_apply_interp_hp_asm:
+
+		@ save registers & reserve stack space
+		stmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, lr}
+		sub		sp, #8
+		str		r2, [sp]
+		str		r3, [sp, #4]
+
+		@ Calculate interpolation step:		(1 << INTERP_PRECISION) / sample_count
+		stmfd	sp!, {r0, r1, r2, r3}
+		mov		r0, #INTERP_ONE
+		bl		__aeabi_idiv
+		mov		r12, r0
+		ldmfd	sp!, {r0, r1, r2, r3}
+
+		@ Copy state coefficients onto stack	(saves a register in the loop)
+		ldr		r4, [r3, #FS_INPUT_C0]
+		mov		r4, r4, asl #4
+		ldr		r5, [r3, #FS_INPUT_C1]
+		mov		r5, r5, asl #4
+		ldr		r6, [r3, #FS_INPUT_C2]
+		mov		r6, r6, asl #4
+		ldr		r7, [r3, #FS_OUTPUT_C0]
+		mov		r7, r7, asl #4
+		ldr		r8, [r3, #FS_OUTPUT_C1]
+		mov		r8, r8, asl #4
+		stmfd	sp!, {r4, r5, r6, r7, r8}
+
+		ldr		r4, [r2, #FS_INPUT_C0]
+		mov		r4, r4, asl #4
+		ldr		r5, [r2, #FS_INPUT_C1]
+		mov		r5, r5, asl #4
+		ldr		r6, [r2, #FS_INPUT_C2]
+		mov		r6, r6, asl #4
+		ldr		r7, [r2, #FS_OUTPUT_C0]
+		mov		r7, r7, asl #4
+		ldr		r8, [r2, #FS_OUTPUT_C1]
+		mov		r8, r8, asl #4
+		stmfd	sp!, {r4, r5, r6, r7, r8}
+
+		@ Set up history & output into registers for temporary use
+		@ Can assume history is same for both last and current
+		ldr		r7, [r3, #FS_HISTORY0]							@ lh & h[0]
+		ldr		r8, [r3, #FS_HISTORY1]							@ lh & h[1]
+		ldr		r9, [r3, #FS_OUTPUT0]							@ lo[0]
+		ldr		r10, [r3, #FS_OUTPUT1]							@ lo[1]
+
+		ldr		r5, [r2, #FS_OUTPUT0]							@ o[0]
+		ldr		r6, [r2, #FS_OUTPUT1]							@ o[1]
+
+		@ Set interpolation values and start loop
+		sub		r11, r11, r11
+		stmfd	sp!, {r11, r12}
+		b		.L7
+
+.L6:
+		@ advance historical data
+		mov		r8, r7					@ h[]
+		mov		r7, r2
+
+		mov		r10, r9					@ lo[]
+		mov		r9, r3
+
+		mov		r6, r5					@ o[]
+		mov		r5, r4
+
+.L7:
+		@ r0 -> sample data, r1 = sample count, r5 to r10 = historical data
+		@ r2 = current sample, r3 = sample from last filter, r4 = sample from current filter
+		@ r11, r12 = temp values
+		@ r14 could be used... (lr, saved for return)
+
+		ldrsh	r2, [r0]								@ load new sample to r2
+
+		@ carry out last state calculations (to r3)
+		@ round result & hold onto it (avoid store if possible)
+		ldr		r11, [sp, #S_LAST_INPUT_C2]
+		ldr		r12, [sp, #S_LAST_INPUT_C0]
+		smull	r3, r14, r8, r11						@ h[1] * ic[2]
+		ldr		r11, [sp, #S_LAST_INPUT_C1]
+		smlal	r3, r14, r2, r12						@ += sample * ic[0]
+		ldr		r12, [sp, #S_LAST_OUTPUT_C0]
+		smlal	r3, r14, r7, r11						@ += h[0] * ic[1]
+		ldr		r11, [sp, #S_LAST_OUTPUT_C1]
+		smlal	r3, r14, r9, r12						@ += lo[0] * oc[0]
+		smlal	r3, r14, r10, r11						@ += lo[1] * oc[1]
+
+		adds	r3, r3, #HP_ROUNDING_OFFSET				@ round new_sample
+		adc		r14, r14, #0
+		mov		r3, r3, lsr #HP_PRECISION
+		orr		r3, r14, lsl #32-HP_PRECISION
+
+		@ carry out current state calculations (to r4)
+		@ round result & store it (avoid store if possible)
+		ldr		r11, [sp, #S_INPUT_C2]
+		ldr		r12, [sp, #S_INPUT_C0]
+		smull	r4, r14, r8, r11						@ h[1] * ic[2]
+		ldr		r11, [sp, #S_INPUT_C1]
+		smlal	r4, r14, r2, r12						@ += sample * ic[0]
+		ldr		r12, [sp, #S_OUTPUT_C0]
+		smlal	r4, r14, r7, r11						@ += h[0] * ic[1]
+		ldr		r11, [sp, #S_OUTPUT_C1]
+		smlal	r4, r14, r5, r12						@ += lo[0] * oc[0]
+		smlal	r4, r14, r6, r11						@ += lo[1] * oc[1]
+
+		adds	r4, r4, #HP_ROUNDING_OFFSET				@ round new_sample
+		adc		r14, r14, #0
+		mov		r4, r4, lsr #HP_PRECISION
+		orr		r4, r14, lsl #32-HP_PRECISION
+
+		@ calculate interpolated result and store
+		ldr		r11, [sp, #S_INTERPOLANT]
+		subs	r1, r1, #1								@ decrement overall count (here to avoid stall from load above)
+		mul		r12, r11, r4							@ i * new_sample
+		rsb		r11, r11, #INTERP_ONE
+		mla		r12, r11, r3, r12						@ += (1 - i) * last_sample
+		mov		r12, r12, asr #INTERP_PRECISION
+		strh	r12, [r0], #2
+		strh	r12, [r0], #2
+
+		@ loop for next sample
+		ldr		r12, [sp, #S_INTERPOLATE_STEP]
+		rsb		r11, r11, #INTERP_ONE
+		add		r11, r12, r11
+		str		r11, [sp, #S_INTERPOLANT]
+		bne		.L6										@ based on flags set from decrement of r1
+
+		@ write back historical data to state
+		add		sp, sp, #S_FRAME_SIZE
+
+		ldr		r1, [sp]
+		str		r2,[r1, #FS_HISTORY0]							@ h[0]
+		str		r7,[r1, #FS_HISTORY1]							@ h[1]
+		str		r4,[r1, #FS_OUTPUT0]							@ o[0]
+		str		r5,[r1, #FS_OUTPUT1]							@ o[1]
+
+		ldr		r1, [sp, #4]
+		str		r2,[r1, #FS_HISTORY0]							@ lh[0]
+		str		r7,[r1, #FS_HISTORY1]							@ lh[1]
+		str		r3,[r1, #FS_OUTPUT0]							@ lo[0]
+		str		r9,[r1, #FS_OUTPUT1]							@ lo[1]
+
+		@ release stack space, restore registers & return
+		add		sp, #8
+		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, lr}
+		mov		pc,lr

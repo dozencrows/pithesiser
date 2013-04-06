@@ -211,9 +211,10 @@ precision suitably while avoiding overflows and keeping performance good.
   - coefficients can be stored as 32 bit values up to fixed precision of 29 before causing an overflow
   - coefficient calculations in filter_update need to use fixed_wide_t (64 bits) throughout to avoid overflow
   - ARM smull and smlal instructions can be used for multiply/multiply-accumulate operations - require additional register for high 32 bits
-  - conversion from 64 bit back to 16 bit samples can be done using shift on low 32 bits or'd with rotated & masked high 32 bits. But need add values first to round it...
-  - could move sample count into local on stack and use r1 for high 32 bits
-  - test implementation by temporarily converting 14-bit coefficients to higher precision through shift & add before increasing filter_update precision?  
+  - conversion from 64 bit back to 16 bit samples can be done using shift on low 32 bits or'd with rotated & masked high 32 bits after adding "0.5" to round.
+Carried out test implementation of actual filter loops using 64 bit operations as above, using r14 (lr) temporarily for high word. This worked, but was
+slower - non interpolated test was about 38% slower, interpolated was about 13% slower. This was across 2560 iterations, where there seemed to be a consistent
+5ms longer time for the higher precision versions. In absolute terms of a single iteration, the additional cost is only then about 2 microseconds.  
 
 * Variable bias appearing in filtering at low frequencies
 This looks like the "output" part of filter state gets "poisoned" somehow, which then persists in further use of the filter. If the filter

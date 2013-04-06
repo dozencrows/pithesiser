@@ -176,7 +176,7 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 	{
 		if (filter->updated)
 		{
-			filter_apply_interp_asm(sample_data, sample_count, &filter->state, &filter->last_state);
+			filter_apply_interp_hp_asm(sample_data, sample_count, &filter->state, &filter->last_state);
 			filter->updated = 0;
 		}
 		else

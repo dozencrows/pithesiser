@@ -109,4 +109,15 @@ void filter_timing_test(int count)
 	end_time = get_elapsed_time_ms();
 
 	printf("For %d iterations (fixed): hp asm = %dms\n", count, end_time - start_asm_time);
+
+	start_asm_time = get_elapsed_time_ms();
+
+	for (int i = 0; i < count; i++)
+	{
+		filter_apply_interp_hp_asm(int_sample_buffer, TEST_BUFFER_SIZE, &fixed_math_filter.state, &fixed_math_filter2.state);
+	}
+
+	end_time = get_elapsed_time_ms();
+
+	printf("For %d iterations (fixed interp): hp asm = %dms\n", count, end_time - start_asm_time);
 }
