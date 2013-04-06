@@ -247,15 +247,10 @@ filter_apply_hp_asm:
 		sub		sp, #4
 
 		ldr		r8,[r2, #FS_INPUT_C0]					@ ic[0]
-		mov		r8,r8,asl #4
 		ldr		r9,[r2, #FS_INPUT_C1]					@ ic[1]
-		mov		r9,r9,asl #4
 		ldr		r10,[r2, #FS_INPUT_C2]					@ ic[2]
-		mov		r10,r10,asl #4
 		ldr		r11,[r2, #FS_OUTPUT_C0]					@ oc[0]
-		mov		r11,r11,asl #4
 		ldr		r12,[r2, #FS_OUTPUT_C1]					@ oc[1]
-		mov		r12,r12,asl #4
 
 		ldr		r3,[r2, #FS_HISTORY0]					@ h[0]
 		ldr		r4,[r2, #FS_HISTORY1]					@ h[1]
@@ -319,27 +314,17 @@ filter_apply_interp_hp_asm:
 
 		@ Copy state coefficients onto stack	(saves a register in the loop)
 		ldr		r4, [r3, #FS_INPUT_C0]
-		mov		r4, r4, asl #4
 		ldr		r5, [r3, #FS_INPUT_C1]
-		mov		r5, r5, asl #4
 		ldr		r6, [r3, #FS_INPUT_C2]
-		mov		r6, r6, asl #4
 		ldr		r7, [r3, #FS_OUTPUT_C0]
-		mov		r7, r7, asl #4
 		ldr		r8, [r3, #FS_OUTPUT_C1]
-		mov		r8, r8, asl #4
 		stmfd	sp!, {r4, r5, r6, r7, r8}
 
 		ldr		r4, [r2, #FS_INPUT_C0]
-		mov		r4, r4, asl #4
 		ldr		r5, [r2, #FS_INPUT_C1]
-		mov		r5, r5, asl #4
 		ldr		r6, [r2, #FS_INPUT_C2]
-		mov		r6, r6, asl #4
 		ldr		r7, [r2, #FS_OUTPUT_C0]
-		mov		r7, r7, asl #4
 		ldr		r8, [r2, #FS_OUTPUT_C1]
-		mov		r8, r8, asl #4
 		stmfd	sp!, {r4, r5, r6, r7, r8}
 
 		@ Set up history & output into registers for temporary use

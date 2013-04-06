@@ -18,6 +18,7 @@ extern void filter_apply_interp_c(sample_t *sample_data, int sample_count, filte
 extern void filter_apply_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
 extern void filter_apply_hp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
 extern void filter_apply_interp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
+extern void filter_apply_interp_hp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
 
 static const int TEST_BUFFER_SIZE = 128;
 

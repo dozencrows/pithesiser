@@ -9,9 +9,8 @@
 #include <memory.h>
 #include "fixed_point_math.h"
 
-extern void filter_apply_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
 extern void filter_apply_hp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
-extern void filter_apply_interp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
+extern void filter_apply_interp_hp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
 
 #define FILTER_PRECISION_DELTA  (FIXED_PRECISION - FILTER_FIXED_PRECISION)
 
@@ -43,46 +42,43 @@ void filter_update(filter_t *filter)
 
 	fixed_sin_cos((fixed_t)w0, &sin_w0, &cos_w0);
 
-	sin_w0 >>= FILTER_PRECISION_DELTA;
-	cos_w0 >>= FILTER_PRECISION_DELTA;
+	fixed_wide_t q = filter->definition.q;
+	fixed_wide_t alpha	= fixed_divide_wide(sin_w0, q * 2);
 
-	fixed_t q = filter->definition.q >> FILTER_PRECISION_DELTA;
-	fixed_t alpha	= fixed_divide_at(sin_w0, q * 2, FILTER_FIXED_PRECISION);
-
-	fixed_t a[3];
-	fixed_t b[3];
+	fixed_wide_t a[3];
+	fixed_wide_t b[3];
 
 	switch(filter->definition.type)
 	{
 		case FILTER_LPF:
 		{
-			fixed_t tmp = FILTER_FIXED_ONE - cos_w0;
+			fixed_wide_t tmp = FIXED_ONE - cos_w0;
 			b[0] = tmp >> 1;
 			b[1] = tmp;
 			b[2] = tmp >> 1;
 
-			a[0] = FILTER_FIXED_ONE + alpha;
+			a[0] = FIXED_ONE + alpha;
 			a[1] = -2 * cos_w0;
-			a[2] = FILTER_FIXED_ONE - alpha;
+			a[2] = FIXED_ONE - alpha;
 			break;
 		}
 
 		case FILTER_HPF:
 		{
-			fixed_t tmp = FILTER_FIXED_ONE + cos_w0;
+			fixed_wide_t tmp = FIXED_ONE + cos_w0;
 			b[0] = tmp >> 1;
 			b[1] = -tmp;
 			b[2] = tmp >> 1;
 
-			a[0] = FILTER_FIXED_ONE + alpha;
+			a[0] = FIXED_ONE + alpha;
 			a[1] = -2 * cos_w0;
-			a[2] = FILTER_FIXED_ONE - alpha;
+			a[2] = FIXED_ONE - alpha;
 			break;
 		}
 
 		default:
 		{
-			b[0] = a[0] = FILTER_FIXED_ONE;
+			b[0] = a[0] = FIXED_ONE;
 			a[1] = a[2] = 0;
 			b[1] = b[2] = 0;
 			break;
@@ -101,12 +97,12 @@ void filter_update(filter_t *filter)
 	}
 	clear_state(&filter->state);
 
-	filter->state.input_coeff[0] = fixed_divide_at(b[0], a[0], FILTER_FIXED_PRECISION);
-	filter->state.input_coeff[1] = fixed_divide_at(b[1], a[0], FILTER_FIXED_PRECISION);
-	filter->state.input_coeff[2] = fixed_divide_at(b[2], a[0], FILTER_FIXED_PRECISION);
+	filter->state.input_coeff[0] = fixed_divide_wide(b[0], a[0]);
+	filter->state.input_coeff[1] = fixed_divide_wide(b[1], a[0]);
+	filter->state.input_coeff[2] = fixed_divide_wide(b[2], a[0]);
 
-	filter->state.output_coeff[0] = -fixed_divide_at(a[1], a[0], FILTER_FIXED_PRECISION);
-	filter->state.output_coeff[1] = -fixed_divide_at(a[2], a[0], FILTER_FIXED_PRECISION);
+	filter->state.output_coeff[0] = -fixed_divide_wide(a[1], a[0]);
+	filter->state.output_coeff[1] = -fixed_divide_wide(a[2], a[0]);
 
 	//	printf("%d,%d,%Ld,%d,%d,%d,", filter->definition.frequency, filter->definition.q, w0, cos_w0, sin_w0, alpha);
 	//	printf("%d,%d,%d,%d,%d,%d,", a[0], a[1], a[2], b[0], b[1], b[2]);
