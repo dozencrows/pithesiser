@@ -10,6 +10,7 @@
 #include "fixed_point_math.h"
 
 extern void filter_apply_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
+extern void filter_apply_hp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
 extern void filter_apply_interp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
 
 #define FILTER_PRECISION_DELTA  (FIXED_PRECISION - FILTER_FIXED_PRECISION)
@@ -180,7 +181,7 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 		}
 		else
 		{
-			filter_apply_asm(sample_data, sample_count, &filter->state);
+			filter_apply_hp_asm(sample_data, sample_count, &filter->state);
 		}
 	}
 	else

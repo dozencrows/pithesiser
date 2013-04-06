@@ -1,5 +1,6 @@
 .globl	filter_apply_asm
 .globl	filter_apply_interp_asm
+.globl	filter_apply_hp_asm
 .globl	__aeabi_idiv
 
 @ r0:	signed positive numerator
@@ -236,3 +237,66 @@ filter_apply_interp_asm:
 		@ release stack space, restore registers & return
 		add		sp, #8
 		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, pc}
+
+		.set	HP_ROUNDING_OFFSET, 131072
+		.set	HP_PRECISION, 18
+
+filter_apply_hp_asm:
+		stmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, lr}
+		sub		sp, #4
+
+		ldr		r8,[r2, #FS_INPUT_C0]					@ ic[0]
+		mov		r8,r8,asl #4
+		ldr		r9,[r2, #FS_INPUT_C1]					@ ic[1]
+		mov		r9,r9,asl #4
+		ldr		r10,[r2, #FS_INPUT_C2]					@ ic[2]
+		mov		r10,r10,asl #4
+		ldr		r11,[r2, #FS_OUTPUT_C0]					@ oc[0]
+		mov		r11,r11,asl #4
+		ldr		r12,[r2, #FS_OUTPUT_C1]					@ oc[1]
+		mov		r12,r12,asl #4
+
+		ldr		r3,[r2, #FS_HISTORY0]					@ h[0]
+		ldr		r4,[r2, #FS_HISTORY1]					@ h[1]
+		ldr		r5,[r2, #FS_OUTPUT0]					@ o[0]
+		ldr		r6,[r2, #FS_OUTPUT1]					@ o[1]
+
+		str		r2,[sp]
+		b		.L5
+
+.L4:
+		mov		r4, r3									@ h[1] = h[0]
+		mov		r6, r5									@ o[1] = o[0]
+		mov		r3, r2									@ h[0] = last input
+		mov		r5, r7									@ o[0] = last output
+
+.L5:
+		ldrsh	r2,[r0]									@ load new sample
+		sub		r1,r1,#1								@ decrement overall count (here to avoid stall from 16-bit load above)
+		smull	r7,r14,r10,r4							@ h[1] * ic[2]			  (helps to avoid stall from 16-bit load above)
+		smlal	r7,r14,r2,r8							@ += sample * ic[0]		  (now use available 16-bit loaded value)
+		smlal	r7,r14,r3,r9							@ += h[0] * ic[1]
+		smlal	r7,r14,r5,r11							@ += o[0] * oc[0]
+		smlal	r7,r14,r6,r12							@ += o[1] * oc[1]
+
+		adds	r7,r7, #HP_ROUNDING_OFFSET				@ round new_sample
+		adc		r14,r14, #0
+		mov		r7, r7, lsr #HP_PRECISION
+		orr		r7, r14, lsl #32-HP_PRECISION
+
+		strh	r7,[r0], #2
+		strh	r7,[r0], #2
+
+		cmp		r1, #0
+		bne		.L4										@ checks r1 for zero
+
+		ldr		r1, [sp]
+
+		str		r2, [r1, #FS_HISTORY0]					@ store final history & output state
+		str		r3, [r1, #FS_HISTORY1]
+		str		r7, [r1, #FS_OUTPUT0]
+		str		r5, [r1, #FS_OUTPUT1]
+
+		add		sp, #4
+		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, r10, r11, r12, lr}
+		mov		pc, lr

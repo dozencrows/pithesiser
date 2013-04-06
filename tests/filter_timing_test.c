@@ -16,6 +16,7 @@
 extern void filter_apply_c(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
 extern void filter_apply_interp_c(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
 extern void filter_apply_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
+extern void filter_apply_hp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state);
 extern void filter_apply_interp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
 
 static const int TEST_BUFFER_SIZE = 128;
@@ -97,4 +98,15 @@ void filter_timing_test(int count)
 	end_time = get_elapsed_time_ms();
 
 	printf("For %d iterations (fixed interp): c = %dms, asm = %dms\n", count, start_asm_time - start_c_time, end_time - start_asm_time);
+
+	start_asm_time = get_elapsed_time_ms();
+
+	for (int i = 0; i < count; i++)
+	{
+		filter_apply_hp_asm(int_sample_buffer, TEST_BUFFER_SIZE, &fixed_math_filter.state);
+	}
+
+	end_time = get_elapsed_time_ms();
+
+	printf("For %d iterations (fixed): hp asm = %dms\n", count, end_time - start_asm_time);
 }
