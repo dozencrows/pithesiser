@@ -103,8 +103,11 @@ void filter_update(filter_t *filter)
 
 	filter->state.output_coeff[0] = -fixed_divide_wide(a[1], a[0]);
 	filter->state.output_coeff[1] = -fixed_divide_wide(a[2], a[0]);
-}
 
+//	printf("%9.03f -> I: %08x %08x %08x  O: %08x %08x\n", (float)filter->definition.frequency / (float)FILTER_FIXED_ONE,
+//			filter->state.input_coeff[0], filter->state.input_coeff[1], filter->state.input_coeff[2],
+//			filter->state.output_coeff[0], filter->state.output_coeff[1]);
+}
 
 void filter_silence(filter_t *filter)
 {

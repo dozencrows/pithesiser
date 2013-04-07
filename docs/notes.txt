@@ -3,14 +3,21 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Filter precision improvements:
-  * Hand-coded assembly for filtering
 
 To do next
 ==========
-* Resolve filtering & going to silence (eliminate bias & clicks)
-* Improve filter math precision while maintaining performance
-  * Improve precision particularly at low values for Q and frequency (doesn't appear to be controller precision)
+* Restructure voice processing:
+  * Separate voice output and mixing
+  * Use mono voices, but mix to stereo
+  * Apply per-voice filters
+* Enrich filter controls
+  * Optional voice pitch tracking
+  * Envelope control
+  * LFO control
+* Improve filtering quality
+  * Resolve filtering & going to silence (eliminate bias & clicks)
+  * Investigate use of interpolation
+  * Add another couple of bits precision to fixed point math in filters
 * Improve waveform quality
   * Multi-waveform wavetables with bandlimited generation
   * More variety of waveforms
