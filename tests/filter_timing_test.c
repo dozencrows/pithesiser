@@ -20,6 +20,64 @@ extern void filter_apply_hp_asm(sample_t *sample_data, int sample_count, filter_
 extern void filter_apply_interp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
 extern void filter_apply_interp_hp_asm(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last);
 
+//
+// These C implementations are for timing and reference purposes; they may not produce correct sounding results
+// due to changes in the precision used for calculating coefficients. However the fundamental algorithm and math
+// operations remain correct, so are ok for comparing timings.
+//
+#define FILTER_INTERNAL_PRECISION	14
+
+__attribute__((always_inline)) inline sample_t filter_sample(sample_t sample, filter_state_t *filter_state)
+{
+	fixed_t new_sample;
+	new_sample =  (fixed_t)sample * filter_state->input_coeff[0];
+	new_sample += filter_state->input_coeff[2] * filter_state->history[1];
+	new_sample += filter_state->input_coeff[1] * filter_state->history[0];
+	new_sample += filter_state->output_coeff[1] * filter_state->output[1];
+	new_sample += filter_state->output_coeff[0] * filter_state->output[0];
+	new_sample  = fixed_round_to_int_at(new_sample, FILTER_INTERNAL_PRECISION);
+
+	filter_state->history[1] = filter_state->history[0];
+	filter_state->history[0] = sample;
+	filter_state->output[1] = filter_state->output[0];
+	filter_state->output[0] = new_sample;
+
+	return (sample_t)new_sample;
+}
+
+void filter_apply_c(sample_t *sample_data, int sample_count, filter_state_t *filter_state)
+{
+	for (int i = 0; i < sample_count; i++)
+	{
+		sample_t output = filter_sample(*sample_data, filter_state);
+		*sample_data++ = output;
+		*sample_data++ = output;
+	}
+}
+
+#define INTERP_PRECISION	15
+#define INTERP_ONE			(1 << INTERP_PRECISION)
+
+void filter_apply_interp_c(sample_t *sample_data, int sample_count, filter_state_t *filter_state_current, filter_state_t *filter_state_last)
+{
+	int32_t interpolation_delta = (1 << INTERP_PRECISION) / sample_count;
+	int32_t interpolator_old = INTERP_ONE;
+	int32_t interpolator_new = 0;
+
+	for (int i = 0; i < sample_count; i++)
+	{
+		sample_t old_output = filter_sample(*sample_data, filter_state_last);
+		sample_t new_output = filter_sample(*sample_data, filter_state_current);
+
+		sample_t output = (((int32_t)new_output * interpolator_new) >> INTERP_PRECISION) + (((int32_t)old_output * interpolator_old) >> INTERP_PRECISION);
+		*sample_data++ = output;
+		*sample_data++ = output;
+
+		interpolator_new += interpolation_delta;
+		interpolator_old -= interpolation_delta;
+	}
+}
+
 static const int TEST_BUFFER_SIZE = 128;
 
 void filter_timing_test(int count)
