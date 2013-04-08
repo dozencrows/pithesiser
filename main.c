@@ -21,6 +21,7 @@
 #include "waveform.h"
 #include "oscillator.h"
 #include "envelope.h"
+#include "voice.h"
 #include "filter.h"
 #include "gfx.h"
 #include "gfx_event.h"
@@ -61,33 +62,9 @@ config_t app_config;
 //-----------------------------------------------------------------------------------------------------------------------
 // Audio processing
 //
-#define NOTE_ENDING				-2
-#define NOTE_NOT_PLAYING		-1
-#define PLAYING_NOTE(x)			(x >= 0)
-
-typedef struct
-{
-	int	midi_channel;
-	int last_note;
-	int current_note;
-	int play_counter;
-	envelope_instance_t	envelope_instance;
-} voice_t;
-
 #define VOICE_COUNT	8
-voice_t voice[VOICE_COUNT] =
-{
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-	{ 0, NOTE_NOT_PLAYING, NOTE_NOT_PLAYING, 0 },
-};
+voice_t voice[VOICE_COUNT];
 
-oscillator_t oscillator[VOICE_COUNT];
 int active_voices;
 
 envelope_stage_t envelope_stages[4] =
@@ -178,67 +155,15 @@ void process_audio(int32_t timestep_ms)
 	int last_active_voices = active_voices;
 	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
 	sample_t *voice_buffer = (sample_t*)alloca(buffer_samples * sizeof(sample_t));
+	int32_t voice_level = (master_volume * auto_duck_level) / LEVEL_MAX;
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
-		if (voice[i].current_note != voice[i].last_note)
+		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, lfo_value, lfo_state))
 		{
-			if (voice[i].current_note == NOTE_NOT_PLAYING)
-			{
-				oscillator[i].level = 0;
-			}
-			else if (voice[i].current_note >= 0)
-			{
-				oscillator[i].frequency = midi_get_note_frequency(voice[i].current_note);
-				oscillator[i].waveform = master_waveform;
-				oscillator[i].phase_accumulator = 0;
-				envelope_start(&voice[i].envelope_instance);
-			}
-
-			if (voice[i].last_note == NOTE_NOT_PLAYING)
-			{
-				oscillator[i].last_level = -1;
-			}
-
-			voice[i].last_note = voice[i].current_note;
-		}
-
-		if (voice[i].current_note != NOTE_NOT_PLAYING)
-		{
-			int32_t envelope_level = envelope_step(&voice[i].envelope_instance, timestep_ms);
-			int32_t note_level = (LEVEL_MAX * envelope_level) / ENVELOPE_LEVEL_MAX;
-
-			fixed_t base_frequency = oscillator[i].frequency;
-
-			if (lfo_state == LFO_STATE_VOLUME)
-			{
-				if (lfo_value > 0)
-				{
-					note_level = (note_level * lfo_value) / SHRT_MAX;
-				}
-				else
-				{
-					note_level = 0;
-				}
-			}
-			else if (lfo_state == LFO_STATE_PITCH)
-			{
-				// TODO: use a proper fixed point power function!
-				oscillator[i].frequency = fixed_mul(base_frequency, powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE);
-			}
-
-			oscillator[i].level = (note_level * master_volume) / LEVEL_MAX;
-			oscillator[i].level = (oscillator[i].level * auto_duck_level) / LEVEL_MAX;
-
-			// If this is a new note from scratch, avoid interpolating the initial level across the chunk.
-			if (oscillator[i].last_level < 0)
-			{
-				oscillator[i].last_level = oscillator[i].level;
-			}
-
-			if (oscillator[i].level > 0 || oscillator[i].last_level != 0)
-			{
-				osc_output(&oscillator[i], voice_buffer, buffer_samples);
+			case VOICE_IDLE:
+				break;
+			case VOICE_ACTIVE:
 				if (first_audible_voice < 0)
 				{
 					first_audible_voice = i;
@@ -248,19 +173,10 @@ void process_audio(int32_t timestep_ms)
 				{
 					mixdown_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
 				}
-
-				oscillator[i].last_level = oscillator[i].level;
-			}
-			else if (voice[i].current_note == NOTE_ENDING || envelope_completed(&voice[i].envelope_instance))
-			{
-				voice[i].current_note = NOTE_NOT_PLAYING;
+				break;
+			case VOICE_GONE_IDLE:
 				active_voices--;
-			}
-
-			if (lfo_state == LFO_STATE_PITCH)
-			{
-				oscillator[i].frequency = base_frequency;
-			}
+				break;
 		}
 	}
 
@@ -398,7 +314,7 @@ void process_midi_events()
 				}
 			}
 
-			voice[candidate_voice].current_note = midi_event.data[0];
+			voice_play_note(voice + candidate_voice, midi_event.data[0], master_waveform);
 		}
 		else if (midi_event.type == 0x80)
 		{
@@ -406,8 +322,7 @@ void process_midi_events()
 			{
 				if (voice[i].current_note == midi_event.data[0])
 				{
-					voice[i].current_note = NOTE_ENDING;
-					envelope_go_to_stage(&voice[i].envelope_instance, ENVELOPE_STAGE_RELEASE);
+					voice_stop_note(voice + i);
 				}
 			}
 		}
@@ -638,11 +553,7 @@ void synth_main()
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
 
-	for (int i = 0; i < VOICE_COUNT; i++)
-	{
-		osc_init(&oscillator[i]);
-		envelope_init(&voice[i].envelope_instance, &envelope);
-	}
+	voice_init_voices(voice, VOICE_COUNT, &envelope);
 	active_voices = 0;
 
 	osc_init(&lf_oscillator);
