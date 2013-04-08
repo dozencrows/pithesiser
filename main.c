@@ -32,6 +32,7 @@
 #include "master_time.h"
 #include "synth_controllers.h"
 #include "mixer.h"
+#include "lfo.h"
 #include "recording.h"
 #include "code_timing_tests.h"
 
@@ -80,8 +81,7 @@ envelope_t envelope = { 4, envelope_stages };
 int32_t master_volume = LEVEL_MAX;
 waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;
 
-oscillator_t lf_oscillator;
-int lfo_state;
+lfo_t lfo;
 
 filter_t global_filter;
 
@@ -144,12 +144,8 @@ void process_audio(int32_t timestep_ms)
 	int buffer_samples;
 	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
 	size_t buffer_bytes = buffer_samples * sizeof(sample_t) * 2;
-	sample_t lfo_value = 0;
 
-	if (lfo_state)
-	{
-		osc_mid_output(&lf_oscillator, &lfo_value, buffer_samples);
-	}
+	lfo_update(&lfo, buffer_samples);
 
 	int first_audible_voice = -1;
 	int last_active_voices = active_voices;
@@ -159,7 +155,7 @@ void process_audio(int32_t timestep_ms)
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
-		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, lfo_value, lfo_state))
+		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &lfo))
 		{
 			case VOICE_IDLE:
 				break;
@@ -299,7 +295,7 @@ void process_midi_events()
 
 					if (active_voices == 0)
 					{
-						lf_oscillator.phase_accumulator = 0;
+						lfo_reset(&lfo);
 					}
 					active_voices++;
 					break;
@@ -398,22 +394,22 @@ void process_midi_controllers()
 
 	if (midi_controller_update(&lfo_state_controller, &param_value))
 	{
-		lfo_state = param_value;
+		lfo.state = param_value;
 	}
 
 	if (midi_controller_update(&lfo_waveform_controller, &param_value))
 	{
-		lf_oscillator.waveform = param_value;
+		lfo.oscillator.waveform = param_value;
 	}
 
 	if (midi_controller_update(&lfo_level_controller, &param_value))
 	{
-		lf_oscillator.level = param_value;
+		lfo.oscillator.level = param_value;
 	}
 
 	if (midi_controller_update(&lfo_frequency_controller, &param_value))
 	{
-		lf_oscillator.frequency = param_value;
+		lfo.oscillator.frequency = param_value;
 	}
 
 	int filter_changed = 0;
@@ -553,14 +549,10 @@ void synth_main()
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
 
-	voice_init_voices(voice, VOICE_COUNT, &envelope);
+	voice_init(voice, VOICE_COUNT, &envelope);
 	active_voices = 0;
 
-	osc_init(&lf_oscillator);
-	lf_oscillator.waveform = LFO_PROCEDURAL_SINE;
-	lf_oscillator.frequency = 1 * FIXED_ONE;
-	lf_oscillator.level = SHRT_MAX;
-	lfo_state = 0;
+	lfo_init(&lfo);
 
 	filter_init(&global_filter);
 	global_filter.definition.type = FILTER_PASS;

@@ -10,6 +10,7 @@
 
 #include "envelope.h"
 #include "oscillator.h"
+#include "lfo.h"
 
 #define NOTE_ENDING				-2
 #define NOTE_NOT_PLAYING		-1
@@ -30,8 +31,8 @@ typedef struct
 	oscillator_t oscillator;
 } voice_t;
 
-extern void voice_init_voices(voice_t *voices, int voice_count, envelope_t *envelope);
-extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, sample_t lfo_value, int lfo_state);
+extern void voice_init(voice_t *voices, int voice_count, envelope_t *envelope);
+extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, lfo_t *lfo);
 extern void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform);
 extern void voice_stop_note(voice_t *voice);
 

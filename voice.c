@@ -6,10 +6,8 @@
  */
 
 #include "voice.h"
-#include <math.h>
 #include "midi.h"
-#include "synth_controllers.h"
-#include "fixed_point_math.h"
+#include "lfo.h"
 
 static void init_voice(voice_t *voice, envelope_t *envelope)
 {
@@ -22,7 +20,7 @@ static void init_voice(voice_t *voice, envelope_t *envelope)
 	envelope_init(&voice->envelope_instance, envelope);
 }
 
-void voice_init_voices(voice_t *voices, int voice_count, envelope_t *envelope)
+void voice_init(voice_t *voices, int voice_count, envelope_t *envelope)
 {
 	for (int i = 0; i < voice_count; i++)
 	{
@@ -30,8 +28,7 @@ void voice_init_voices(voice_t *voices, int voice_count, envelope_t *envelope)
 	}
 }
 
-// TODO Encapsulate LFO data & functionality
-int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, sample_t lfo_value, int lfo_state)
+int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, lfo_t *lfo)
 {
 	int voice_state = VOICE_IDLE;
 
@@ -59,29 +56,11 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 	if (voice->current_note != NOTE_NOT_PLAYING)
 	{
 		int32_t envelope_level = envelope_step(&voice->envelope_instance, timestep_ms);
-		int32_t note_level = (LEVEL_MAX * envelope_level) / ENVELOPE_LEVEL_MAX;
 
-		fixed_t osc_frequency = voice->frequency;
-
-		if (lfo_state == LFO_STATE_VOLUME)
-		{
-			if (lfo_value > 0)
-			{
-				note_level = (note_level * lfo_value) / SHRT_MAX;
-			}
-			else
-			{
-				note_level = 0;
-			}
-		}
-		else if (lfo_state == LFO_STATE_PITCH)
-		{
-			// TODO: use a proper fixed point power function!
-			osc_frequency = fixed_mul(osc_frequency, powf(2.0f, (float)lfo_value / (float)SHRT_MAX) * FIXED_ONE);
-		}
-
-		voice->oscillator.frequency = osc_frequency;
-		voice->oscillator.level = (note_level * master_level) / LEVEL_MAX;
+		voice->oscillator.level = (LEVEL_MAX * envelope_level) / ENVELOPE_LEVEL_MAX;
+		voice->oscillator.frequency = voice->frequency;
+		lfo_modulate_oscillator(lfo, &voice->oscillator);
+		voice->oscillator.level = (voice->oscillator.level * master_level) / LEVEL_MAX;
 
 		// If this is a new note from scratch, avoid interpolating the initial level across the chunk.
 		if (voice->oscillator.last_level < 0)

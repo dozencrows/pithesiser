@@ -3,12 +3,10 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Restructure voice processing:
 
 To do next
 ==========
 * Restructure voice processing:
-  * Separate voice code module
   * Apply per-voice filters
 * Enrich filter controls
   * Optional voice pitch tracking

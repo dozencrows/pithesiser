@@ -11,10 +11,6 @@
 #include "midi_controller.h"
 #include "libconfig.h"
 
-#define LFO_STATE_OFF			0
-#define LFO_STATE_VOLUME		1
-#define LFO_STATE_PITCH			2
-
 extern midi_controller_t master_volume_controller;
 extern midi_controller_t waveform_controller;
 extern midi_controller_t oscilloscope_controller;

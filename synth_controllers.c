@@ -13,6 +13,7 @@
 #include "envelope.h"
 #include "waveform.h"
 #include "filter.h"
+#include "lfo.h"
 
 #define LFO_MIN_FREQUENCY		(FIXED_ONE / 10)
 #define LFO_MAX_FREQUENCY		(20 * FIXED_ONE)
