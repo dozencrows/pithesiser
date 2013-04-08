@@ -7,6 +7,7 @@
 
 #include "float_waveform.h"
 #include <math.h>
+#include <stdlib.h>
 
 void float_generate_sine(float_waveform_t *waveform, float sample_rate, float frequency)
 {

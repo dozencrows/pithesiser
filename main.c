@@ -30,6 +30,8 @@
 #include "gfx_image.h"
 #include "master_time.h"
 #include "synth_controllers.h"
+#include "mixer.h"
+#include "recording.h"
 #include "code_timing_tests.h"
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -175,6 +177,7 @@ void process_audio(int32_t timestep_ms)
 	int first_audible_voice = -1;
 	int last_active_voices = active_voices;
 	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
+	sample_t *voice_buffer = (sample_t*)alloca(buffer_samples * sizeof(sample_t));
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
@@ -235,14 +238,15 @@ void process_audio(int32_t timestep_ms)
 
 			if (oscillator[i].level > 0 || oscillator[i].last_level != 0)
 			{
+				osc_output(&oscillator[i], voice_buffer, buffer_samples);
 				if (first_audible_voice < 0)
 				{
 					first_audible_voice = i;
-					osc_output(&oscillator[i], buffer_data, buffer_samples);
+					copy_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
 				}
 				else
 				{
-					osc_mix_output(&oscillator[i], buffer_data, buffer_samples);
+					mixdown_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
 				}
 
 				oscillator[i].last_level = oscillator[i].level;

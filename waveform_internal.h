@@ -48,6 +48,6 @@ extern waveform_generator_t generators[];
 													else if (mixed > SAMPLE_MAX)			\
 														mixed = SAMPLE_MAX;
 
-#define STORE_SAMPLE(sample, sample_ptr)			*sample_ptr++ = (sample_t)sample; *sample_ptr++ = (sample_t)sample
+#define STORE_SAMPLE(sample, sample_ptr)			*sample_ptr++ = (sample_t)sample;
 
 #endif /* WAVEFORM_INTERNAL_H_ */
