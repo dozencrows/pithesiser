@@ -284,42 +284,27 @@ void process_midi_events()
 		midi_pop_event(&midi_event);
 		if (midi_event.type == 0x90)
 		{
-			int candidate_voice = -1;
-			int lowest_play_counter = INT_MAX;
+			int candidate_voice_state;
+			voice_t *candidate_voice = voice_find_next_likely_free(voice, VOICE_COUNT, &candidate_voice_state);
 
-			for (int i = 0; i < VOICE_COUNT; i++)
+			if (active_voices == 0)
 			{
-				if (voice[i].current_note == NOTE_NOT_PLAYING)
-				{
-					candidate_voice = i;
-
-					if (active_voices == 0)
-					{
-						lfo_reset(&lfo);
-					}
-					active_voices++;
-					break;
-				}
-				else
-				{
-					if (voice[i].play_counter < lowest_play_counter)
-					{
-						lowest_play_counter = voice[i].play_counter;
-						candidate_voice = i;
-					}
-				}
+				lfo_reset(&lfo);
 			}
 
-			voice_play_note(voice + candidate_voice, midi_event.data[0], master_waveform);
+			if (candidate_voice_state == VOICE_IDLE)
+			{
+				active_voices++;
+			}
+
+			voice_play_note(candidate_voice, midi_event.data[0], master_waveform);
 		}
 		else if (midi_event.type == 0x80)
 		{
-			for (int i = 0; i < VOICE_COUNT; i++)
+			voice_t *playing_voice = voice_find_playing_note(voice, VOICE_COUNT, midi_event.data[0]);
+			if (playing_voice != NULL)
 			{
-				if (voice[i].current_note == midi_event.data[0])
-				{
-					voice_stop_note(voice + i);
-				}
+				voice_stop_note(playing_voice);
 			}
 		}
 	}

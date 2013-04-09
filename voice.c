@@ -6,6 +6,7 @@
  */
 
 #include "voice.h"
+#include <stddef.h>
 #include "midi.h"
 #include "lfo.h"
 
@@ -98,4 +99,44 @@ void voice_stop_note(voice_t *voice)
 		voice->current_note = NOTE_ENDING;
 		envelope_go_to_stage(&voice->envelope_instance, ENVELOPE_STAGE_RELEASE);
 	}
+}
+
+voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int *voice_state)
+{
+	int candidate_voice = 0;
+	int lowest_play_counter = INT_MAX;
+	*voice_state = VOICE_ACTIVE;
+
+	for (int i = 0; i < voice_count; i++)
+	{
+		if (voices[i].current_note == NOTE_NOT_PLAYING)
+		{
+			candidate_voice = i;
+			*voice_state = VOICE_IDLE;
+			break;
+		}
+		else
+		{
+			if (voices[i].play_counter < lowest_play_counter)
+			{
+				lowest_play_counter = voices[i].play_counter;
+				candidate_voice = i;
+			}
+		}
+	}
+
+	return voices + candidate_voice;
+}
+
+voice_t *voice_find_playing_note(voice_t *voices, int voice_count, int midi_note)
+{
+	for (int i = 0; i < voice_count; i++)
+	{
+		if (voices[i].current_note == midi_note)
+		{
+			return voices + i;
+		}
+	}
+
+	return NULL;
 }
