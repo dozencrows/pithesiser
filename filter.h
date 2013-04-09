@@ -46,5 +46,6 @@ extern void filter_init(filter_t *filter);
 extern void filter_update(filter_t *filter);
 extern void filter_silence(filter_t *filter);
 extern void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count);
+extern int filter_definitions_same(filter_definition_t *definition1, filter_definition_t *definition2);
 
 #endif /* FILTER_H_ */

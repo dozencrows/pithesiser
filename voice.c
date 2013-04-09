@@ -19,6 +19,8 @@ static void init_voice(voice_t *voice, envelope_t *envelope)
 
 	osc_init(&voice->oscillator);
 	envelope_init(&voice->envelope_instance, envelope);
+	filter_init(&voice->filter);
+	voice->filter_def = voice->filter.definition;
 }
 
 void voice_init(voice_t *voices, int voice_count, envelope_t *envelope)
@@ -29,7 +31,7 @@ void voice_init(voice_t *voices, int voice_count, envelope_t *envelope)
 	}
 }
 
-int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, lfo_t *lfo)
+int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, lfo_t *lfo, filter_definition_t *filter_def)
 {
 	int voice_state = VOICE_IDLE;
 
@@ -44,6 +46,8 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.frequency = voice->frequency;
 			voice->oscillator.phase_accumulator = 0;
 			envelope_start(&voice->envelope_instance);
+			filter_silence(&voice->filter);
+			voice->filter_def = *filter_def;
 		}
 
 		if (voice->last_note == NOTE_NOT_PLAYING)
@@ -69,9 +73,16 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 		}
 
+		if (!filter_definitions_same(&voice->filter_def, &voice->filter))
+		{
+			voice->filter.definition = voice->filter_def;
+			filter_update(&voice->filter);
+		}
+
 		if (voice->oscillator.level > 0 || voice->oscillator.last_level != 0)
 		{
 			osc_output(&voice->oscillator, voice_buffer, buffer_samples);
+			filter_apply(&voice->filter, voice_buffer, buffer_samples);
 			voice->oscillator.last_level = voice->oscillator.level;
 			voice_state = VOICE_ACTIVE;
 		}

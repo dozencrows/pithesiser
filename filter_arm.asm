@@ -71,7 +71,6 @@ filter_apply_asm:
 		mov		r7, r7, asr #PRECISION
 
 		strh	r7,[r0], #2
-		strh	r7,[r0], #2
 
 		bne		.L0										@ checks r1 for zero
 
@@ -211,7 +210,6 @@ filter_apply_interp_asm:
 		mla		r12, r11, r3, r12						@ += (1 - i) * last_sample
 		mov		r12, r12, asr #INTERP_PRECISION
 		strh	r12, [r0], #2
-		strh	r12, [r0], #2
 
 		@ loop for next sample
 		ldr		r12, [sp, #S_INTERPOLATE_STEP]
@@ -280,7 +278,6 @@ filter_apply_hp_asm:
 		mov		r7, r7, lsr #HP_PRECISION
 		orr		r7, r14, lsl #32-HP_PRECISION
 
-		strh	r7,[r0], #2
 		strh	r7,[r0], #2
 
 		cmp		r1, #0
@@ -404,7 +401,6 @@ filter_apply_interp_hp_asm:
 		rsb		r11, r11, #INTERP_ONE
 		mla		r12, r11, r3, r12						@ += (1 - i) * last_sample
 		mov		r12, r12, asr #INTERP_PRECISION
-		strh	r12, [r0], #2
 		strh	r12, [r0], #2
 
 		@ loop for next sample

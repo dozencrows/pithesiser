@@ -104,7 +104,6 @@ void float_filter_apply(float_filter_t *filter, float *sample_data, int sample_c
 			filter->state.output[0] = new_sample;
 
 			*sample_data++ = new_sample;
-			*sample_data++ = new_sample;
 		}
 	}
 	else

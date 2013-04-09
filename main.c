@@ -83,7 +83,7 @@ waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;
 
 lfo_t lfo;
 
-filter_t global_filter;
+filter_definition_t global_filter_def;
 
 static int32_t duck_level_by_voice_count[] = { LEVEL_MAX, LEVEL_MAX, LEVEL_MAX * 0.65f, LEVEL_MAX * 0.49f, LEVEL_MAX * 0.40f,
 											   LEVEL_MAX * 0.34f, LEVEL_MAX * 0.29f, LEVEL_MAX * 0.25f, LEVEL_MAX * 0.22f};
@@ -155,7 +155,7 @@ void process_audio(int32_t timestep_ms)
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
-		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &lfo))
+		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &lfo, &global_filter_def))
 		{
 			case VOICE_IDLE:
 				break;
@@ -179,13 +179,6 @@ void process_audio(int32_t timestep_ms)
 	if (first_audible_voice < 0)
 	{
 		memset(buffer_data, 0, buffer_bytes);
-		// TO DO - resolve this better as may get click due to true silence has to account
-		// for filter latency.
-		filter_silence(&global_filter);
-	}
-	else
-	{
-		filter_apply(&global_filter, buffer_data, buffer_samples);
 	}
 
 	gfx_event_t gfx_event;
@@ -397,29 +390,19 @@ void process_midi_controllers()
 		lfo.oscillator.frequency = param_value;
 	}
 
-	int filter_changed = 0;
-
 	if (midi_controller_update(&filter_state_controller, &param_value))
 	{
-		global_filter.definition.type = param_value;
-		filter_changed++;
+		global_filter_def.type = param_value;
 	}
 
 	if (midi_controller_update(&filter_frequency_controller, &param_value))
 	{
-		global_filter.definition.frequency = param_value;
-		filter_changed++;
+		global_filter_def.frequency = param_value;
 	}
 
 	if (midi_controller_update(&filter_q_controller, &param_value))
 	{
-		global_filter.definition.q = param_value;
-		filter_changed++;
-	}
-
-	if (filter_changed)
-	{
-		filter_update(&global_filter);
+		global_filter_def.q = param_value;
 	}
 }
 
@@ -539,11 +522,9 @@ void synth_main()
 
 	lfo_init(&lfo);
 
-	filter_init(&global_filter);
-	global_filter.definition.type = FILTER_PASS;
-	global_filter.definition.frequency = 9000 * FILTER_FIXED_ONE;
-	global_filter.definition.q = FIXED_HALF;
-	filter_update(&global_filter);
+	global_filter_def.type = FILTER_PASS;
+	global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
+	global_filter_def.q = FIXED_HALF;
 
 	int profiling = 0;
 

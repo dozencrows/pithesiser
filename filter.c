@@ -29,6 +29,7 @@ static void clear_state(filter_state_t *state)
 
 void filter_init(filter_t *filter)
 {
+	filter->definition.type = FILTER_PASS;
 	clear_state(&filter->state);
 	clear_state(&filter->last_state);
 	filter->updated = 0;
@@ -138,4 +139,12 @@ void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)
 		filter->state.output[1] = filter->state.output[0];
 		filter->state.output[0] = sample;
 	}
+}
+
+int filter_definitions_same(filter_definition_t *definition1, filter_definition_t *definition2)
+{
+	return definition1 == definition2 || (definition1->type == definition2->type
+											&& definition1->frequency == definition2->frequency
+											&& definition1->q == definition2->q
+											&& definition1->gain == definition2->gain);
 }

@@ -51,7 +51,6 @@ void filter_apply_c(sample_t *sample_data, int sample_count, filter_state_t *fil
 	{
 		sample_t output = filter_sample(*sample_data, filter_state);
 		*sample_data++ = output;
-		*sample_data++ = output;
 	}
 }
 
@@ -71,7 +70,6 @@ void filter_apply_interp_c(sample_t *sample_data, int sample_count, filter_state
 
 		sample_t output = (((int32_t)new_output * interpolator_new) >> INTERP_PRECISION) + (((int32_t)old_output * interpolator_old) >> INTERP_PRECISION);
 		*sample_data++ = output;
-		*sample_data++ = output;
 
 		interpolator_new += interpolation_delta;
 		interpolator_old -= interpolation_delta;
@@ -84,9 +82,9 @@ void filter_timing_test(int count)
 {
 	filter_t fixed_math_filter;
 	filter_t fixed_math_filter2;
-	sample_t int_sample_buffer[TEST_BUFFER_SIZE * 2];
+	sample_t int_sample_buffer[TEST_BUFFER_SIZE];
 	float_filter_t float_math_filter;
-	float float_sample_buffer[TEST_BUFFER_SIZE * 2];
+	float float_sample_buffer[TEST_BUFFER_SIZE];
 
 	printf("*********************************************************************\n");
 	printf("Filter Timing Test\n");
