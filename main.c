@@ -70,13 +70,13 @@ int active_voices;
 
 envelope_stage_t envelope_stages[4] =
 {
-	{ 0,				32767,	100, 			},
-	{ 32767, 			16384,	250				},
-	{ 16384,			16384,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,	0,		100				}
+	{ 0,				LEVEL_MAX,		100, 			},
+	{ LEVEL_MAX,		LEVEL_MAX / 2,	250				},
+	{ LEVEL_MAX / 2,	LEVEL_MAX / 2,	DURATION_HELD 	},
+	{ LEVEL_CURRENT,	0,				100				}
 };
 
-envelope_t envelope = { 4, envelope_stages };
+envelope_t envelope = { LEVEL_MAX, 4, envelope_stages };
 
 int32_t master_volume = LEVEL_MAX;
 waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;

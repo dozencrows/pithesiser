@@ -228,7 +228,7 @@ static void midi_resolution_controller_set_output(midi_controller_t *controller)
 static void envelope_level_controller_set_output(midi_controller_t *controller)
 {
 	controller->output_min = 0;
-	controller->output_max = ENVELOPE_LEVEL_MAX;
+	controller->output_max = LEVEL_MAX;
 }
 
 static void envelope_time_controller_set_output(midi_controller_t *controller)

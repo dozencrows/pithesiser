@@ -43,8 +43,8 @@ void envelope_init(envelope_instance_t *instance, envelope_t* envelope)
 void envelope_start(envelope_instance_t *instance)
 {
 	instance->time_ms		= 0;
-	instance->ref_level		= 0;
-	instance->last_level	= 0;
+	instance->ref_level		= instance->envelope->stages[0].start_level;
+	instance->last_level	= instance->ref_level;
 	instance->stage			= 0;
 	instance->ref_time_ms	= 0;
 }

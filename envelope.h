@@ -10,8 +10,6 @@
 
 #include <sys/types.h>
 
-#define ENVELOPE_LEVEL_MAX		32767
-
 #define ENVELOPE_STAGE_INACTIVE	-1
 #define	ENVELOPE_STAGE_ATTACK	0
 #define	ENVELOPE_STAGE_DECAY	1
@@ -31,6 +29,7 @@ typedef struct envelope_stage_t
 
 typedef struct envelope_t
 {
+	int32_t				peak;
 	int					stage_count;
 	envelope_stage_t 	*stages;
 } envelope_t;

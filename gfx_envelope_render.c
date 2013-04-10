@@ -63,7 +63,7 @@ static void update_display(envelope_render_internal_t *renderer)
 	}
 
 	float horizontal_scale = (float)(renderer->definition.width - 1) / (float) total_duration;
-	float vertical_scale = (float)(renderer->definition.height - 1) / (float)ENVELOPE_LEVEL_MAX;
+	float vertical_scale = (float)(renderer->definition.height - 1) / (float)envelope->peak;
 
 	// Build path segments from envelope stages
 	int command_index = 0;

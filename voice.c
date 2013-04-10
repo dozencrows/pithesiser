@@ -62,7 +62,7 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 	{
 		int32_t envelope_level = envelope_step(&voice->envelope_instance, timestep_ms);
 
-		voice->oscillator.level = (LEVEL_MAX * envelope_level) / ENVELOPE_LEVEL_MAX;
+		voice->oscillator.level = envelope_level;
 		voice->oscillator.frequency = voice->frequency;
 		lfo_modulate_oscillator(lfo, &voice->oscillator);
 		voice->oscillator.level = (voice->oscillator.level * master_level) / LEVEL_MAX;
@@ -73,7 +73,7 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 		}
 
-		if (!filter_definitions_same(&voice->filter_def, &voice->filter))
+		if (!filter_definitions_same(&voice->filter_def, &voice->filter.definition))
 		{
 			voice->filter.definition = voice->filter_def;
 			filter_update(&voice->filter);
