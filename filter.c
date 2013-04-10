@@ -113,6 +113,7 @@ void filter_update(filter_t *filter)
 void filter_silence(filter_t *filter)
 {
 	clear_history(&filter->state);
+	filter->last_type = FILTER_PASS;	// Avoid interpolation on next non-silence when params updated.
 }
 
 void filter_apply(filter_t *filter, sample_t *sample_data, int sample_count)

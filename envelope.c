@@ -65,8 +65,8 @@ int32_t envelope_step(envelope_instance_t *instance, int32_t timestep_ms)
 				instance->stage++;
 				if (instance->stage == instance->envelope->stage_count)
 				{
+					level = instance->envelope->stages[instance->stage - 1].end_level;
 					instance->stage = ENVELOPE_STAGE_INACTIVE;
-					level = 0;
 					break;
 				}
 				else

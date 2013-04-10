@@ -10,7 +10,7 @@
 #include "midi.h"
 #include "lfo.h"
 
-static void init_voice(voice_t *voice, envelope_t *envelope)
+static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
 {
 	voice->midi_channel = 0;
 	voice->last_note = NOTE_NOT_PLAYING;
@@ -18,16 +18,18 @@ static void init_voice(voice_t *voice, envelope_t *envelope)
 	voice->play_counter = 0;
 
 	osc_init(&voice->oscillator);
-	envelope_init(&voice->envelope_instance, envelope);
+	envelope_init(&voice->level_envelope_instance, level_envelope);
+	envelope_init(&voice->filter_freq_envelope_instance, filter_freq_envelope);
+	envelope_init(&voice->filter_q_envelope_instance, filter_q_envelope);
 	filter_init(&voice->filter);
 	voice->filter_def = voice->filter.definition;
 }
 
-void voice_init(voice_t *voices, int voice_count, envelope_t *envelope)
+void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
 {
 	for (int i = 0; i < voice_count; i++)
 	{
-		init_voice(voices + i, envelope);
+		init_voice(voices + i, level_envelope, filter_freq_envelope, filter_q_envelope);
 	}
 }
 
@@ -45,7 +47,9 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 		{
 			voice->oscillator.frequency = voice->frequency;
 			voice->oscillator.phase_accumulator = 0;
-			envelope_start(&voice->envelope_instance);
+			envelope_start(&voice->level_envelope_instance);
+			envelope_start(&voice->filter_freq_envelope_instance);
+			envelope_start(&voice->filter_q_envelope_instance);
 			filter_silence(&voice->filter);
 			voice->filter_def = *filter_def;
 		}
@@ -60,7 +64,7 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 
 	if (voice->current_note != NOTE_NOT_PLAYING)
 	{
-		int32_t envelope_level = envelope_step(&voice->envelope_instance, timestep_ms);
+		int32_t envelope_level = envelope_step(&voice->level_envelope_instance, timestep_ms);
 
 		voice->oscillator.level = envelope_level;
 		voice->oscillator.frequency = voice->frequency;
@@ -73,6 +77,8 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 		}
 
+		voice->filter_def.frequency = envelope_step(&voice->filter_freq_envelope_instance, timestep_ms);
+		voice->filter_def.q = envelope_step(&voice->filter_q_envelope_instance, timestep_ms);
 		if (!filter_definitions_same(&voice->filter_def, &voice->filter.definition))
 		{
 			voice->filter.definition = voice->filter_def;
@@ -86,7 +92,7 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 			voice_state = VOICE_ACTIVE;
 		}
-		else if (voice->current_note == NOTE_ENDING || envelope_completed(&voice->envelope_instance))
+		else if (voice->current_note == NOTE_ENDING || envelope_completed(&voice->level_envelope_instance))
 		{
 			voice->current_note = NOTE_NOT_PLAYING;
 			voice_state = VOICE_GONE_IDLE;
@@ -108,7 +114,9 @@ void voice_stop_note(voice_t *voice)
 	if (PLAYING_NOTE(voice->current_note))
 	{
 		voice->current_note = NOTE_ENDING;
-		envelope_go_to_stage(&voice->envelope_instance, ENVELOPE_STAGE_RELEASE);
+		envelope_go_to_stage(&voice->level_envelope_instance, ENVELOPE_STAGE_RELEASE);
+		envelope_go_to_stage(&voice->filter_freq_envelope_instance, ENVELOPE_STAGE_RELEASE);
+		envelope_go_to_stage(&voice->filter_q_envelope_instance, ENVELOPE_STAGE_RELEASE);
 	}
 }
 

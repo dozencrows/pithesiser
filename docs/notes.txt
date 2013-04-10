@@ -6,11 +6,8 @@ Underway
 
 To do next
 ==========
-* Restructure voice processing:
-  * Apply per-voice filters
 * Enrich filter controls
   * Optional voice pitch tracking
-  * Envelope control
   * LFO control
 * Improve filtering quality
   * Resolve filtering & going to silence (eliminate bias & clicks)

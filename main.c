@@ -39,9 +39,11 @@
 //-----------------------------------------------------------------------------------------------------------------------
 // Commons
 //
-#define WAVE_RENDERER_ID		1
-#define ENVELOPE_RENDERER_ID	2
-#define IMAGE_RENDERER_ID		3
+#define WAVE_RENDERER_ID			1
+#define ENVELOPE_RENDERER_ID		2
+#define IMAGE_RENDERER_ID			3
+#define FREQ_ENVELOPE_RENDERER_ID	4
+#define Q_ENVELOPE_RENDERER_ID		5
 
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
@@ -84,6 +86,26 @@ waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;
 lfo_t lfo;
 
 filter_definition_t global_filter_def;
+
+envelope_stage_t freq_envelope_stages[4] =
+{
+	{ FILTER_FIXED_ONE * 20,	FILTER_FIXED_ONE * 12000,	1000, 			},
+	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	1				},
+	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	DURATION_HELD 	},
+	{ LEVEL_CURRENT,			FILTER_FIXED_ONE * 20,		200				}
+};
+
+envelope_t freq_envelope = { FILTER_FIXED_ONE * 18000, 4, freq_envelope_stages };
+
+envelope_stage_t q_envelope_stages[4] =
+{
+	{ FIXED_ONE / 100,	FIXED_ONE * .75,	1000, 			},
+	{ FIXED_ONE * .75,	FIXED_ONE * .75,	1				},
+	{ FIXED_ONE * .75,	FIXED_ONE * .75,	DURATION_HELD 	},
+	{ LEVEL_CURRENT,	FIXED_HALF,	200				}
+};
+
+envelope_t q_envelope = { FIXED_ONE, 4, q_envelope_stages };
 
 static int32_t duck_level_by_voice_count[] = { LEVEL_MAX, LEVEL_MAX, LEVEL_MAX * 0.65f, LEVEL_MAX * 0.49f, LEVEL_MAX * 0.40f,
 											   LEVEL_MAX * 0.34f, LEVEL_MAX * 0.29f, LEVEL_MAX * 0.25f, LEVEL_MAX * 0.22f};
@@ -413,6 +435,8 @@ void process_midi_controllers()
 wave_renderer_t *waveform_renderer = NULL;
 envelope_renderer_t *envelope_renderer = NULL;
 image_renderer_t *image_renderer = NULL;
+envelope_renderer_t *freq_envelope_renderer = NULL;
+envelope_renderer_t *q_envelope_renderer = NULL;
 
 void process_postinit_ui(gfx_event_t *event, gfx_object_t *receiver)
 {
@@ -449,7 +473,7 @@ void create_ui()
 
 	envelope_renderer->x = 0;
 	envelope_renderer->y = 514;
-	envelope_renderer->width = 512;
+	envelope_renderer->width = 510;
 	envelope_renderer->height = 240;
 	envelope_renderer->envelope = &envelope;
 	envelope_renderer->background_colour[0] = 0.0f;
@@ -460,6 +484,38 @@ void create_ui()
 	envelope_renderer->line_colour[1] = 255.0f;
 	envelope_renderer->line_colour[2] = 0.0f;
 	envelope_renderer->line_colour[3] = 255.0f;
+
+	freq_envelope_renderer = gfx_envelope_renderer_create(FREQ_ENVELOPE_RENDERER_ID);
+
+	freq_envelope_renderer->x = 512;
+	freq_envelope_renderer->y = 514;
+	freq_envelope_renderer->width = 512;
+	freq_envelope_renderer->height = 119;
+	freq_envelope_renderer->envelope = &freq_envelope;
+	freq_envelope_renderer->background_colour[0] = 0.0f;
+	freq_envelope_renderer->background_colour[1] = 0.0f;
+	freq_envelope_renderer->background_colour[2] = 16.0f;
+	freq_envelope_renderer->background_colour[3] = 255.0f;
+	freq_envelope_renderer->line_colour[0] = 0.0f;
+	freq_envelope_renderer->line_colour[1] = 255.0f;
+	freq_envelope_renderer->line_colour[2] = 0.0f;
+	freq_envelope_renderer->line_colour[3] = 255.0f;
+
+	q_envelope_renderer = gfx_envelope_renderer_create(Q_ENVELOPE_RENDERER_ID);
+
+	q_envelope_renderer->x = 512;
+	q_envelope_renderer->y = 634;
+	q_envelope_renderer->width = 512;
+	q_envelope_renderer->height = 120;
+	q_envelope_renderer->envelope = &q_envelope;
+	q_envelope_renderer->background_colour[0] = 0.0f;
+	q_envelope_renderer->background_colour[1] = 0.0f;
+	q_envelope_renderer->background_colour[2] = 16.0f;
+	q_envelope_renderer->background_colour[3] = 255.0f;
+	q_envelope_renderer->line_colour[0] = 0.0f;
+	q_envelope_renderer->line_colour[1] = 255.0f;
+	q_envelope_renderer->line_colour[2] = 0.0f;
+	q_envelope_renderer->line_colour[3] = 255.0f;
 
 	image_renderer = gfx_image_renderer_create(IMAGE_RENDERER_ID);
 	image_renderer->x = 0;
@@ -478,6 +534,8 @@ void tune_oscilloscope_to_note(int note)
 void destroy_ui()
 {
 	gfx_image_renderer_destroy(image_renderer);
+	gfx_envelope_renderer_destroy(q_envelope_renderer);
+	gfx_envelope_renderer_destroy(freq_envelope_renderer);
 	gfx_envelope_renderer_destroy(envelope_renderer);
 	gfx_wave_renderer_destroy(waveform_renderer);
 }
@@ -517,7 +575,7 @@ void synth_main()
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
 
-	voice_init(voice, VOICE_COUNT, &envelope);
+	voice_init(voice, VOICE_COUNT, &envelope, &freq_envelope, &q_envelope);
 	active_voices = 0;
 
 	lfo_init(&lfo);

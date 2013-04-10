@@ -29,12 +29,14 @@ typedef struct
 	int play_counter;
 	fixed_t frequency;
 	filter_definition_t filter_def;
-	envelope_instance_t	envelope_instance;
+	envelope_instance_t	level_envelope_instance;
+	envelope_instance_t filter_freq_envelope_instance;
+	envelope_instance_t filter_q_envelope_instance;
 	oscillator_t oscillator;
 	filter_t filter;
 } voice_t;
 
-extern void voice_init(voice_t *voices, int voice_count, envelope_t *envelope);
+extern void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope);
 extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, lfo_t *lfo, filter_definition_t *filter_def);
 extern void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform);
 extern void voice_stop_note(voice_t *voice);
