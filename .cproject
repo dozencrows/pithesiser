@@ -47,9 +47,9 @@
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include-fixed"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/finclude"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc/interface/vcos/pthreads}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc/interface/vcos/pthreads}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1329318695" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2136628134" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols"/>
@@ -63,7 +63,7 @@
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/lib/arm-linux-gnueabihf"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/libexec/gcc/arm-linux-gnueabihf/4.7.2"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/lib}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/lib}&quot;"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.793497982" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="asound"/>
@@ -91,7 +91,7 @@
 								</inputType>
 							</tool>
 							<tool command="arm-linux-gnueabihf-as" id="cdt.managedbuild.tool.gnu.assembler.exe.debug.1631266620" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
-								<option id="gnu.both.asm.option.flags.1304553944" superClass="gnu.both.asm.option.flags" value="-g" valueType="string"/>
+								<option id="gnu.both.asm.option.flags.1304553944" name="Assembler flags" superClass="gnu.both.asm.option.flags" value="-g" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1780943094" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
@@ -145,11 +145,11 @@
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include-fixed"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/include"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2/finclude"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/include/vc/interface/vcos/pthreads}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc/interface/vcos/pthreads}&quot;"/>
 								</option>
-								<option id="gnu.c.compiler.option.misc.other.1442520081" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99 -Wa,-a,-aln=$*.s" valueType="string"/>
+								<option id="gnu.c.compiler.option.misc.other.1442520081" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2041202764" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.815851615" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -161,7 +161,7 @@
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/lib/arm-linux-gnueabihf"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/lib/gcc/arm-linux-gnueabihf/4.7.2"/>
 									<listOptionValue builtIn="false" value="/home/ntuckett/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/libexec/gcc/arm-linux-gnueabihf/4.7.2"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/synth-test/lib}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/lib}&quot;"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.517138077" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="asound"/>
@@ -189,6 +189,7 @@
 								</inputType>
 							</tool>
 							<tool command="arm-linux-gnueabihf-as" id="cdt.managedbuild.tool.gnu.assembler.exe.release.1395016571" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.release">
+								<option id="gnu.both.asm.option.flags.813423024" superClass="gnu.both.asm.option.flags" value="-g" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1662461981" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
