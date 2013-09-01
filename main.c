@@ -185,7 +185,8 @@ void process_audio(int32_t timestep_ms)
 				if (first_audible_voice < 0)
 				{
 					first_audible_voice = i;
-					copy_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
+					//copy_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
+					copy_mono_to_stereo_asm(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
 				}
 				else
 				{
