@@ -112,3 +112,18 @@ copy_mono_to_stereo_asm:
 .exit3:
 	ldmfd	sp!, {r4, r5, r6, r7, r8, r9, r10}
 	bx		lr
+
+@ Further ideas:
+@	use strd to write & increment - but need to rearrange registers to achieve: strd	r6, r7, [r8], #8
+
+@ Implement mixdown_mono_to_stereo_asm:
+@		extra steps:	read & add source sample for each channel
+@						clamp to +/-32767
+@	Multiplication:
+@		- Look into using a multiply-accumulate to perform add; need to pre-shift source value so implicit
+@		  divide works.
+@   Saturation:
+@		- Compiled C uses comparison with limit, then conditional move of limit value into reg if outside limit.
+@		- SSAT instruction does arbitrary saturation (including sign); SSAT16 does parallel halfword saturation.
+@
+@	One approach - use MAC with shifted source, halfword packing then parallel halfword saturation. Unroll once.
