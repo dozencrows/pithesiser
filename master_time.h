@@ -11,5 +11,6 @@
 #include <stdint.h>
 
 extern int32_t get_elapsed_time_ms();
+extern int32_t get_elapsed_cpu_time_ns();
 
 #endif /* MASTER_TIME_H_ */

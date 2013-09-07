@@ -38,3 +38,20 @@ int32_t	get_elapsed_time_ms()
 	return (diff.tv_nsec / 1000000) + (diff.tv_sec * 1000);
 }
 
+int32_t	get_elapsed_cpu_time_ns()
+{
+	static int base_set = 0;
+	static struct timespec base_tspec;
+	struct timespec tspec;
+
+	if (base_set == 0)
+	{
+		base_set = 1;
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &base_tspec);
+	}
+
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tspec);
+	struct timespec diff = timespec_diff(base_tspec, tspec);
+
+	return diff.tv_nsec + (diff.tv_sec * 1000000000);
+}
