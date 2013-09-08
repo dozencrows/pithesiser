@@ -10,6 +10,7 @@
 #include "gfx.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
+#include "gfx_font.h"
 #include <pthread.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -22,6 +23,10 @@
 
 #define FRAME_TIME_DELAY_US	16667
 #define MAX_EGL_CONFIGS 32
+
+//---------------------------------------------------------------
+// EGL support
+//
 
 static EGLDisplay display;
 static EGLContext context;
@@ -134,6 +139,32 @@ void gfx_openvg_init()
 }
 
 //---------------------------------------------------------------
+// Rendering support
+//
+#include "gfx_font_resources.inc"
+
+font_info_t	gfx_font_sans;
+
+void gfx_init_fonts()
+{
+	gfx_font_sans = gfx_load_font(
+					DejaVuSans_glyphPoints,
+					DejaVuSans_glyphPointIndices,
+					DejaVuSans_glyphInstructions,
+					DejaVuSans_glyphInstructionIndices,
+					DejaVuSans_glyphInstructionCounts,
+					DejaVuSans_glyphAdvances,
+					DejaVuSans_characterMap,
+					DejaVuSans_glyphCount
+					);
+}
+
+void gfx_deinit_fonts()
+{
+	gfx_unload_font(&gfx_font_sans);
+}
+
+//---------------------------------------------------------------
 // Gfx processing thread
 
 static int32_t total_frames = 0;
@@ -148,6 +179,7 @@ void *gfx_thread()
 
 	gfx_egl_init();
 	gfx_openvg_init();
+	gfx_init_fonts();
 	sem_post(&gfx_init_semaphore);
 
 	gfx_event_t postinit_event;
@@ -194,6 +226,8 @@ void *gfx_thread()
 		int32_t render_elapsed = exec_end_timestamp - idle_end_timestamp;
 		render_exec_time += render_elapsed;
 	}
+
+	gfx_deinit_fonts();
 
 	return NULL;
 }

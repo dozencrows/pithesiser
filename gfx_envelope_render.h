@@ -25,6 +25,9 @@ typedef struct envelope_renderer_t
 	VGint line_join_style;
 	VGint rendering_quality;
 	envelope_t *envelope;
+	const char *text;
+	VGint text_quality;
+	VGfloat	text_colour[4];
 } envelope_renderer_t;
 
 extern void gfx_envelope_render_initialise();

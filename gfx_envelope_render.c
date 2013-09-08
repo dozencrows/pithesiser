@@ -10,10 +10,13 @@
 #include "VG/openvg.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
+#include "gfx_font.h"
+#include "gfx_font_resources.h"
 
 typedef struct envelope_renderer_state_t
 {
 	VGPaint line_paint;
+	VGPaint text_paint;
 	VGPath path;
 	int display_update;
 } envelope_renderer_state_t;
@@ -30,6 +33,9 @@ static void initialise_renderer(envelope_render_internal_t *renderer)
 	renderer->state.line_paint = vgCreatePaint();
 	vgSetParameteri(renderer->state.line_paint, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
 	vgSetParameterfv(renderer->state.line_paint, VG_PAINT_COLOR, 4, renderer->definition.line_colour);
+	renderer->state.text_paint = vgCreatePaint();
+	vgSetParameteri(renderer->state.text_paint, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
+	vgSetParameterfv(renderer->state.text_paint, VG_PAINT_COLOR, 4, renderer->definition.text_colour);
 	renderer->state.path = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_S_16, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_APPEND_TO);
 }
 
@@ -114,6 +120,10 @@ static void update_display(envelope_render_internal_t *renderer)
 	vgTranslate(renderer->definition.x, renderer->definition.y);
 	vgDrawPath(renderer->state.path, VG_STROKE_PATH);
 	vgClearPath(renderer->state.path, VG_PATH_CAPABILITY_APPEND_TO);
+
+	vgSeti(VG_RENDERING_QUALITY, renderer->definition.text_quality);
+	vgSetPaint(renderer->state.text_paint, VG_FILL_PATH);
+	gfx_render_text(0, renderer->definition.height - 12, renderer->definition.text, &gfx_font_sans, 9);
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -169,6 +179,8 @@ envelope_renderer_t *gfx_envelope_renderer_create(object_id_t id)
 	renderer->definition.line_cap_style 	= VG_CAP_BUTT;
 	renderer->definition.line_join_style	= VG_JOIN_MITER;
 	renderer->definition.rendering_quality	= VG_RENDERING_QUALITY_NONANTIALIASED;
+	renderer->definition.text_quality		= VG_RENDERING_QUALITY_FASTER;
+
 
 	return (envelope_renderer_t*)renderer;
 }

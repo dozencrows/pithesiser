@@ -486,6 +486,11 @@ void create_ui()
 	envelope_renderer->line_colour[1] = 255.0f;
 	envelope_renderer->line_colour[2] = 0.0f;
 	envelope_renderer->line_colour[3] = 255.0f;
+	envelope_renderer->text = "amplitude env";
+	envelope_renderer->text_colour[0] = 255.0f;
+	envelope_renderer->text_colour[1] = 255.0f;
+	envelope_renderer->text_colour[2] = 255.0f;
+	envelope_renderer->text_colour[3] = 255.0f;
 
 	freq_envelope_renderer = gfx_envelope_renderer_create(FREQ_ENVELOPE_RENDERER_ID);
 
@@ -502,6 +507,11 @@ void create_ui()
 	freq_envelope_renderer->line_colour[1] = 255.0f;
 	freq_envelope_renderer->line_colour[2] = 0.0f;
 	freq_envelope_renderer->line_colour[3] = 255.0f;
+	freq_envelope_renderer->text = "filter freq env";
+	freq_envelope_renderer->text_colour[0] = 255.0f;
+	freq_envelope_renderer->text_colour[1] = 255.0f;
+	freq_envelope_renderer->text_colour[2] = 255.0f;
+	freq_envelope_renderer->text_colour[3] = 255.0f;
 
 	q_envelope_renderer = gfx_envelope_renderer_create(Q_ENVELOPE_RENDERER_ID);
 
@@ -518,6 +528,11 @@ void create_ui()
 	q_envelope_renderer->line_colour[1] = 255.0f;
 	q_envelope_renderer->line_colour[2] = 0.0f;
 	q_envelope_renderer->line_colour[3] = 255.0f;
+	q_envelope_renderer->text = "filter Q env";
+	q_envelope_renderer->text_colour[0] = 255.0f;
+	q_envelope_renderer->text_colour[1] = 255.0f;
+	q_envelope_renderer->text_colour[2] = 255.0f;
+	q_envelope_renderer->text_colour[3] = 255.0f;
 
 	image_renderer = gfx_image_renderer_create(IMAGE_RENDERER_ID);
 	image_renderer->x = 0;
