@@ -17,5 +17,6 @@ extern void gfx_set_frame_complete_threshold(size_t complete_threshold);
 extern size_t gfx_get_frame_complete_threshold();
 extern void gfx_advance_frame_progress(size_t progress_delta);
 extern void gfx_set_frame_progress(size_t progress);
+extern void gfx_screenshot(const char* screenshot_file_path);
 
 #endif /* GFX_H_ */

@@ -689,6 +689,14 @@ void synth_main()
 			break;
 		}
 
+		if (midi_controller_update(&screenshot_controller, &midi_controller_value))
+		{
+			static int screenshot_count = 0;
+			char screenshot_name[64];
+			sprintf(screenshot_name, "pithesiser-img-%03d.png", screenshot_count++);
+			gfx_screenshot(screenshot_name);
+		}
+
 		process_midi_events();
 
 		if (!profiling && midi_controller_update(&profile_controller, &midi_controller_value))

@@ -49,6 +49,7 @@ midi_controller_t filter_q_controller;
 
 midi_controller_t exit_controller;
 midi_controller_t profile_controller;
+midi_controller_t screenshot_controller;
 
 static const char* CFG_TYPE_SETTING = "type";
 static const char* CFG_CONTINUOUS_CONTROLLER = "continuous";
@@ -306,6 +307,7 @@ controller_parser_t controller_parser[] =
 	{ "filter_q", &filter_q_controller, filter_q_controller_set_output },
 	{ "exit", &exit_controller, NULL },
 	{ "profile", &profile_controller, NULL },
+	{ "screenshot", &screenshot_controller, NULL },
 };
 
 #define CONTROLLER_PARSER_COUNT	(sizeof(controller_parser) / sizeof(controller_parser[0]))

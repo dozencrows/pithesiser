@@ -14,12 +14,16 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <limits.h>
 #include "EGL/egl.h"
 #include "VG/openvg.h"
 #include "VG/vgu.h"
 #include "interface/vmcs_host/vc_vchi_dispmanx.h"
 #include "bcm_host.h"
 #include "master_time.h"
+
+#define PNG_DEBUG 3
+#include "libpng/png.h"
 
 #define FRAME_TIME_DELAY_US	16667
 #define MAX_EGL_CONFIGS 32
@@ -164,6 +168,31 @@ void gfx_deinit_fonts()
 	gfx_unload_font(&gfx_font_sans);
 }
 
+void gfx_take_screenshot(FILE* outfile)
+{
+	size_t w = dispman_mode_info.width;
+	size_t h = dispman_mode_info.height;
+	size_t buffer_size = w * h * 4;
+	void* screen_buffer = malloc(buffer_size);
+	vgReadPixels(screen_buffer, w * 4, VG_sABGR_8888, 0, 0, w, h);
+
+	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	png_infop info_ptr = png_create_info_struct(png_ptr);
+
+	png_init_io(png_ptr, outfile);
+	png_set_IHDR(png_ptr, info_ptr, w, h, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
+					PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_write_info(png_ptr, info_ptr);
+	for(int y = h - 1; y >= 0; y--)
+	{
+		png_write_row(png_ptr, (png_bytep)screen_buffer + (y * w * 4));
+	}
+
+	png_write_end(png_ptr, NULL);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
+	free(screen_buffer);
+}
+
 //---------------------------------------------------------------
 // Gfx processing thread
 
@@ -172,6 +201,8 @@ static int32_t render_exec_time;
 static int32_t render_idle_time;
 static size_t frame_progress = 0;
 static size_t frame_complete_threshold = 0;
+static int trigger_screenshot = 0;
+static char screenshot_path[PATH_MAX];
 
 void *gfx_thread()
 {
@@ -220,6 +251,18 @@ void *gfx_thread()
 			eglSwapBuffers(display, surface);
 			total_frames++;
 			frame_progress = 0;
+
+			if (trigger_screenshot)
+			{
+				if (screenshot_path != NULL)
+				{
+					FILE* screenshot_file = fopen(screenshot_path, "wb");
+					gfx_take_screenshot(screenshot_file);
+					fclose(screenshot_file);
+				}
+
+				trigger_screenshot = 0;
+			}
 		}
 
 		int32_t exec_end_timestamp = get_elapsed_time_ms();
@@ -287,3 +330,10 @@ void gfx_set_frame_progress(size_t progress)
 {
 	frame_progress = progress;
 }
+
+void gfx_screenshot(const char* screenshot_file_path)
+{
+	strncpy(screenshot_path, screenshot_file_path, PATH_MAX);
+	trigger_screenshot = 1;
+}
+
