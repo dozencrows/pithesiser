@@ -70,4 +70,7 @@ void mixer_timing_test(int count)
 	mix_time += end_mix_time - start_mix_time;
 
 	printf("For %d iterations: Asm copy stereo = %dns\n", count, mix_time);
+
+	free(dest_sample_buffer);
+	free(src_sample_buffer);
 }

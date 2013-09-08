@@ -43,6 +43,7 @@ static void deinitialise_renderer(envelope_render_internal_t *renderer)
 {
 	vgDestroyPath(renderer->state.path);
 	vgDestroyPaint(renderer->state.line_paint);
+	vgDestroyPaint(renderer->state.text_paint);
 }
 
 static VGubyte commands[ENVELOPE_STAGES_MAX * 2];

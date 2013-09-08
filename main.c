@@ -28,6 +28,7 @@
 #include "gfx_event_types.h"
 #include "gfx_wave_render.h"
 #include "gfx_envelope_render.h"
+#include "gfx_setting_render.h"
 #include "gfx_image.h"
 #include "master_time.h"
 #include "synth_controllers.h"
@@ -44,6 +45,8 @@
 #define IMAGE_RENDERER_ID			3
 #define FREQ_ENVELOPE_RENDERER_ID	4
 #define Q_ENVELOPE_RENDERER_ID		5
+#define MASTER_VOLUME_RENDERER_ID	6
+#define MASTER_WAVEFORM_RENDERER_ID	7
 
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
@@ -333,10 +336,23 @@ void process_midi_controllers()
 {
 	int param_value;
 
-	midi_controller_update(&master_volume_controller, &master_volume);
+	if (midi_controller_update(&master_volume_controller, &master_volume))
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.flags = 0;
+		gfx_event.receiver_id = MASTER_VOLUME_RENDERER_ID;
+		gfx_send_event(&gfx_event);
+	}
+
 	if (midi_controller_update(&waveform_controller, &param_value))
 	{
 		master_waveform = param_value;
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.flags = 0;
+		gfx_event.receiver_id = MASTER_WAVEFORM_RENDERER_ID;
+		gfx_send_event(&gfx_event);
 	}
 
 	if (midi_controller_update(&oscilloscope_controller, &param_value))
@@ -439,6 +455,20 @@ envelope_renderer_t *envelope_renderer = NULL;
 image_renderer_t *image_renderer = NULL;
 envelope_renderer_t *freq_envelope_renderer = NULL;
 envelope_renderer_t *q_envelope_renderer = NULL;
+setting_renderer_t *master_volume_renderer = NULL;
+setting_renderer_t *master_waveform_renderer = NULL;
+
+const char* master_waveform_names[] =
+{
+	"WAVETABLE_SINE",
+	"WAVETABLE_SAW",
+	"WAVETABLE_SAW_BL",
+	"WAVETABLE_SINE_LINEAR",
+	"WAVETABLE_SAW_LINEAR",
+	"WAVETABLE_SAW_LINEAR_BL",
+	"PROCEDURAL_SINE",
+	"PROCEDURAL_SAW",
+};
 
 void process_postinit_ui(gfx_event_t *event, gfx_object_t *receiver)
 {
@@ -540,6 +570,49 @@ void create_ui()
 	image_renderer->width = 157;
 	image_renderer->height = 140;
 	image_renderer->image_file = (char*)RESOURCES_PITHESISER_ALPHA_PNG;
+
+	master_volume_renderer = gfx_setting_renderer_create(MASTER_VOLUME_RENDERER_ID);
+	master_volume_renderer->x		= 1026;
+	master_volume_renderer->y		= 0;
+	master_volume_renderer->width	= 300;
+	master_volume_renderer->height	= 14;
+	master_volume_renderer->background_colour[0] = 0.0f;
+	master_volume_renderer->background_colour[1] = 0.0f;
+	master_volume_renderer->background_colour[2] = 16.0f;
+	master_volume_renderer->background_colour[3] = 255.0f;
+	master_volume_renderer->text = "master vol:";
+	master_volume_renderer->text_colour[0] = 255.0f;
+	master_volume_renderer->text_colour[1] = 255.0f;
+	master_volume_renderer->text_colour[2] = 255.0f;
+	master_volume_renderer->text_colour[3] = 255.0f;
+	master_volume_renderer->text_size = 9;
+	master_volume_renderer->text_x_offset = 1;
+	master_volume_renderer->text_y_offset = 1;
+	master_volume_renderer->setting_type = SETTING_TYPE_INT;
+	master_volume_renderer->int_val_ptr	= &master_volume;
+	master_volume_renderer->int_type_info.format = "%d";
+
+	master_waveform_renderer = gfx_setting_renderer_create(MASTER_WAVEFORM_RENDERER_ID);
+	master_waveform_renderer->x		= 1026;
+	master_waveform_renderer->y		= 14;
+	master_waveform_renderer->width	= 300;
+	master_waveform_renderer->height = 14;
+	master_waveform_renderer->background_colour[0] = 0.0f;
+	master_waveform_renderer->background_colour[1] = 0.0f;
+	master_waveform_renderer->background_colour[2] = 16.0f;
+	master_waveform_renderer->background_colour[3] = 255.0f;
+	master_waveform_renderer->text = "master wave:";
+	master_waveform_renderer->text_colour[0] = 255.0f;
+	master_waveform_renderer->text_colour[1] = 255.0f;
+	master_waveform_renderer->text_colour[2] = 255.0f;
+	master_waveform_renderer->text_colour[3] = 255.0f;
+	master_waveform_renderer->text_size = 9;
+	master_waveform_renderer->text_x_offset = 1;
+	master_waveform_renderer->text_y_offset = 3;
+	master_waveform_renderer->setting_type = SETTING_TYPE_INDEXED;
+	master_waveform_renderer->int_val_ptr	= (int*)&master_waveform;
+	master_waveform_renderer->indexed_type_info.max_index = WAVE_LAST_AUDIBLE;
+	master_waveform_renderer->indexed_type_info.values = master_waveform_names;
 }
 
 void tune_oscilloscope_to_note(int note)
@@ -550,6 +623,8 @@ void tune_oscilloscope_to_note(int note)
 
 void destroy_ui()
 {
+	gfx_setting_renderer_destroy(master_waveform_renderer);
+	gfx_setting_renderer_destroy(master_volume_renderer);
 	gfx_image_renderer_destroy(image_renderer);
 	gfx_envelope_renderer_destroy(q_envelope_renderer);
 	gfx_envelope_renderer_destroy(freq_envelope_renderer);
