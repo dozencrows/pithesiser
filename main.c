@@ -34,6 +34,7 @@
 #include "synth_controllers.h"
 #include "mixer.h"
 #include "lfo.h"
+#include "setting.h"
 #include "recording.h"
 #include "code_timing_tests.h"
 
@@ -66,6 +67,36 @@ static const char* CFG_SYSEX_INIT = "sysex.init_message";
 config_t app_config;
 
 //-----------------------------------------------------------------------------------------------------------------------
+// Settings
+//
+const char* master_waveform_names[] =
+{
+	"WAVETABLE_SINE",
+	"WAVETABLE_SAW",
+	"WAVETABLE_SAW_BL",
+	"WAVETABLE_SINE_LINEAR",
+	"WAVETABLE_SAW_LINEAR",
+	"WAVETABLE_SAW_LINEAR_BL",
+	"PROCEDURAL_SINE",
+	"PROCEDURAL_SAW",
+};
+
+enum_type_info_t master_waveform_type =
+{
+	WAVE_LAST_AUDIBLE,
+	master_waveform_names
+};
+
+setting_t	setting_master_volume;
+setting_t	setting_master_waveform;
+
+void configure_settings()
+{
+	setting_init_as_int(&setting_master_volume, "master-volume", 0);
+	setting_init_as_enum(&setting_master_waveform, "master-waveform", (int)WAVETABLE_SINE, &master_waveform_type);
+}
+
+//-----------------------------------------------------------------------------------------------------------------------
 // Audio processing
 //
 #define VOICE_COUNT	8
@@ -82,9 +113,6 @@ envelope_stage_t envelope_stages[4] =
 };
 
 envelope_t envelope = { LEVEL_MAX, 4, envelope_stages };
-
-int32_t master_volume = LEVEL_MAX;
-waveform_type_t master_waveform = WAVE_FIRST_AUDIBLE;
 
 lfo_t lfo;
 
@@ -176,6 +204,7 @@ void process_audio(int32_t timestep_ms)
 	int last_active_voices = active_voices;
 	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
 	sample_t *voice_buffer = (sample_t*)alloca(buffer_samples * sizeof(sample_t));
+	int master_volume = setting_get_value_int(&setting_master_volume);
 	int32_t voice_level = (master_volume * auto_duck_level) / LEVEL_MAX;
 
 	for (int i = 0; i < VOICE_COUNT; i++)
@@ -297,6 +326,7 @@ void configure_midi()
 void process_midi_events()
 {
 	int midi_events = midi_get_event_count();
+	int master_waveform = setting_get_value_enum_as_int(&setting_master_waveform);
 
 	while (midi_events-- > 0)
 	{
@@ -336,7 +366,7 @@ void process_midi_controllers()
 {
 	int param_value;
 
-	if (midi_controller_update(&master_volume_controller, &master_volume))
+	if (midi_controller_update_setting(&master_volume_controller, &setting_master_volume))
 	{
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_REFRESH;
@@ -345,9 +375,8 @@ void process_midi_controllers()
 		gfx_send_event(&gfx_event);
 	}
 
-	if (midi_controller_update(&waveform_controller, &param_value))
+	if (midi_controller_update_setting(&waveform_controller, &setting_master_waveform))
 	{
-		master_waveform = param_value;
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_REFRESH;
 		gfx_event.flags = 0;
@@ -457,18 +486,6 @@ envelope_renderer_t *freq_envelope_renderer = NULL;
 envelope_renderer_t *q_envelope_renderer = NULL;
 setting_renderer_t *master_volume_renderer = NULL;
 setting_renderer_t *master_waveform_renderer = NULL;
-
-const char* master_waveform_names[] =
-{
-	"WAVETABLE_SINE",
-	"WAVETABLE_SAW",
-	"WAVETABLE_SAW_BL",
-	"WAVETABLE_SINE_LINEAR",
-	"WAVETABLE_SAW_LINEAR",
-	"WAVETABLE_SAW_LINEAR_BL",
-	"PROCEDURAL_SINE",
-	"PROCEDURAL_SAW",
-};
 
 void process_postinit_ui(gfx_event_t *event, gfx_object_t *receiver)
 {
@@ -588,9 +605,8 @@ void create_ui()
 	master_volume_renderer->text_size = 9;
 	master_volume_renderer->text_x_offset = 1;
 	master_volume_renderer->text_y_offset = 1;
-	master_volume_renderer->setting_type = SETTING_TYPE_INT;
-	master_volume_renderer->int_val_ptr	= &master_volume;
-	master_volume_renderer->int_type_info.format = "%d";
+	master_volume_renderer->setting = &setting_master_volume;
+	master_volume_renderer->format = "%05d";
 
 	master_waveform_renderer = gfx_setting_renderer_create(MASTER_WAVEFORM_RENDERER_ID);
 	master_waveform_renderer->x		= 1026;
@@ -609,10 +625,8 @@ void create_ui()
 	master_waveform_renderer->text_size = 9;
 	master_waveform_renderer->text_x_offset = 1;
 	master_waveform_renderer->text_y_offset = 3;
-	master_waveform_renderer->setting_type = SETTING_TYPE_INDEXED;
-	master_waveform_renderer->int_val_ptr	= (int*)&master_waveform;
-	master_waveform_renderer->indexed_type_info.max_index = WAVE_LAST_AUDIBLE;
-	master_waveform_renderer->indexed_type_info.values = master_waveform_names;
+	master_waveform_renderer->setting = &setting_master_waveform;
+	master_waveform_renderer->format = "%s";
 }
 
 void tune_oscilloscope_to_note(int note)
@@ -655,6 +669,7 @@ void synth_main()
 	gfx_wave_render_initialise();
 	gfx_envelope_render_initialise();
 
+	configure_settings();
 	create_ui();
 
 	gfx_event_initialise();

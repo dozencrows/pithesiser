@@ -26,7 +26,7 @@ typedef struct setting_render_internal_t
 	setting_renderer_state_t state;
 } setting_render_internal_t;
 
-static void initialise_renderer(setting_render_internal_t *renderer)
+static void initialise_renderer(setting_render_internal_t* renderer)
 {
 	renderer->state.display_update = 1;
 	renderer->state.text_paint = vgCreatePaint();
@@ -34,12 +34,12 @@ static void initialise_renderer(setting_render_internal_t *renderer)
 	vgSetParameterfv(renderer->state.text_paint, VG_PAINT_COLOR, 4, renderer->definition.text_colour);
 }
 
-static void deinitialise_renderer(setting_render_internal_t *renderer)
+static void deinitialise_renderer(setting_render_internal_t* renderer)
 {
 	vgDestroyPaint(renderer->state.text_paint);
 }
 
-static void update_display(setting_render_internal_t *renderer)
+static void update_display(setting_render_internal_t* renderer)
 {
 	// Render it out
 	vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
@@ -58,37 +58,27 @@ static void update_display(setting_render_internal_t *renderer)
 
 	const size_t buffer_size = 512;
 	char setting_text_buffer[buffer_size];
+	setting_t* setting = renderer->definition.setting;
 
-	switch(renderer->definition.setting_type)
+	switch(setting->type)
 	{
 		case SETTING_TYPE_INT:
 		{
-			snprintf(setting_text_buffer, buffer_size - 1, renderer->definition.int_type_info.format, *(renderer->definition.int_val_ptr));
+			snprintf(setting_text_buffer, buffer_size - 1, renderer->definition.format, setting_get_value_int(setting));
 			break;
 		}
 		case SETTING_TYPE_FLOAT:
 		{
-			snprintf(setting_text_buffer, buffer_size - 1, renderer->definition.float_type_info.format, *(renderer->definition.float_val_ptr));
+			snprintf(setting_text_buffer, buffer_size - 1, renderer->definition.format, setting_get_value_float(setting));
 			break;
 		}
-		case SETTING_TYPE_INDEXED:
+		case SETTING_TYPE_ENUM:
 		{
-			int value = *(renderer->definition.int_val_ptr);
-
-			if (value < 0)
-			{
-				value = 0;
-			}
-			else if (value > renderer->definition.indexed_type_info.max_index)
-			{
-				value = renderer->definition.indexed_type_info.max_index;
-			}
-
-			snprintf(setting_text_buffer, buffer_size - 1, "%s", renderer->definition.indexed_type_info.values[value]);
+			snprintf(setting_text_buffer, buffer_size - 1, renderer->definition.format, setting_get_value_enum(setting));
 			break;
 		}
 		default:
-			snprintf(setting_text_buffer, buffer_size - 1, "ILLEGAL SETTING TYPE: %d", (int)renderer->definition.setting_type);
+			snprintf(setting_text_buffer, buffer_size - 1, "ILLEGAL SETTING TYPE: %d", (int)setting->type);
 			break;
 	}
 
@@ -103,13 +93,13 @@ static void update_display(setting_render_internal_t *renderer)
 // Event handlers
 //
 
-static void refresh_handler(gfx_event_t *event, gfx_object_t *receiver)
+static void refresh_handler(gfx_event_t* event, gfx_object_t* receiver)
 {
 	setting_render_internal_t* renderer = (setting_render_internal_t*)receiver;
 	renderer->state.display_update = 1;
 }
 
-static void swap_handler(gfx_event_t *event, gfx_object_t *receiver)
+static void swap_handler(gfx_event_t* event, gfx_object_t* receiver)
 {
 	setting_render_internal_t* renderer = (setting_render_internal_t*)receiver;
 	if (renderer->state.display_update)
@@ -119,7 +109,7 @@ static void swap_handler(gfx_event_t *event, gfx_object_t *receiver)
 	}
 }
 
-static void post_init_handler(gfx_event_t *event, gfx_object_t *receiver)
+static void post_init_handler(gfx_event_t* event, gfx_object_t* receiver)
 {
 	initialise_renderer((setting_render_internal_t*)receiver);
 }
@@ -136,7 +126,7 @@ void gfx_setting_render_deinitialise()
 {
 }
 
-setting_renderer_t *gfx_setting_renderer_create(object_id_t id)
+setting_renderer_t* gfx_setting_renderer_create(object_id_t id)
 {
 	setting_render_internal_t *renderer = (setting_render_internal_t*) calloc(1, sizeof(setting_render_internal_t));
 
@@ -151,7 +141,7 @@ setting_renderer_t *gfx_setting_renderer_create(object_id_t id)
 	return (setting_renderer_t*)renderer;
 }
 
-void gfx_setting_renderer_destroy(setting_renderer_t *renderer)
+void gfx_setting_renderer_destroy(setting_renderer_t* renderer)
 {
 	deinitialise_renderer((setting_render_internal_t*)renderer);
 	free(renderer);
