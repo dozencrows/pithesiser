@@ -12,6 +12,7 @@
 
 typedef enum setting_type_t
 {
+	SETTING_TYPE_UNKNOWN,
 	SETTING_TYPE_INT,
 	SETTING_TYPE_FLOAT,
 	SETTING_TYPE_ENUM
@@ -46,9 +47,11 @@ typedef struct setting_t
 	} value;
 } setting_t;
 
-extern void setting_init_as_int(setting_t* setting, const char* name, int value);
-extern void setting_init_as_float(setting_t* setting, const char* name, float value);
-extern void setting_init_as_enum(setting_t* setting, const char* name, int value, enum_type_info_t* enum_type);
+extern setting_t* setting_create(const char* name);
+extern void setting_destroy(setting_t* setting);
+extern void setting_init_as_int(setting_t* setting, int value);
+extern void setting_init_as_float(setting_t* setting, float value);
+extern void setting_init_as_enum(setting_t* setting, int value, enum_type_info_t* enum_type);
 
 extern void setting_set_value_int(setting_t* setting, int value);
 extern void setting_set_value_float(setting_t* setting, float value);

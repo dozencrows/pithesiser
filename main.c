@@ -87,13 +87,24 @@ enum_type_info_t master_waveform_type =
 	master_waveform_names
 };
 
-setting_t	setting_master_volume;
-setting_t	setting_master_waveform;
+setting_t*	setting_master_volume 	= NULL;
+setting_t*	setting_master_waveform	= NULL;
 
-void configure_settings()
+void create_settings()
 {
-	setting_init_as_int(&setting_master_volume, "master-volume", 0);
-	setting_init_as_enum(&setting_master_waveform, "master-waveform", (int)WAVETABLE_SINE, &master_waveform_type);
+	setting_master_volume = setting_create("master-volume");
+	setting_master_waveform = setting_create("master-waveform");
+
+	setting_init_as_int(setting_master_volume, 0);
+	setting_init_as_enum(setting_master_waveform, (int)WAVETABLE_SINE, &master_waveform_type);
+}
+
+void destroy_settings()
+{
+	setting_destroy(setting_master_volume);
+	setting_destroy(setting_master_waveform);
+	setting_master_volume = NULL;
+	setting_master_waveform = NULL;
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -204,7 +215,7 @@ void process_audio(int32_t timestep_ms)
 	int last_active_voices = active_voices;
 	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
 	sample_t *voice_buffer = (sample_t*)alloca(buffer_samples * sizeof(sample_t));
-	int master_volume = setting_get_value_int(&setting_master_volume);
+	int master_volume = setting_get_value_int(setting_master_volume);
 	int32_t voice_level = (master_volume * auto_duck_level) / LEVEL_MAX;
 
 	for (int i = 0; i < VOICE_COUNT; i++)
@@ -326,7 +337,7 @@ void configure_midi()
 void process_midi_events()
 {
 	int midi_events = midi_get_event_count();
-	int master_waveform = setting_get_value_enum_as_int(&setting_master_waveform);
+	int master_waveform = setting_get_value_enum_as_int(setting_master_waveform);
 
 	while (midi_events-- > 0)
 	{
@@ -366,7 +377,7 @@ void process_midi_controllers()
 {
 	int param_value;
 
-	if (midi_controller_update_setting(&master_volume_controller, &setting_master_volume))
+	if (midi_controller_update_setting(&master_volume_controller, setting_master_volume))
 	{
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_REFRESH;
@@ -375,7 +386,7 @@ void process_midi_controllers()
 		gfx_send_event(&gfx_event);
 	}
 
-	if (midi_controller_update_setting(&waveform_controller, &setting_master_waveform))
+	if (midi_controller_update_setting(&waveform_controller, setting_master_waveform))
 	{
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_REFRESH;
@@ -605,7 +616,7 @@ void create_ui()
 	master_volume_renderer->text_size = 9;
 	master_volume_renderer->text_x_offset = 1;
 	master_volume_renderer->text_y_offset = 1;
-	master_volume_renderer->setting = &setting_master_volume;
+	master_volume_renderer->setting = setting_master_volume;
 	master_volume_renderer->format = "%05d";
 
 	master_waveform_renderer = gfx_setting_renderer_create(MASTER_WAVEFORM_RENDERER_ID);
@@ -625,7 +636,7 @@ void create_ui()
 	master_waveform_renderer->text_size = 9;
 	master_waveform_renderer->text_x_offset = 1;
 	master_waveform_renderer->text_y_offset = 3;
-	master_waveform_renderer->setting = &setting_master_waveform;
+	master_waveform_renderer->setting = setting_master_waveform;
 	master_waveform_renderer->format = "%s";
 }
 
@@ -669,7 +680,7 @@ void synth_main()
 	gfx_wave_render_initialise();
 	gfx_envelope_render_initialise();
 
-	configure_settings();
+	create_settings();
 	create_ui();
 
 	gfx_event_initialise();
@@ -741,6 +752,7 @@ void synth_main()
 	gfx_wave_render_deinitialise();
 	alsa_deinitialise();
 	midi_deinitialise();
+	destroy_settings();
 	config_destroy(&app_config);
 
 	printf("Done: %d xruns\n", alsa_get_xruns_count());
