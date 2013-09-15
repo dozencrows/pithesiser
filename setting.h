@@ -24,14 +24,6 @@ typedef struct enum_type_info_t
 	const char** values;
 } enum_type_info_t;
 
-typedef struct setting_type_info_t
-{
-	union
-	{
-
-	};
-} setting_type_info_t;
-
 typedef struct setting_t
 {
 	char 					name[SETTING_MAX_NAME_LEN];
@@ -49,6 +41,7 @@ typedef struct setting_t
 
 extern setting_t* setting_create(const char* name);
 extern void setting_destroy(setting_t* setting);
+extern setting_t* setting_find(const char* name);
 extern void setting_init_as_int(setting_t* setting, int value);
 extern void setting_init_as_float(setting_t* setting, float value);
 extern void setting_init_as_enum(setting_t* setting, int value, enum_type_info_t* enum_type);

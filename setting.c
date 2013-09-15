@@ -11,20 +11,76 @@
 #include <stdlib.h>
 #include <assert.h>
 
+//------------------------------------------------------------------------------
+// Internal link list structure for keeping track of settings
+//
+typedef struct link_double_t link_double_t;
+
+struct link_double_t
+{
+	link_double_t* next;
+	link_double_t* prev;
+};
+
 static void setting_set_name(setting_t* setting, const char* name)
 {
 	strncpy(setting->name, name, SETTING_MAX_NAME_LEN);
 	setting->name[SETTING_MAX_NAME_LEN - 1] = 0;
 }
 
+static link_double_t* setting_list_head = NULL;
+
+static void setting_list_add(setting_t* setting)
+{
+	link_double_t* link = ((link_double_t*)setting) - 1;
+	assert(link->next == NULL);
+	assert(link->prev == NULL);
+
+	link->next = setting_list_head;
+	if (link->next != NULL)
+	{
+		link->next->prev = link;
+	}
+	setting_list_head = link;
+}
+
+static link_double_t* setting_list_remove(setting_t* setting)
+{
+	link_double_t* link = ((link_double_t*)setting) - 1;
+
+	if (link->next != NULL)
+	{
+		link->next->prev = link->prev;
+	}
+
+	if (link->prev != NULL)
+	{
+		link->prev->next = link->next;
+	}
+	else
+	{
+		setting_list_head = link->next;
+	}
+
+	return link;
+}
+
+//------------------------------------------------------------------------------
+// Public API
+//
 setting_t* setting_create(const char* name)
 {
-	setting_t* setting = (setting_t*)calloc(1, sizeof(setting_t));
+	link_double_t* link = (link_double_t*)calloc(1, sizeof(link_double_t) + sizeof(setting_t));
+	setting_t* setting = NULL;
 
-	if (setting != NULL)
+	if (link != NULL)
 	{
+		link->next = NULL;
+		link->prev = NULL;
+		setting = (setting_t*)(link + 1);
 		setting_set_name(setting, name);
 		setting->type = SETTING_TYPE_UNKNOWN;
+		setting_list_add(setting);
 	}
 
 	return setting;
@@ -32,7 +88,28 @@ setting_t* setting_create(const char* name)
 
 void setting_destroy(setting_t* setting)
 {
-	free(setting);
+	link_double_t* link = setting_list_remove(setting);
+	free(link);
+}
+
+setting_t* setting_find(const char* name)
+{
+	link_double_t* link = setting_list_head;
+
+	while (link != NULL)
+	{
+		setting_t* setting = (setting_t*)(link + 1);
+		if (strncmp(name, setting->name, SETTING_MAX_NAME_LEN) == 0)
+		{
+			return setting;
+		}
+		else
+		{
+			link = link->next;
+		}
+	}
+
+	return NULL;
 }
 
 void setting_init_as_int(setting_t* setting, int value)

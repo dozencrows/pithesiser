@@ -92,9 +92,11 @@ setting_t*	setting_master_waveform	= NULL;
 
 void create_settings()
 {
-	setting_master_volume = setting_create("master-volume");
-	setting_master_waveform = setting_create("master-waveform");
+	setting_create("master-volume");
+	setting_create("master-waveform");
 
+	setting_master_volume = setting_find("master-volume");
+	setting_master_waveform = setting_find("master-waveform");
 	setting_init_as_int(setting_master_volume, 0);
 	setting_init_as_enum(setting_master_waveform, (int)WAVETABLE_SINE, &master_waveform_type);
 }
