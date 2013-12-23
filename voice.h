@@ -24,8 +24,9 @@
 typedef struct
 {
 	int	midi_channel;
-	int last_note;
-	int current_note;
+	int note;
+	int last_state;
+	int current_state;
 	int play_counter;
 	fixed_t frequency;
 	filter_definition_t filter_def;

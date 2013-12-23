@@ -13,8 +13,8 @@
 static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
 {
 	voice->midi_channel = 0;
-	voice->last_note = NOTE_NOT_PLAYING;
-	voice->current_note = NOTE_NOT_PLAYING;
+	voice->last_state = NOTE_NOT_PLAYING;
+	voice->current_state = NOTE_NOT_PLAYING;
 	voice->play_counter = 0;
 
 	osc_init(&voice->oscillator);
@@ -37,13 +37,13 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 {
 	int voice_state = VOICE_IDLE;
 
-	if (voice->current_note != voice->last_note)
+	if (voice->current_state != voice->last_state)
 	{
-		if (voice->current_note == NOTE_NOT_PLAYING)
+		if (voice->current_state == NOTE_NOT_PLAYING)
 		{
 			voice->oscillator.level = 0;
 		}
-		else if (voice->current_note >= 0)
+		else if (voice->current_state >= 0)
 		{
 			voice->oscillator.frequency = voice->frequency;
 			voice->oscillator.phase_accumulator = 0;
@@ -54,15 +54,15 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->filter_def = *filter_def;
 		}
 
-		if (voice->last_note == NOTE_NOT_PLAYING)
+		if (voice->last_state == NOTE_NOT_PLAYING)
 		{
 			voice->oscillator.last_level = -1;
 		}
 
-		voice->last_note = voice->current_note;
+		voice->last_state = voice->current_state;
 	}
 
-	if (voice->current_note != NOTE_NOT_PLAYING)
+	if (voice->current_state != NOTE_NOT_PLAYING)
 	{
 		int32_t envelope_level = envelope_step(&voice->level_envelope_instance, timestep_ms);
 
@@ -92,9 +92,9 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 			voice_state = VOICE_ACTIVE;
 		}
-		else if (voice->current_note == NOTE_ENDING || envelope_completed(&voice->level_envelope_instance))
+		else if (voice->current_state == NOTE_ENDING || envelope_completed(&voice->level_envelope_instance))
 		{
-			voice->current_note = NOTE_NOT_PLAYING;
+			voice->current_state = NOTE_NOT_PLAYING;
 			voice_state = VOICE_GONE_IDLE;
 		}
 	}
@@ -104,16 +104,17 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 
 void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform)
 {
-	voice->current_note = midi_note;
+	voice->note = midi_note;
+	voice->current_state = midi_note;
 	voice->oscillator.waveform = waveform;
 	voice->frequency = midi_get_note_frequency(midi_note);
 }
 
 void voice_stop_note(voice_t *voice)
 {
-	if (PLAYING_NOTE(voice->current_note))
+	if (PLAYING_NOTE(voice->current_state))
 	{
-		voice->current_note = NOTE_ENDING;
+		voice->current_state = NOTE_ENDING;
 		envelope_go_to_stage(&voice->level_envelope_instance, ENVELOPE_STAGE_RELEASE);
 		envelope_go_to_stage(&voice->filter_freq_envelope_instance, ENVELOPE_STAGE_RELEASE);
 		envelope_go_to_stage(&voice->filter_q_envelope_instance, ENVELOPE_STAGE_RELEASE);
@@ -128,7 +129,7 @@ voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int *voic
 
 	for (int i = 0; i < voice_count; i++)
 	{
-		if (voices[i].current_note == NOTE_NOT_PLAYING)
+		if (voices[i].current_state == NOTE_NOT_PLAYING)
 		{
 			candidate_voice = i;
 			*voice_state = VOICE_IDLE;
@@ -151,7 +152,7 @@ voice_t *voice_find_playing_note(voice_t *voices, int voice_count, int midi_note
 {
 	for (int i = 0; i < voice_count; i++)
 	{
-		if (voices[i].current_note == midi_note)
+		if (voices[i].current_state == midi_note)
 		{
 			return voices + i;
 		}

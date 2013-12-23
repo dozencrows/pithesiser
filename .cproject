@@ -50,6 +50,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc/interface/vcos/pthreads}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include/wiringPi}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include/wiringPi/devLib}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1329318695" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99" valueType="string"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2136628134" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols"/>
@@ -84,6 +86,8 @@
 									<listOptionValue builtIn="false" value="vorbisenc"/>
 									<listOptionValue builtIn="false" value="sndfile"/>
 									<listOptionValue builtIn="false" value="profiler"/>
+									<listOptionValue builtIn="false" value="wiringPi"/>
+									<listOptionValue builtIn="false" value="wiringPiDev"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1385601344" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -148,6 +152,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pithesiser/include/vc/interface/vcos/pthreads}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include/wiringPi}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include/wiringPi/devLib}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1442520081" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -std=gnu99 -mcpu=arm1176jzf-s" valueType="string"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2041202764" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols"/>
@@ -182,6 +188,8 @@
 									<listOptionValue builtIn="false" value="vorbisenc"/>
 									<listOptionValue builtIn="false" value="sndfile"/>
 									<listOptionValue builtIn="false" value="profiler"/>
+									<listOptionValue builtIn="false" value="wiringPi"/>
+									<listOptionValue builtIn="false" value="wiringPiDev"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.54546842" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

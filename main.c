@@ -227,6 +227,7 @@ void process_audio(int32_t timestep_ms)
 			case VOICE_IDLE:
 				break;
 			case VOICE_ACTIVE:
+			{
 				if (first_audible_voice < 0)
 				{
 					first_audible_voice = i;
@@ -239,9 +240,12 @@ void process_audio(int32_t timestep_ms)
 					mixdown_mono_to_stereo_asm(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
 				}
 				break;
+			}
 			case VOICE_GONE_IDLE:
+			{
 				active_voices--;
 				break;
+			}
 		}
 	}
 
@@ -662,9 +666,11 @@ void destroy_ui()
 //-----------------------------------------------------------------------------------------------------------------------
 // GFX event handlers
 //
+
 void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 {
 	process_midi_controllers();
+	piglow_update(voice, VOICE_COUNT);
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -691,6 +697,8 @@ void synth_main()
 	configure_audio();
 	configure_midi();
 	configure_profiling();
+
+	piglow_initialise();
 
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
