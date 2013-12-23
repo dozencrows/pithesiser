@@ -37,6 +37,7 @@
 #include "setting.h"
 #include "recording.h"
 #include "code_timing_tests.h"
+#include "piglow.h"
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Commons
