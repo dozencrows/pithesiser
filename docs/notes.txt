@@ -3,6 +3,8 @@ Raspberry Pi Synth Project
 
 Underway
 ========
+ * Rendering:
+   * Of settings
 
 To do next
 ==========
@@ -30,8 +32,6 @@ Blog ideas
 Ideas to try
 ============
 Feature support:
- * Rendering:
-   * Of settings
  * Better naming for oscillators & generators
  * Paired oscillators: (cross) modulation, mixing, detuning
  * Noise channel
