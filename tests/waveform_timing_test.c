@@ -63,19 +63,19 @@ static const int TEST_BUFFER_SIZE = 128;
 //#define PHASE_QUARTER_LIMIT	(FIXED_ONE)
 //
 //#define PR_CALC_PHASE_STEP(osc, phase_step)	fixed_t	phase_step = fixed_mul(PHASE_LIMIT, osc->frequency) / SYSTEM_SAMPLE_RATE
-//#define PR_CALC_SINE_POSITIVE(osc, sample)	sample = FIXED_ONE - osc->phase_accumulator; \
-//											sample = fixed_mul(sample, sample); \
-//											sample = fixed_mul(FIXED_ONE - sample, SAMPLE_MAX)
-//
-//#define PR_CALC_SINE_NEGATIVE(osc, sample)	sample = FIXED_ONE - (osc->phase_accumulator - PHASE_HALF_LIMIT); \
-//											sample = fixed_mul(sample, sample); \
-//											sample = fixed_mul(sample - FIXED_ONE, SAMPLE_MAX)
-//
+/*#define PR_CALC_SINE_POSITIVE(osc, sample)	sample = FIXED_ONE - osc->phase_accumulator; \
+											sample = fixed_mul(sample, sample); \
+											sample = fixed_mul(FIXED_ONE - sample, SAMPLE_MAX)
+*/
+/*#define PR_CALC_SINE_NEGATIVE(osc, sample)	sample = FIXED_ONE - (osc->phase_accumulator - PHASE_HALF_LIMIT); \
+											sample = fixed_mul(sample, sample); \
+											sample = fixed_mul(sample - FIXED_ONE, SAMPLE_MAX)
+*/
 //#define PR_ADVANCE_PHASE(osc, phase_step)	osc->phase_accumulator += phase_step
 //
-//#define PR_LOOP_PHASE(osc)					if (osc->phase_accumulator >= PHASE_LIMIT) \
-//												osc->phase_accumulator -= PHASE_LIMIT
-//
+/*#define PR_LOOP_PHASE(osc)					if (osc->phase_accumulator >= PHASE_LIMIT) \
+												osc->phase_accumulator -= PHASE_LIMIT
+*/
 //static void procedural_sine_output(waveform_generator_def_t *generator, oscillator_t* osc, sample_t *sample_data, int sample_count)
 //{
 //	PR_CALC_PHASE_STEP(osc, phase_step);

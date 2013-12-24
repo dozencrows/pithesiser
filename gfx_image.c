@@ -76,7 +76,7 @@ static void deinit_state(image_renderer_state_t *image_state)
 		}
 	}
 
-	if (image_state->image_handle != NULL)
+	if (image_state->image_handle != 0)
 	{
 		vgDestroyImage(image_state->image_handle);
 	}
