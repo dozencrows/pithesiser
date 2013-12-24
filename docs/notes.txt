@@ -21,10 +21,6 @@ To do next
   * Pre-filtered procedural waveforms
   * Cubic interpolation with table lookup
   * Normalise range of phase accumulator across all waveform types
-* PiGlow settings
-  * Turn on/off
-  * Set overall brightness
-  * Select behaviour
 
 Blog ideas
 ==========
@@ -54,6 +50,8 @@ Feature support:
    * variable pulse width
    * LFO driving pulse width
  * Ring modulator
+ * PiGlow
+   * Alternative behaviours
  
 Performance & quality:
  * Optimise WAV output

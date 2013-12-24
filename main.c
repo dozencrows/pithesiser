@@ -53,12 +53,14 @@
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
 
-static const char* CFG_DEVICES_AUDIO_OUTPUT = "devices.audio.output";
-static const char* CFG_DEVICES_AUDIO_AUTO_DUCK = "devices.audio.auto_duck";
 static const char* RESOURCES_PITHESISER_ALPHA_PNG = "resources/pithesiser_alpha.png";
 static const char* RESOURCES_SYNTH_CFG = "resources/synth.cfg";
+
+static const char* CFG_DEVICES_AUDIO_OUTPUT = "devices.audio.output";
+static const char* CFG_DEVICES_AUDIO_AUTO_DUCK = "devices.audio.auto_duck";
 static const char* CFG_DEVICES_MIDI_NOTE_CHANNEL = "devices.midi.note_channel";
 static const char* CFG_DEVICES_MIDI_CONTROLLER_CHANNEL = "devices.midi.controller_channel";
+static const char* CFG_DEVICES_PIGLOW = "devices.piglow";
 static const char* CFG_CONTROLLERS = "controllers";
 static const char* CFG_DEVICES_MIDI_INPUT = "devices.midi.input";
 static const char* CFG_TESTS = "tests";
@@ -699,7 +701,11 @@ void synth_main()
 	configure_midi();
 	configure_profiling();
 
-	piglow_initialise();
+	config_setting_t* piglow_config = config_lookup(&app_config, CFG_DEVICES_PIGLOW);
+	if (piglow_config != NULL)
+	{
+		piglow_initialise(piglow_config);
+	}
 
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
@@ -757,6 +763,7 @@ void synth_main()
 		ProfilerStop();
 	}
 
+	piglow_deinitialise();
 	gfx_deinitialise();
 	destroy_ui();
 	gfx_envelope_render_deinitialise();

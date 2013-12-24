@@ -21,7 +21,7 @@
 #define VOICE_GONE_IDLE			1
 #define VOICE_ACTIVE			2
 
-typedef struct
+typedef struct voice_t
 {
 	int	midi_channel;
 	int note;
