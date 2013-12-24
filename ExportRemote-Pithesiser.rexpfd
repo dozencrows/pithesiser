@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <rexpfd>
     <destination path="ubuntu12-desktop.Pithesiser:/home/pi"/>
-    <options createDirectoryStructure="false" createSelectedOnly="true" descriptionFilePath="/pithesiser/ExportRemote-Pithesiser.rexpfd" overWriteExistingFiles="true" reviewSynchronize="false" saveSettings="true"/>
+    <options createDirectoryStructure="false" createSelectedOnly="true" descriptionFilePath="/pithesiser-git/ExportRemote-Pithesiser.rexpfd" overWriteExistingFiles="true" reviewSynchronize="false" saveSettings="true"/>
     <selectedElements>
-        <folder path="/pithesiser/resources"/>
+        <folder path="/pithesiser-git/resources"/>
     </selectedElements>
 </rexpfd>
