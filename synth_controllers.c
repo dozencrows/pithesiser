@@ -153,6 +153,13 @@ static void filter_q_controller_set_output(midi_controller_t *controller)
 	controller->output_max = FILTER_MAX_Q;
 }
 
+typedef struct controller_parser_t
+{
+	const char *config_setting_name;
+	midi_controller_t *controller;
+	void(*set_output)(midi_controller_t *controller);
+} controller_parser_t;
+
 controller_parser_t controller_parser[] =
 {
 	{ "master_volume", &master_volume_controller, master_volume_controller_set_output },
@@ -188,6 +195,11 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 
 	int error_count = 0;
 
+	if (midi_controller_parse_index_controls(config, controller_channel) != RESULT_OK)
+	{
+		error_count++;
+	}
+
 	for (int i = 0; i < CONTROLLER_PARSER_COUNT; i++)
 	{
 		config_setting_t *setting_controller = config_setting_get_member(config, controller_parser[i].config_setting_name);
@@ -198,10 +210,10 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 		}
 		else
 		{
-			midi_controller_create(controller_parser[i].controller);
+			midi_controller_create(controller_parser[i].controller, controller_parser[i].config_setting_name);
 			controller_parser[i].controller->midi_channel = controller_channel;
 
-			if (midi_controller_parse_config(setting_controller, controller_parser[i].controller))
+			if (midi_controller_parse_config(setting_controller, controller_parser[i].controller) == RESULT_OK)
 			{
 				if (controller_parser[i].set_output != NULL)
 				{
@@ -221,6 +233,8 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 
 void update_midi_controllers(synth_state_t* synth_state)
 {
+	midi_controller_update_index_controls();
+
 	if (midi_controller_update(&master_volume_controller))
 	{
 		synth_state->volume = STATE_UPDATED;

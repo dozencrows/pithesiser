@@ -137,9 +137,10 @@ static int process_event_controller(midi_controller_t* controller, int* changed)
 	}
 }
 
-void midi_controller_create(midi_controller_t* controller)
+void midi_controller_create(midi_controller_t* controller, const char* name)
 {
 	memset(controller, 0, sizeof(midi_controller_t));
+	controller->name = name;
 	controller->midi_cc[0] = -1;
 	controller->midi_cc[1] = -1;
 	controller->type = NONE;
@@ -154,9 +155,9 @@ int midi_controller_update_and_read(midi_controller_t* controller, int* value)
 {
 	int changed = 0;
 
-	if (controller->selector_control != NULL)
+	if (controller->indexer_control != NULL)
 	{
-		if (midi_controller_read(controller->selector_control) != controller->selector_value)
+		if (midi_controller_read(controller->indexer_control) != controller->indexer_value)
 		{
 			return changed;
 		}
@@ -212,4 +213,44 @@ void midi_controller_set_setting(midi_controller_t* controller, setting_t* setti
 {
 	int value = midi_controller_read(controller);
 	setting_set_value_int(setting, value);
+}
+
+#define MAX_INDEX_CONTROLS	16
+static midi_controller_t index_controls[MAX_INDEX_CONTROLS];
+static int next_free_index_control = 0;
+
+midi_controller_t* midi_controller_new_index_control(const char* name)
+{
+	if (next_free_index_control < MAX_INDEX_CONTROLS)
+	{
+		midi_controller_t* index_control = index_controls + next_free_index_control;
+		next_free_index_control++;
+		midi_controller_create(index_control, name);
+		return index_control;
+	}
+	else
+	{
+		return NULL;
+	}
+}
+
+midi_controller_t* midi_controller_find_index_control(const char* name)
+{
+	for (int i = 0; i < next_free_index_control; i++)
+	{
+		if (strcasecmp(name, index_controls[i].name) == 0)
+		{
+			return index_controls + i;
+		}
+	}
+
+	return NULL;
+}
+
+void midi_controller_update_index_controls()
+{
+	for (int i = 0; i < next_free_index_control; i++)
+	{
+		midi_controller_update(index_controls + i);
+	}
 }
