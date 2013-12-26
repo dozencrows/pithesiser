@@ -150,7 +150,7 @@ void midi_controller_init(midi_controller_t* controller)
 	controller->last_output = controller->output_min;
 }
 
-int midi_controller_update(midi_controller_t* controller, int* value)
+int midi_controller_update_and_read(midi_controller_t* controller, int* value)
 {
 	int changed = 0;
 
@@ -189,47 +189,19 @@ int midi_controller_update(midi_controller_t* controller, int* value)
 	return changed;
 }
 
-int midi_controller_update_setting(midi_controller_t* controller, setting_t* setting)
+int midi_controller_update(midi_controller_t* controller)
 {
-	int changed = 0;
-	int value;
+	int dummy_value;
+	return midi_controller_update_and_read(controller, &dummy_value);
+}
 
-	switch (controller->type)
-	{
-		case CONTINUOUS:
-		{
-			value = process_continuous_controller(controller, &changed);
-			break;
-		}
+int midi_controller_read(midi_controller_t* controller)
+{
+	return controller->last_output;
+}
 
-		case CONTINUOUS_WITH_HELD:
-		{
-			value = process_continuous_controller_with_end(controller, &changed);
-			break;
-		}
-
-		case TOGGLE:
-		{
-			value = process_toggle_controller(controller, &changed);
-			break;
-		}
-
-		case EVENT:
-		{
-			value = process_event_controller(controller, &changed);
-			break;
-		}
-
-		default:
-		{
-			break;
-		}
-	}
-
-	if (changed)
-	{
-		setting_set_value_int(setting, value);
-	}
-
-	return changed;
+void midi_controller_set_setting(midi_controller_t* controller, setting_t* setting)
+{
+	int value = midi_controller_read(controller);
+	setting_set_value_int(setting, value);
 }

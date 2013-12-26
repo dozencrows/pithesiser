@@ -599,12 +599,14 @@ void synth_main()
 	voice_init(voice, VOICE_COUNT, &envelope, &freq_envelope, &q_envelope);
 	active_voices = 0;
 
-	configure_midi();
 	lfo_init(&lfo);
 
 	global_filter_def.type = FILTER_PASS;
 	global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
 	global_filter_def.q = FIXED_HALF;
+
+	// Done after synth setup as this can load controller values into the synth
+	configure_midi();
 
 	int profiling = 0;
 
@@ -614,12 +616,12 @@ void synth_main()
 	{
 		int midi_controller_value;
 
-		if (midi_controller_update(&exit_controller, &midi_controller_value))
+		if (midi_controller_update_and_read(&exit_controller, &midi_controller_value))
 		{
 			break;
 		}
 
-		if (midi_controller_update(&screenshot_controller, &midi_controller_value))
+		if (midi_controller_update_and_read(&screenshot_controller, &midi_controller_value))
 		{
 			static int screenshot_count = 0;
 			char screenshot_name[64];
@@ -629,7 +631,7 @@ void synth_main()
 
 		process_midi_events();
 
-		if (!profiling && midi_controller_update(&profile_controller, &midi_controller_value))
+		if (!profiling && midi_controller_update_and_read(&profile_controller, &midi_controller_value))
 		{
 			if (profile_file != NULL)
 			{
