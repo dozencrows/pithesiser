@@ -458,11 +458,30 @@ void update_midi_controllers(synth_state_t* synth_state)
 	}
 }
 
-void update_synth(synth_state_t* synth_state)
+void update_envelope(envelope_t* envelope, object_id_t envelope_renderer_id)
+{
+	envelope->stages[ENVELOPE_STAGE_ATTACK].end_level 		= midi_controller_read(&envelope_attack_level_controller);
+	envelope->stages[ENVELOPE_STAGE_DECAY].start_level 		= midi_controller_read(&envelope_attack_level_controller);
+	envelope->stages[ENVELOPE_STAGE_ATTACK].duration 		= midi_controller_read(&envelope_attack_time_controller);
+	envelope->stages[ENVELOPE_STAGE_DECAY].end_level 		= midi_controller_read(&envelope_decay_level_controller);
+	envelope->stages[ENVELOPE_STAGE_SUSTAIN].start_level 	= midi_controller_read(&envelope_decay_level_controller);
+	envelope->stages[ENVELOPE_STAGE_SUSTAIN].end_level 		= midi_controller_read(&envelope_decay_level_controller);
+	envelope->stages[ENVELOPE_STAGE_DECAY].duration 		= midi_controller_read(&envelope_decay_time_controller);
+	envelope->stages[ENVELOPE_STAGE_SUSTAIN].duration 		= midi_controller_read(&envelope_sustain_time_controller);
+	envelope->stages[ENVELOPE_STAGE_RELEASE].duration 		= midi_controller_read(&envelope_release_time_controller);
+
+	gfx_event_t gfx_event;
+	gfx_event.type = GFX_EVENT_REFRESH;
+	gfx_event.flags = 0;
+	gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
+	gfx_send_event(&gfx_event);
+}
+
+void update_synth(synth_state_t* synth_state, synth_model_t* synth_model)
 {
 	if (synth_state->volume == STATE_UPDATED)
 	{
-		midi_controller_set_setting(&master_volume_controller, setting_master_volume);
+		midi_controller_set_setting(&master_volume_controller, synth_model->setting_master_volume);
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_REFRESH;
 		gfx_event.flags = 0;
@@ -472,7 +491,7 @@ void update_synth(synth_state_t* synth_state)
 
 	if (synth_state->waveform == STATE_UPDATED)
 	{
-		midi_controller_set_setting(&waveform_controller, setting_master_waveform);
+		midi_controller_set_setting(&waveform_controller, synth_model->setting_master_waveform);
 		gfx_event_t gfx_event;
 		gfx_event.type = GFX_EVENT_REFRESH;
 		gfx_event.flags = 0;
@@ -482,45 +501,31 @@ void update_synth(synth_state_t* synth_state)
 
 	if (synth_state->envelope == STATE_UPDATED)
 	{
-		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = midi_controller_read(&envelope_attack_level_controller);
-		envelope.stages[ENVELOPE_STAGE_DECAY].start_level = midi_controller_read(&envelope_attack_level_controller);
-		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = midi_controller_read(&envelope_attack_time_controller);
-		envelope.stages[ENVELOPE_STAGE_DECAY].end_level = midi_controller_read(&envelope_decay_level_controller);
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].start_level = midi_controller_read(&envelope_decay_level_controller);
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].end_level = midi_controller_read(&envelope_decay_level_controller);
-		envelope.stages[ENVELOPE_STAGE_DECAY].duration = midi_controller_read(&envelope_decay_time_controller);
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = midi_controller_read(&envelope_sustain_time_controller);
-		envelope.stages[ENVELOPE_STAGE_RELEASE].duration = midi_controller_read(&envelope_release_time_controller);
-
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_REFRESH;
-		gfx_event.flags = 0;
-		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
-		gfx_send_event(&gfx_event);
+		update_envelope(&synth_model->envelope[0], ENVELOPE_RENDERER_ID);
 	}
 
 	if (synth_state->lfo == STATE_UPDATED)
 	{
-		lfo.state = midi_controller_read(&lfo_state_controller);
-		lfo.oscillator.waveform = midi_controller_read(&lfo_waveform_controller);
-		lfo.oscillator.level = midi_controller_read(&lfo_level_controller);
-		lfo.oscillator.frequency = midi_controller_read(&lfo_frequency_controller);
+		synth_model->lfo.state = midi_controller_read(&lfo_state_controller);
+		synth_model->lfo.oscillator.waveform = midi_controller_read(&lfo_waveform_controller);
+		synth_model->lfo.oscillator.level = midi_controller_read(&lfo_level_controller);
+		synth_model->lfo.oscillator.frequency = midi_controller_read(&lfo_frequency_controller);
 	}
 
 	if (synth_state->filter == STATE_UPDATED)
 	{
-		global_filter_def.type = midi_controller_read(&filter_state_controller);
-		global_filter_def.frequency = midi_controller_read(&filter_frequency_controller);
-		global_filter_def.q = midi_controller_read(&filter_q_controller);
+		synth_model->global_filter_def.type = midi_controller_read(&filter_state_controller);
+		synth_model->global_filter_def.frequency = midi_controller_read(&filter_frequency_controller);
+		synth_model->global_filter_def.q = midi_controller_read(&filter_q_controller);
 	}
 }
 
-void process_synth_controllers()
+void process_synth_controllers(synth_model_t* synth_model)
 {
 	synth_state_t synth_state;
 	memset(&synth_state, 0, sizeof(synth_state));
 	update_midi_controllers(&synth_state);
-	update_synth(&synth_state);
+	update_synth(&synth_state, synth_model);
 }
 
 int synth_controllers_save(const char* file_path)
@@ -566,7 +571,7 @@ error:
 	return RESULT_ERROR;
 }
 
-int synth_controllers_load(const char* file_path)
+int synth_controllers_load(const char* file_path, synth_model_t* synth_model)
 {
 	FILE* file = fopen(file_path, "rb");
 	if (file != NULL)
@@ -612,7 +617,7 @@ int synth_controllers_load(const char* file_path)
 
 	synth_state_t synth_state;
 	memset(&synth_state, STATE_UPDATED, sizeof(synth_state));
-	update_synth(&synth_state);
+	update_synth(&synth_state, synth_model);
 
 	return RESULT_OK;
 

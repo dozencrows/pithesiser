@@ -13,6 +13,21 @@
 #include "filter.h"
 #include "lfo.h"
 
+// Forward declarations
+typedef struct setting_t setting_t;
+
+// Types and values
+typedef struct synth_model_t
+{
+	envelope_t 			envelope[3];
+	lfo_t 				lfo;
+	filter_definition_t	global_filter_def;
+
+	setting_t*	setting_master_volume;
+	setting_t*	setting_master_waveform;
+} synth_model_t;
+
+
 #define STATE_UNCHANGED	0
 #define STATE_UPDATED	1
 

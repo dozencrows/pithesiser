@@ -14,15 +14,15 @@
 #include <libgen.h>
 #include <libconfig.h>
 #include <gperftools/profiler.h>
+
 #include "system_constants.h"
+#include "master_time.h"
 #include "fixed_point_math.h"
 #include "alsa.h"
 #include "midi.h"
-#include "waveform.h"
 #include "oscillator.h"
-#include "envelope.h"
 #include "voice.h"
-#include "filter.h"
+
 #include "gfx.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
@@ -30,10 +30,10 @@
 #include "gfx_envelope_render.h"
 #include "gfx_setting_render.h"
 #include "gfx_image.h"
-#include "master_time.h"
+#include "synth_model.h"
 #include "synth_controllers.h"
+
 #include "mixer.h"
-#include "lfo.h"
 #include "setting.h"
 #include "recording.h"
 #include "code_timing_tests.h"
@@ -64,6 +64,11 @@ static const char* SETTINGS_FILE = ".pithesiser.cfg";
 config_t app_config;
 
 //-----------------------------------------------------------------------------------------------------------------------
+// Synth model
+//
+synth_model_t synth_model;
+
+//-----------------------------------------------------------------------------------------------------------------------
 // Settings
 //
 const char* master_waveform_names[] =
@@ -84,26 +89,23 @@ enum_type_info_t master_waveform_type =
 	master_waveform_names
 };
 
-setting_t*	setting_master_volume 	= NULL;
-setting_t*	setting_master_waveform	= NULL;
-
 void create_settings()
 {
 	setting_create("master-volume");
 	setting_create("master-waveform");
 
-	setting_master_volume = setting_find("master-volume");
-	setting_master_waveform = setting_find("master-waveform");
-	setting_init_as_int(setting_master_volume, 0);
-	setting_init_as_enum(setting_master_waveform, (int)WAVETABLE_SINE, &master_waveform_type);
+	synth_model.setting_master_volume = setting_find("master-volume");
+	synth_model.setting_master_waveform = setting_find("master-waveform");
+	setting_init_as_int(synth_model.setting_master_volume, 0);
+	setting_init_as_enum(synth_model.setting_master_waveform, (int)WAVETABLE_SINE, &master_waveform_type);
 }
 
 void destroy_settings()
 {
-	setting_destroy(setting_master_volume);
-	setting_destroy(setting_master_waveform);
-	setting_master_volume = NULL;
-	setting_master_waveform = NULL;
+	setting_destroy(synth_model.setting_master_volume);
+	setting_destroy(synth_model.setting_master_waveform);
+	synth_model.setting_master_volume = NULL;
+	synth_model.setting_master_waveform = NULL;
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -122,12 +124,6 @@ envelope_stage_t envelope_stages[4] =
 	{ LEVEL_CURRENT,	0,				100				}
 };
 
-envelope_t envelope = { LEVEL_MAX, 4, envelope_stages };
-
-lfo_t lfo;
-
-filter_definition_t global_filter_def;
-
 envelope_stage_t freq_envelope_stages[4] =
 {
 	{ FILTER_FIXED_ONE * 20,	FILTER_FIXED_ONE * 12000,	1000, 			},
@@ -135,8 +131,6 @@ envelope_stage_t freq_envelope_stages[4] =
 	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	DURATION_HELD 	},
 	{ LEVEL_CURRENT,			FILTER_FIXED_ONE * 20,		200				}
 };
-
-envelope_t freq_envelope = { FILTER_FIXED_ONE * 18000, 4, freq_envelope_stages };
 
 envelope_stage_t q_envelope_stages[4] =
 {
@@ -146,13 +140,23 @@ envelope_stage_t q_envelope_stages[4] =
 	{ LEVEL_CURRENT,	FIXED_HALF,	200				}
 };
 
-envelope_t q_envelope = { FIXED_ONE, 4, q_envelope_stages };
-
 static int32_t duck_level_by_voice_count[] = { LEVEL_MAX, LEVEL_MAX, LEVEL_MAX * 0.65f, LEVEL_MAX * 0.49f, LEVEL_MAX * 0.40f,
 											   LEVEL_MAX * 0.34f, LEVEL_MAX * 0.29f, LEVEL_MAX * 0.25f, LEVEL_MAX * 0.22f};
 
 void configure_audio()
 {
+	synth_model.envelope[0].peak = LEVEL_MAX;
+	synth_model.envelope[0].stage_count = 4;
+	synth_model.envelope[0].stages = envelope_stages;
+
+	synth_model.envelope[1].peak = FILTER_FIXED_ONE * 18000;
+	synth_model.envelope[1].stage_count = 4;
+	synth_model.envelope[1].stages = freq_envelope_stages;
+
+	synth_model.envelope[2].peak = FIXED_ONE;
+	synth_model.envelope[2].stage_count = 4;
+	synth_model.envelope[2].stages = q_envelope_stages;
+
 	const char *setting_devices_audio_output = NULL;
 
 	if (config_lookup_string(&app_config, CFG_DEVICES_AUDIO_OUTPUT, &setting_devices_audio_output) != CONFIG_TRUE)
@@ -208,18 +212,18 @@ void process_audio(int32_t timestep_ms)
 	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
 	size_t buffer_bytes = buffer_samples * sizeof(sample_t) * 2;
 
-	lfo_update(&lfo, buffer_samples);
+	lfo_update(&synth_model.lfo, buffer_samples);
 
 	int first_audible_voice = -1;
 	int last_active_voices = active_voices;
 	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
 	sample_t *voice_buffer = (sample_t*)alloca(buffer_samples * sizeof(sample_t));
-	int master_volume = setting_get_value_int(setting_master_volume);
+	int master_volume = setting_get_value_int(synth_model.setting_master_volume);
 	int32_t voice_level = (master_volume * auto_duck_level) / LEVEL_MAX;
 
 	for (int i = 0; i < VOICE_COUNT; i++)
 	{
-		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &lfo, &global_filter_def))
+		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &synth_model.lfo, &synth_model.global_filter_def))
 		{
 			case VOICE_IDLE:
 				break;
@@ -323,7 +327,7 @@ void configure_midi()
 		exit(EXIT_FAILURE);
 	}
 
-	synth_controllers_load(SETTINGS_FILE);
+	synth_controllers_load(SETTINGS_FILE, &synth_model);
 
 	config_setting_t *setting_sysex_init_message = config_lookup(&app_config, CFG_SYSEX_INIT);
 	if (setting_sysex_init_message != NULL)
@@ -342,7 +346,7 @@ void configure_midi()
 void process_midi_events()
 {
 	int midi_events = midi_get_event_count();
-	int master_waveform = setting_get_value_enum_as_int(setting_master_waveform);
+	int master_waveform = setting_get_value_enum_as_int(synth_model.setting_master_waveform);
 
 	while (midi_events-- > 0)
 	{
@@ -358,7 +362,7 @@ void process_midi_events()
 
 			if (active_voices == 0)
 			{
-				lfo_reset(&lfo);
+				lfo_reset(&synth_model.lfo);
 			}
 
 			if (candidate_voice != NULL)
@@ -431,7 +435,7 @@ void create_ui()
 	envelope_renderer->y = 514;
 	envelope_renderer->width = 510;
 	envelope_renderer->height = 240;
-	envelope_renderer->envelope = &envelope;
+	envelope_renderer->envelope = &synth_model.envelope[0];
 	envelope_renderer->background_colour[0] = 0.0f;
 	envelope_renderer->background_colour[1] = 0.0f;
 	envelope_renderer->background_colour[2] = 16.0f;
@@ -452,7 +456,7 @@ void create_ui()
 	freq_envelope_renderer->y = 514;
 	freq_envelope_renderer->width = 512;
 	freq_envelope_renderer->height = 119;
-	freq_envelope_renderer->envelope = &freq_envelope;
+	freq_envelope_renderer->envelope = &synth_model.envelope[1];
 	freq_envelope_renderer->background_colour[0] = 0.0f;
 	freq_envelope_renderer->background_colour[1] = 0.0f;
 	freq_envelope_renderer->background_colour[2] = 16.0f;
@@ -473,7 +477,7 @@ void create_ui()
 	q_envelope_renderer->y = 634;
 	q_envelope_renderer->width = 512;
 	q_envelope_renderer->height = 120;
-	q_envelope_renderer->envelope = &q_envelope;
+	q_envelope_renderer->envelope = &synth_model.envelope[2];
 	q_envelope_renderer->background_colour[0] = 0.0f;
 	q_envelope_renderer->background_colour[1] = 0.0f;
 	q_envelope_renderer->background_colour[2] = 16.0f;
@@ -512,7 +516,7 @@ void create_ui()
 	master_volume_renderer->text_size = 9;
 	master_volume_renderer->text_x_offset = 1;
 	master_volume_renderer->text_y_offset = 1;
-	master_volume_renderer->setting = setting_master_volume;
+	master_volume_renderer->setting = synth_model.setting_master_volume;
 	master_volume_renderer->format = "%05d";
 
 	master_waveform_renderer = gfx_setting_renderer_create(MASTER_WAVEFORM_RENDERER_ID);
@@ -532,7 +536,7 @@ void create_ui()
 	master_waveform_renderer->text_size = 9;
 	master_waveform_renderer->text_x_offset = 1;
 	master_waveform_renderer->text_y_offset = 3;
-	master_waveform_renderer->setting = setting_master_waveform;
+	master_waveform_renderer->setting = synth_model.setting_master_waveform;
 	master_waveform_renderer->format = "%s";
 }
 
@@ -559,7 +563,7 @@ void destroy_ui()
 
 void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 {
-	process_synth_controllers();
+	process_synth_controllers(&synth_model);
 	piglow_update(voice, VOICE_COUNT);
 
 	int param_value;
@@ -603,14 +607,14 @@ void synth_main()
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
 
-	voice_init(voice, VOICE_COUNT, &envelope, &freq_envelope, &q_envelope);
+	voice_init(voice, VOICE_COUNT, &synth_model.envelope[0], &synth_model.envelope[1], &synth_model.envelope[2]);
 	active_voices = 0;
 
-	lfo_init(&lfo);
+	lfo_init(&synth_model.lfo);
 
-	global_filter_def.type = FILTER_PASS;
-	global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
-	global_filter_def.q = FIXED_HALF;
+	synth_model.global_filter_def.type = FILTER_PASS;
+	synth_model.global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
+	synth_model.global_filter_def.q = FIXED_HALF;
 
 	// Done after synth setup as this can load controller values into the synth
 	configure_midi();

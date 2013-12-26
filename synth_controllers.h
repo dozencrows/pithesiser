@@ -11,6 +11,8 @@
 #include "midi_controller.h"
 #include "libconfig.h"
 
+typedef struct synth_model_t synth_model_t;
+
 extern midi_controller_t master_volume_controller;
 extern midi_controller_t waveform_controller;
 extern midi_controller_t oscilloscope_controller;
@@ -37,7 +39,7 @@ extern midi_controller_t screenshot_controller;
 
 extern int synth_controllers_initialise(int controller_channel, config_setting_t *config);
 extern int synth_controllers_save(const char* file_path);
-extern int synth_controllers_load(const char* file_path);
-extern void process_synth_controllers();
+extern int synth_controllers_load(const char* file_path, synth_model_t* synth_model);
+extern void process_synth_controllers(synth_model_t* synth_model);
 
 #endif /* SYNTH_CONTROLLERS_H_ */

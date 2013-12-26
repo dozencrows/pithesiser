@@ -3,7 +3,7 @@ Raspberry Pi Synth Project
 
 Underway
 ========
- * Persisting MIDI controller outputs
+ * Migrate standalone synth globals into central "synth model" structure
  * Data-driven settings:
    * DONE: 
      * master volume & waveform as settings - midi control, rendering
@@ -13,6 +13,7 @@ Underway
 
 To do next
 ==========
+* Modularise synth model init and processing
 * Indexed MIDI controls
 * Generalising envelope support
 * Modulation matrix to control LFO & envelope outputs to start with 
@@ -30,6 +31,10 @@ To do next
   * Pre-filtered procedural waveforms
   * Cubic interpolation with table lookup
   * Normalise range of phase accumulator across all waveform types
+  
+Done
+====
+ * Persisting MIDI controller outputs
 
 Blog ideas
 ==========
