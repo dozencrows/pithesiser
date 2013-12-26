@@ -15,18 +15,25 @@
 
 // Forward declarations
 typedef struct setting_t setting_t;
+typedef struct voice_t voice_t;
 
 // Types and values
 typedef struct synth_model_t
 {
+	// Settings
+	setting_t*	setting_master_volume;
+	setting_t*	setting_master_waveform;
+
+	// Components
 	envelope_t 			envelope[3];
 	lfo_t 				lfo;
 	filter_definition_t	global_filter_def;
 
-	setting_t*	setting_master_volume;
-	setting_t*	setting_master_waveform;
+	// Voices
+	int			voice_count;
+	int			active_voices;
+	voice_t* 	voice;
 } synth_model_t;
-
 
 #define STATE_UNCHANGED	0
 #define STATE_UPDATED	1

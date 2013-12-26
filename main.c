@@ -42,6 +42,7 @@
 //-----------------------------------------------------------------------------------------------------------------------
 // Commons
 //
+#define VOICE_COUNT				8
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
 
@@ -111,52 +112,11 @@ void destroy_settings()
 //-----------------------------------------------------------------------------------------------------------------------
 // Audio processing
 //
-#define VOICE_COUNT	8
-voice_t voice[VOICE_COUNT];
-
-int active_voices;
-
-envelope_stage_t envelope_stages[4] =
-{
-	{ 0,				LEVEL_MAX,		100, 			},
-	{ LEVEL_MAX,		LEVEL_MAX / 2,	250				},
-	{ LEVEL_MAX / 2,	LEVEL_MAX / 2,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,	0,				100				}
-};
-
-envelope_stage_t freq_envelope_stages[4] =
-{
-	{ FILTER_FIXED_ONE * 20,	FILTER_FIXED_ONE * 12000,	1000, 			},
-	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	1				},
-	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,			FILTER_FIXED_ONE * 20,		200				}
-};
-
-envelope_stage_t q_envelope_stages[4] =
-{
-	{ FIXED_ONE / 100,	FIXED_ONE * .75,	1000, 			},
-	{ FIXED_ONE * .75,	FIXED_ONE * .75,	1				},
-	{ FIXED_ONE * .75,	FIXED_ONE * .75,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,	FIXED_HALF,	200				}
-};
-
 static int32_t duck_level_by_voice_count[] = { LEVEL_MAX, LEVEL_MAX, LEVEL_MAX * 0.65f, LEVEL_MAX * 0.49f, LEVEL_MAX * 0.40f,
 											   LEVEL_MAX * 0.34f, LEVEL_MAX * 0.29f, LEVEL_MAX * 0.25f, LEVEL_MAX * 0.22f};
 
 void configure_audio()
 {
-	synth_model.envelope[0].peak = LEVEL_MAX;
-	synth_model.envelope[0].stage_count = 4;
-	synth_model.envelope[0].stages = envelope_stages;
-
-	synth_model.envelope[1].peak = FILTER_FIXED_ONE * 18000;
-	synth_model.envelope[1].stage_count = 4;
-	synth_model.envelope[1].stages = freq_envelope_stages;
-
-	synth_model.envelope[2].peak = FIXED_ONE;
-	synth_model.envelope[2].stage_count = 4;
-	synth_model.envelope[2].stages = q_envelope_stages;
-
 	const char *setting_devices_audio_output = NULL;
 
 	if (config_lookup_string(&app_config, CFG_DEVICES_AUDIO_OUTPUT, &setting_devices_audio_output) != CONFIG_TRUE)
@@ -176,9 +136,9 @@ void configure_audio()
 	{
 		int duck_setting_count = config_setting_length(setting_auto_duck);
 
-		if (duck_setting_count != VOICE_COUNT)
+		if (duck_setting_count != synth_model.voice_count)
 		{
-			printf("Invalid number of auto duck levels %d - should be %d\n", duck_setting_count, VOICE_COUNT);
+			printf("Invalid number of auto duck levels %d - should be %d\n", duck_setting_count, synth_model.voice_count);
 			exit(EXIT_FAILURE);
 		}
 
@@ -215,15 +175,15 @@ void process_audio(int32_t timestep_ms)
 	lfo_update(&synth_model.lfo, buffer_samples);
 
 	int first_audible_voice = -1;
-	int last_active_voices = active_voices;
-	int32_t auto_duck_level = duck_level_by_voice_count[active_voices];
+	int last_active_voices = synth_model.active_voices;
+	int32_t auto_duck_level = duck_level_by_voice_count[synth_model.active_voices];
 	sample_t *voice_buffer = (sample_t*)alloca(buffer_samples * sizeof(sample_t));
 	int master_volume = setting_get_value_int(synth_model.setting_master_volume);
 	int32_t voice_level = (master_volume * auto_duck_level) / LEVEL_MAX;
 
-	for (int i = 0; i < VOICE_COUNT; i++)
+	for (int i = 0; i < synth_model.voice_count; i++)
 	{
-		switch(voice_update(voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &synth_model.lfo, &synth_model.global_filter_def))
+		switch(voice_update(synth_model.voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &synth_model.lfo, &synth_model.global_filter_def))
 		{
 			case VOICE_IDLE:
 				break;
@@ -244,7 +204,7 @@ void process_audio(int32_t timestep_ms)
 			}
 			case VOICE_GONE_IDLE:
 			{
-				active_voices--;
+				synth_model.active_voices--;
 				break;
 			}
 		}
@@ -269,11 +229,11 @@ void process_audio(int32_t timestep_ms)
 
 	alsa_unlock_buffer(write_buffer_index);
 
-	if (last_active_voices != active_voices)
+	if (last_active_voices != synth_model.active_voices)
 	{
-		if (active_voices < 0)
+		if (synth_model.active_voices < 0)
 		{
-			printf("Voice underflow: %d\n", active_voices);
+			printf("Voice underflow: %d\n", synth_model.active_voices);
 		}
 	}
 }
@@ -290,9 +250,9 @@ void configure_midi()
 	config_lookup_int(&app_config, CFG_DEVICES_MIDI_CONTROLLER_CHANNEL, &controller_channel);
 	config_lookup_int(&app_config, CFG_DEVICES_MIDI_NOTE_CHANNEL, &note_channel);
 
-	for (int i = 0 ; i < VOICE_COUNT; i++)
+	for (int i = 0 ; i < synth_model.voice_count; i++)
 	{
-		voice[i].midi_channel = note_channel;
+		synth_model.voice[i].midi_channel = note_channel;
 	}
 
 	config_setting_t *setting_devices_midi_input = config_lookup(&app_config, CFG_DEVICES_MIDI_INPUT);
@@ -358,9 +318,9 @@ void process_midi_events()
 		if (event_type == 0x90)
 		{
 			int candidate_voice_state;
-			voice_t *candidate_voice = voice_find_next_likely_free(voice, VOICE_COUNT, channel, &candidate_voice_state);
+			voice_t *candidate_voice = voice_find_next_likely_free(synth_model.voice, synth_model.voice_count, channel, &candidate_voice_state);
 
-			if (active_voices == 0)
+			if (synth_model.active_voices == 0)
 			{
 				lfo_reset(&synth_model.lfo);
 			}
@@ -369,7 +329,7 @@ void process_midi_events()
 			{
 				if (candidate_voice_state == VOICE_IDLE)
 				{
-					active_voices++;
+					synth_model.active_voices++;
 				}
 
 				voice_play_note(candidate_voice, midi_event.data[0], master_waveform);
@@ -377,7 +337,7 @@ void process_midi_events()
 		}
 		else if (event_type == 0x80)
 		{
-			voice_t *playing_voice = voice_find_playing_note(voice, VOICE_COUNT, channel, midi_event.data[0]);
+			voice_t *playing_voice = voice_find_playing_note(synth_model.voice, synth_model.voice_count, channel, midi_event.data[0]);
 			if (playing_voice != NULL)
 			{
 				voice_stop_note(playing_voice);
@@ -389,7 +349,6 @@ void process_midi_events()
 //-----------------------------------------------------------------------------------------------------------------------
 // UI data & management
 //
-
 wave_renderer_t *waveform_renderer = NULL;
 envelope_renderer_t *envelope_renderer = NULL;
 image_renderer_t *image_renderer = NULL;
@@ -564,7 +523,7 @@ void destroy_ui()
 void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 {
 	process_synth_controllers(&synth_model);
-	piglow_update(voice, VOICE_COUNT);
+	piglow_update(synth_model.voice, synth_model.voice_count);
 
 	int param_value;
 
@@ -575,7 +534,68 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
-// Synth setup and main loop
+// Synth model
+//
+
+envelope_stage_t envelope_stages[4] =
+{
+	{ 0,				LEVEL_MAX,		100, 			},
+	{ LEVEL_MAX,		LEVEL_MAX / 2,	250				},
+	{ LEVEL_MAX / 2,	LEVEL_MAX / 2,	DURATION_HELD 	},
+	{ LEVEL_CURRENT,	0,				100				}
+};
+
+envelope_stage_t freq_envelope_stages[4] =
+{
+	{ FILTER_FIXED_ONE * 20,	FILTER_FIXED_ONE * 12000,	1000, 			},
+	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	1				},
+	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	DURATION_HELD 	},
+	{ LEVEL_CURRENT,			FILTER_FIXED_ONE * 20,		200				}
+};
+
+envelope_stage_t q_envelope_stages[4] =
+{
+	{ FIXED_ONE / 100,	FIXED_ONE * .75,	1000, 			},
+	{ FIXED_ONE * .75,	FIXED_ONE * .75,	1				},
+	{ FIXED_ONE * .75,	FIXED_ONE * .75,	DURATION_HELD 	},
+	{ LEVEL_CURRENT,	FIXED_HALF,	200				}
+};
+
+void synth_initialise()
+{
+	synth_model.voice_count 	= VOICE_COUNT;
+	synth_model.active_voices	= 0;
+	synth_model.voice 			= (voice_t*)calloc(synth_model.voice_count, sizeof(voice_t));
+	voice_init(synth_model.voice, synth_model.voice_count, &synth_model.envelope[0], &synth_model.envelope[1], &synth_model.envelope[2]);
+
+	lfo_init(&synth_model.lfo);
+
+	synth_model.global_filter_def.type = FILTER_PASS;
+	synth_model.global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
+	synth_model.global_filter_def.q = FIXED_HALF;
+
+	synth_model.envelope[0].peak = LEVEL_MAX;
+	synth_model.envelope[0].stage_count = 4;
+	synth_model.envelope[0].stages = envelope_stages;
+
+	synth_model.envelope[1].peak = FILTER_FIXED_ONE * 18000;
+	synth_model.envelope[1].stage_count = 4;
+	synth_model.envelope[1].stages = freq_envelope_stages;
+
+	synth_model.envelope[2].peak = FIXED_ONE;
+	synth_model.envelope[2].stage_count = 4;
+	synth_model.envelope[2].stages = q_envelope_stages;
+}
+
+void synth_deinitialise()
+{
+	destroy_settings();
+	free(synth_model.voice);
+	synth_model.voice = NULL;
+}
+
+//-----------------------------------------------------------------------------------------------------------------------
+// Synth main loop
 //
 const char *profile_file = NULL;
 
@@ -595,6 +615,7 @@ void synth_main()
 	gfx_event_initialise();
 	gfx_initialise();
 
+	synth_initialise();
 	configure_audio();
 	configure_profiling();
 
@@ -606,15 +627,6 @@ void synth_main()
 
 	waveform_initialise();
 	gfx_register_event_global_handler(GFX_EVENT_BUFFERSWAP, process_buffer_swap);
-
-	voice_init(voice, VOICE_COUNT, &synth_model.envelope[0], &synth_model.envelope[1], &synth_model.envelope[2]);
-	active_voices = 0;
-
-	lfo_init(&synth_model.lfo);
-
-	synth_model.global_filter_def.type = FILTER_PASS;
-	synth_model.global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
-	synth_model.global_filter_def.q = FIXED_HALF;
 
 	// Done after synth setup as this can load controller values into the synth
 	configure_midi();
@@ -671,7 +683,7 @@ void synth_main()
 	gfx_wave_render_deinitialise();
 	alsa_deinitialise();
 	midi_deinitialise();
-	destroy_settings();
+	synth_deinitialise();
 	config_destroy(&app_config);
 
 	printf("Done: %d xruns\n", alsa_get_xruns_count());
