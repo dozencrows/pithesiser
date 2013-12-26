@@ -379,7 +379,6 @@ extern lfo_t lfo;
 extern setting_t*	setting_master_volume;
 extern setting_t*	setting_master_waveform;
 extern filter_definition_t global_filter_def;
-extern void tune_oscilloscope_to_note(int note);
 
 void update_midi_controllers(synth_state_t* synth_state)
 {
@@ -391,13 +390,6 @@ void update_midi_controllers(synth_state_t* synth_state)
 	if (midi_controller_update(&waveform_controller))
 	{
 		synth_state->waveform = STATE_UPDATED;
-	}
-
-	int param_value;
-
-	if (midi_controller_update_and_read(&oscilloscope_controller, &param_value))
-	{
-		tune_oscilloscope_to_note(param_value);
 	}
 
 	if (midi_controller_update(&envelope_attack_level_controller))

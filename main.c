@@ -561,6 +561,13 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 {
 	process_synth_controllers();
 	piglow_update(voice, VOICE_COUNT);
+
+	int param_value;
+
+	if (midi_controller_update_and_read(&oscilloscope_controller, &param_value))
+	{
+		tune_oscilloscope_to_note(param_value);
+	}
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
