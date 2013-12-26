@@ -352,26 +352,32 @@ void process_midi_events()
 	{
 		midi_event_t midi_event;
 		midi_pop_event(&midi_event);
-		if (midi_event.type == 0x90)
+		unsigned char event_type = midi_event.type & 0xf0;
+		int channel = midi_event.type & 0x0f;
+
+		if (event_type == 0x90)
 		{
 			int candidate_voice_state;
-			voice_t *candidate_voice = voice_find_next_likely_free(voice, VOICE_COUNT, &candidate_voice_state);
+			voice_t *candidate_voice = voice_find_next_likely_free(voice, VOICE_COUNT, channel, &candidate_voice_state);
 
 			if (active_voices == 0)
 			{
 				lfo_reset(&lfo);
 			}
 
-			if (candidate_voice_state == VOICE_IDLE)
+			if (candidate_voice != NULL)
 			{
-				active_voices++;
-			}
+				if (candidate_voice_state == VOICE_IDLE)
+				{
+					active_voices++;
+				}
 
-			voice_play_note(candidate_voice, midi_event.data[0], master_waveform);
+				voice_play_note(candidate_voice, midi_event.data[0], master_waveform);
+			}
 		}
-		else if (midi_event.type == 0x80)
+		else if (event_type == 0x80)
 		{
-			voice_t *playing_voice = voice_find_playing_note(voice, VOICE_COUNT, midi_event.data[0]);
+			voice_t *playing_voice = voice_find_playing_note(voice, VOICE_COUNT, channel, midi_event.data[0]);
 			if (playing_voice != NULL)
 			{
 				voice_stop_note(playing_voice);
@@ -698,7 +704,6 @@ void synth_main()
 	gfx_initialise();
 
 	configure_audio();
-	configure_midi();
 	configure_profiling();
 
 	config_setting_t* piglow_config = config_lookup(&app_config, CFG_DEVICES_PIGLOW);
@@ -713,6 +718,7 @@ void synth_main()
 	voice_init(voice, VOICE_COUNT, &envelope, &freq_envelope, &q_envelope);
 	active_voices = 0;
 
+	configure_midi();
 	lfo_init(&lfo);
 
 	global_filter_def.type = FILTER_PASS;

@@ -41,7 +41,7 @@ extern void voice_init(voice_t *voices, int voice_count, envelope_t *level_envel
 extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, lfo_t *lfo, filter_definition_t *filter_def);
 extern void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform);
 extern void voice_stop_note(voice_t *voice);
-extern voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int *voice_state);
-extern voice_t *voice_find_playing_note(voice_t *voices, int voice_count, int midi_note);
+extern voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_channel, int *voice_state);
+extern voice_t *voice_find_playing_note(voice_t *voices, int voice_count, int midi_channel, int midi_note);
 
 #endif /* VOICE_H_ */

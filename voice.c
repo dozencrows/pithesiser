@@ -121,38 +121,48 @@ void voice_stop_note(voice_t *voice)
 	}
 }
 
-voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int *voice_state)
+voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_channel, int *voice_state)
 {
-	int candidate_voice = 0;
+	int candidate_voice = -1;
 	int lowest_play_counter = INT_MAX;
 	*voice_state = VOICE_ACTIVE;
 
 	for (int i = 0; i < voice_count; i++)
 	{
-		if (voices[i].current_state == NOTE_NOT_PLAYING)
+		if (voices[i].midi_channel == midi_channel)
 		{
-			candidate_voice = i;
-			*voice_state = VOICE_IDLE;
-			break;
-		}
-		else
-		{
-			if (voices[i].play_counter < lowest_play_counter)
+			if (voices[i].current_state == NOTE_NOT_PLAYING)
 			{
-				lowest_play_counter = voices[i].play_counter;
 				candidate_voice = i;
+				*voice_state = VOICE_IDLE;
+				break;
+			}
+			else
+			{
+				if (voices[i].play_counter < lowest_play_counter)
+				{
+					lowest_play_counter = voices[i].play_counter;
+					candidate_voice = i;
+				}
 			}
 		}
 	}
 
-	return voices + candidate_voice;
+	if (candidate_voice >= 0)
+	{
+		return voices + candidate_voice;
+	}
+	else
+	{
+		return NULL;
+	}
 }
 
-voice_t *voice_find_playing_note(voice_t *voices, int voice_count, int midi_note)
+voice_t *voice_find_playing_note(voice_t *voices, int voice_count, int midi_channel, int midi_note)
 {
 	for (int i = 0; i < voice_count; i++)
 	{
-		if (voices[i].current_state == midi_note)
+		if (voices[i].current_state == midi_note && voices[i].midi_channel == midi_channel)
 		{
 			return voices + i;
 		}

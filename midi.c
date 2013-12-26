@@ -44,21 +44,21 @@ typedef struct
 channel_data channels[CHANNEL_COUNT] =
 {
 	{  0, 127, NULL },
-	{  1,  17, NULL },
-	{  2,  17, NULL },
-	{  3,  17, NULL },
-	{  4,  17, NULL },
-	{  5,  17, NULL },
-	{  6,  17, NULL },
-	{  7,  17, NULL },
-	{  8,  17, NULL },
-	{  9,  17, NULL },
-	{ 10,  17, NULL },
-	{ 11,  17, NULL },
-	{ 12,  17, NULL },
-	{ 13,  17, NULL },
-	{ 14,  17, NULL },
-	{ 15,  17, NULL },
+	{  1, 127, NULL },
+	{  2, 127, NULL },
+	{  3, 127, NULL },
+	{  4, 127, NULL },
+	{  5, 127, NULL },
+	{  6, 127, NULL },
+	{  7, 127, NULL },
+	{  8, 127, NULL },
+	{  9, 127, NULL },
+	{ 10, 127, NULL },
+	{ 11, 127, NULL },
+	{ 12, 127, NULL },
+	{ 13, 127, NULL },
+	{ 14, 127, NULL },
+	{ 15, 127, NULL },
 };
 
 fixed_t note_frequency[MIDI_NOTE_COUNT] =
@@ -149,7 +149,9 @@ static void midi_read_packet(int handle)
 		return;
 	}
 
-	if ((control_byte & 0xf0) == 0xb0)
+	unsigned char message = control_byte & 0xf0;
+
+	if (message == 0xb0)
 	{
 		unsigned char control_data[2];
 
@@ -166,7 +168,7 @@ static void midi_read_packet(int handle)
 			}
 		}
 	}
-	else if (control_byte == 0x80 || control_byte == 0x90)
+	else if (message == 0x80 || message == 0x90)
 	{
 		unsigned char control_data[2];
 		if (read(handle, &control_data, sizeof(control_data)) == sizeof(control_data))
