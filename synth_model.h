@@ -42,7 +42,7 @@ typedef struct synth_state_t
 {
 	unsigned char	volume;
 	unsigned char	waveform;
-	unsigned char	envelope;
+	unsigned char	envelope[3];
 	unsigned char	lfo;
 	unsigned char	filter;
 } synth_state_t;

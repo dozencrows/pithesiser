@@ -30,16 +30,22 @@
 #define FILTER_MAX_Q			(FIXED_ONE)
 #define ENVELOPE_TIME_SCALE		10
 
+typedef struct envelope_controller_t
+{
+	int renderer_id;
+	midi_controller_t attack_time_controller;
+	midi_controller_t attack_level_controller;
+	midi_controller_t decay_time_controller;
+	midi_controller_t decay_level_controller;
+	midi_controller_t sustain_time_controller;
+	midi_controller_t release_time_controller;
+} envelope_controller_t;
+
 midi_controller_t master_volume_controller;
 midi_controller_t waveform_controller;
 midi_controller_t oscilloscope_controller;
 
-midi_controller_t envelope_attack_time_controller;
-midi_controller_t envelope_attack_level_controller;
-midi_controller_t envelope_decay_time_controller;
-midi_controller_t envelope_decay_level_controller;
-midi_controller_t envelope_sustain_time_controller;
-midi_controller_t envelope_release_time_controller;
+envelope_controller_t envelope_controller[3];
 
 midi_controller_t lfo_state_controller;
 midi_controller_t lfo_waveform_controller;
@@ -59,12 +65,18 @@ static midi_controller_t* persistent_controllers[] =
 	&master_volume_controller,
 	&waveform_controller,
 	&oscilloscope_controller,
-	&envelope_attack_time_controller,
-	&envelope_attack_level_controller,
-	&envelope_decay_time_controller,
-	&envelope_decay_level_controller,
-	&envelope_sustain_time_controller,
-	&envelope_release_time_controller,
+	&envelope_controller[0].attack_time_controller,
+	&envelope_controller[0].attack_level_controller,
+	&envelope_controller[0].decay_time_controller,
+	&envelope_controller[0].decay_level_controller,
+	&envelope_controller[0].sustain_time_controller,
+	&envelope_controller[0].release_time_controller,
+	&envelope_controller[1].attack_time_controller,
+	&envelope_controller[1].attack_level_controller,
+	&envelope_controller[1].decay_time_controller,
+	&envelope_controller[1].decay_level_controller,
+	&envelope_controller[1].sustain_time_controller,
+	&envelope_controller[1].release_time_controller,
 	&lfo_state_controller,
 	&lfo_waveform_controller,
 	&lfo_level_controller,
@@ -92,10 +104,16 @@ static void midi_resolution_controller_set_output(midi_controller_t *controller)
 	controller->output_max = MIDI_MAX_CONTROLLER_VALUE;
 }
 
-static void envelope_level_controller_set_output(midi_controller_t *controller)
+static void volume_envelope_level_controller_set_output(midi_controller_t *controller)
 {
 	controller->output_min = 0;
 	controller->output_max = LEVEL_MAX;
+}
+
+static void filter_freq_envelope_level_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = 0;
+	controller->output_max = FILTER_FIXED_ONE * 18000;
 }
 
 static void envelope_time_controller_set_output(midi_controller_t *controller)
@@ -165,12 +183,18 @@ controller_parser_t controller_parser[] =
 	{ "master_volume", &master_volume_controller, master_volume_controller_set_output },
 	{ "waveform_select", &waveform_controller, waveform_controller_set_output },
 	{ "oscilloscope_frequency", &oscilloscope_controller, midi_resolution_controller_set_output },
-	{ "volume_envelope_attack_time", &envelope_attack_time_controller, envelope_time_controller_set_output },
-	{ "volume_envelope_attack_level", &envelope_attack_level_controller, envelope_level_controller_set_output },
-	{ "volume_envelope_decay_time", &envelope_decay_time_controller, envelope_time_controller_set_output },
-	{ "volume_envelope_decay_level", &envelope_decay_level_controller, envelope_level_controller_set_output },
-	{ "volume_envelope_sustain_time", &envelope_sustain_time_controller, envelope_time_held_controller_set_output },
-	{ "volume_envelope_release_time", &envelope_release_time_controller, envelope_time_controller_set_output },
+	{ "volume_envelope_attack_time", &envelope_controller[0].attack_time_controller, envelope_time_controller_set_output },
+	{ "volume_envelope_attack_level", &envelope_controller[0].attack_level_controller, volume_envelope_level_controller_set_output },
+	{ "volume_envelope_decay_time", &envelope_controller[0].decay_time_controller, envelope_time_controller_set_output },
+	{ "volume_envelope_decay_level", &envelope_controller[0].decay_level_controller, volume_envelope_level_controller_set_output },
+	{ "volume_envelope_sustain_time", &envelope_controller[0].sustain_time_controller, envelope_time_held_controller_set_output },
+	{ "volume_envelope_release_time", &envelope_controller[0].release_time_controller, envelope_time_controller_set_output },
+	{ "filter_freq_envelope_attack_time", &envelope_controller[1].attack_time_controller, envelope_time_controller_set_output },
+	{ "filter_freq_envelope_attack_level", &envelope_controller[1].attack_level_controller, filter_freq_envelope_level_controller_set_output },
+	{ "filter_freq_envelope_decay_time", &envelope_controller[1].decay_time_controller, envelope_time_controller_set_output },
+	{ "filter_freq_envelope_decay_level", &envelope_controller[1].decay_level_controller, filter_freq_envelope_level_controller_set_output },
+	{ "filter_freq_envelope_sustain_time", &envelope_controller[1].sustain_time_controller, envelope_time_held_controller_set_output },
+	{ "filter_freq_envelope_release_time", &envelope_controller[1].release_time_controller, envelope_time_controller_set_output },
 	{ "lfo_state", &lfo_state_controller, lfo_state_controller_set_output },
 	{ "lfo_waveform_select", &lfo_waveform_controller, lfo_waveform_controller_set_output },
 	{ "lfo_frequency", &lfo_frequency_controller, lfo_frequency_controller_set_output },
@@ -199,6 +223,10 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 	{
 		error_count++;
 	}
+
+	envelope_controller[0].renderer_id = ENVELOPE_RENDERER_ID;
+	envelope_controller[1].renderer_id = FREQ_ENVELOPE_RENDERER_ID;
+	envelope_controller[2].renderer_id = Q_ENVELOPE_RENDERER_ID;
 
 	for (int i = 0; i < CONTROLLER_PARSER_COUNT; i++)
 	{
@@ -245,34 +273,37 @@ void update_midi_controllers(synth_state_t* synth_state)
 		synth_state->waveform = STATE_UPDATED;
 	}
 
-	if (midi_controller_update(&envelope_attack_level_controller))
+	for (int i = 0; i < 2; i++)
 	{
-		synth_state->envelope = STATE_UPDATED;
-	}
+		if (midi_controller_update(&envelope_controller[i].attack_level_controller))
+		{
+			synth_state->envelope[i] = STATE_UPDATED;
+		}
 
-	if (midi_controller_update(&envelope_attack_time_controller))
-	{
-		synth_state->envelope = STATE_UPDATED;
-	}
+		if (midi_controller_update(&envelope_controller[i].attack_time_controller))
+		{
+			synth_state->envelope[i] = STATE_UPDATED;
+		}
 
-	if (midi_controller_update(&envelope_decay_level_controller))
-	{
-		synth_state->envelope = STATE_UPDATED;
-	}
+		if (midi_controller_update(&envelope_controller[i].decay_level_controller))
+		{
+			synth_state->envelope[i] = STATE_UPDATED;
+		}
 
-	if (midi_controller_update(&envelope_decay_time_controller))
-	{
-		synth_state->envelope = STATE_UPDATED;
-	}
+		if (midi_controller_update(&envelope_controller[i].decay_time_controller))
+		{
+			synth_state->envelope[i] = STATE_UPDATED;
+		}
 
-	if (midi_controller_update(&envelope_sustain_time_controller))
-	{
-		synth_state->envelope = STATE_UPDATED;
-	}
+		if (midi_controller_update(&envelope_controller[i].sustain_time_controller))
+		{
+			synth_state->envelope[i] = STATE_UPDATED;
+		}
 
-	if (midi_controller_update(&envelope_release_time_controller))
-	{
-		synth_state->envelope = STATE_UPDATED;
+		if (midi_controller_update(&envelope_controller[i].release_time_controller))
+		{
+			synth_state->envelope[i] = STATE_UPDATED;
+		}
 	}
 
 	if (midi_controller_update(&lfo_state_controller))
@@ -311,22 +342,22 @@ void update_midi_controllers(synth_state_t* synth_state)
 	}
 }
 
-void update_envelope(envelope_t* envelope, object_id_t envelope_renderer_id)
+void update_envelope(envelope_t* envelope, object_id_t envelope_renderer_id, envelope_controller_t* envelope_controller)
 {
-	envelope->stages[ENVELOPE_STAGE_ATTACK].end_level 		= midi_controller_read(&envelope_attack_level_controller);
-	envelope->stages[ENVELOPE_STAGE_DECAY].start_level 		= midi_controller_read(&envelope_attack_level_controller);
-	envelope->stages[ENVELOPE_STAGE_ATTACK].duration 		= midi_controller_read(&envelope_attack_time_controller);
-	envelope->stages[ENVELOPE_STAGE_DECAY].end_level 		= midi_controller_read(&envelope_decay_level_controller);
-	envelope->stages[ENVELOPE_STAGE_SUSTAIN].start_level 	= midi_controller_read(&envelope_decay_level_controller);
-	envelope->stages[ENVELOPE_STAGE_SUSTAIN].end_level 		= midi_controller_read(&envelope_decay_level_controller);
-	envelope->stages[ENVELOPE_STAGE_DECAY].duration 		= midi_controller_read(&envelope_decay_time_controller);
-	envelope->stages[ENVELOPE_STAGE_SUSTAIN].duration 		= midi_controller_read(&envelope_sustain_time_controller);
-	envelope->stages[ENVELOPE_STAGE_RELEASE].duration 		= midi_controller_read(&envelope_release_time_controller);
+	envelope->stages[ENVELOPE_STAGE_ATTACK].end_level 		= midi_controller_read(&envelope_controller->attack_level_controller);
+	envelope->stages[ENVELOPE_STAGE_DECAY].start_level 		= midi_controller_read(&envelope_controller->attack_level_controller);
+	envelope->stages[ENVELOPE_STAGE_ATTACK].duration 		= midi_controller_read(&envelope_controller->attack_time_controller);
+	envelope->stages[ENVELOPE_STAGE_DECAY].end_level 		= midi_controller_read(&envelope_controller->decay_level_controller);
+	envelope->stages[ENVELOPE_STAGE_SUSTAIN].start_level 	= midi_controller_read(&envelope_controller->decay_level_controller);
+	envelope->stages[ENVELOPE_STAGE_SUSTAIN].end_level 		= midi_controller_read(&envelope_controller->decay_level_controller);
+	envelope->stages[ENVELOPE_STAGE_DECAY].duration 		= midi_controller_read(&envelope_controller->decay_time_controller);
+	envelope->stages[ENVELOPE_STAGE_SUSTAIN].duration 		= midi_controller_read(&envelope_controller->sustain_time_controller);
+	envelope->stages[ENVELOPE_STAGE_RELEASE].duration 		= midi_controller_read(&envelope_controller->release_time_controller);
 
 	gfx_event_t gfx_event;
 	gfx_event.type = GFX_EVENT_REFRESH;
 	gfx_event.flags = 0;
-	gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
+	gfx_event.receiver_id = envelope_renderer_id;
 	gfx_send_event(&gfx_event);
 }
 
@@ -352,9 +383,12 @@ void update_synth(synth_state_t* synth_state, synth_model_t* synth_model)
 		gfx_send_event(&gfx_event);
 	}
 
-	if (synth_state->envelope == STATE_UPDATED)
+	for (int i = 0; i < 2; i++)
 	{
-		update_envelope(&synth_model->envelope[0], ENVELOPE_RENDERER_ID);
+		if (synth_state->envelope[i] == STATE_UPDATED)
+		{
+			update_envelope(&synth_model->envelope[i], envelope_controller[i].renderer_id, &envelope_controller[i]);
+		}
 	}
 
 	if (synth_state->lfo == STATE_UPDATED)
@@ -475,6 +509,6 @@ int synth_controllers_load(const char* file_path, synth_model_t* synth_model)
 	return RESULT_OK;
 
 error:
-	pop_error_report("synth_controllers_save failed");
+	pop_error_report("synth_controllers_load failed");
 	return RESULT_ERROR;
 }

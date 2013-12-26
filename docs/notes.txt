@@ -3,13 +3,12 @@ Raspberry Pi Synth Project
 
 Underway
 ========
- * Indexed MIDI controls
+ * Indexed envelope editing:
+   * Add Q envelope to indexed edit
+   * Resolve how to tackle index change mismatch as physical controllers don't update (try relative controls?)  
  * Data-driven settings:
-   * DONE: 
-     * master volume & waveform as settings - midi control, rendering
-   * TO DO:
-     * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
-     * loading & saving of settings (replace MIDI controller output saving)
+   * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
+   * loading & saving of settings (replace MIDI controller output saving)
 
 To do next
 ==========
@@ -33,8 +32,10 @@ To do next
   
 Done
 ====
+ * Master volume & waveform as settings - midi control, rendering
  * Persisting MIDI controller outputs
  * Migrate standalone synth globals into central "synth model" structure
+ * Indexed MIDI controls
 
 Blog ideas
 ==========

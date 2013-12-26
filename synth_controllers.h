@@ -13,26 +13,7 @@
 typedef struct config_setting_t config_setting_t;
 typedef struct synth_model_t synth_model_t;
 
-extern midi_controller_t master_volume_controller;
-extern midi_controller_t waveform_controller;
 extern midi_controller_t oscilloscope_controller;
-
-extern midi_controller_t envelope_attack_time_controller;
-extern midi_controller_t envelope_attack_level_controller;
-extern midi_controller_t envelope_decay_time_controller;
-extern midi_controller_t envelope_decay_level_controller;
-extern midi_controller_t envelope_sustain_time_controller;
-extern midi_controller_t envelope_release_time_controller;
-
-extern midi_controller_t lfo_state_controller;
-extern midi_controller_t lfo_waveform_controller;
-extern midi_controller_t lfo_level_controller;
-extern midi_controller_t lfo_frequency_controller;
-
-extern midi_controller_t filter_state_controller;
-extern midi_controller_t filter_frequency_controller;
-extern midi_controller_t filter_q_controller;
-
 extern midi_controller_t exit_controller;
 extern midi_controller_t profile_controller;
 extern midi_controller_t screenshot_controller;
