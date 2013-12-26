@@ -8,12 +8,16 @@
 #include "synth_controllers.h"
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 #include "system_constants.h"
+#include "error_handler.h"
 #include "midi.h"
 #include "envelope.h"
 #include "waveform.h"
 #include "filter.h"
 #include "lfo.h"
+#include "gfx_event.h"
+#include "gfx_event_types.h"
 
 #define LFO_MIN_FREQUENCY		(FIXED_ONE / 10)
 #define LFO_MAX_FREQUENCY		(20 * FIXED_ONE)
@@ -50,6 +54,26 @@ midi_controller_t filter_q_controller;
 midi_controller_t exit_controller;
 midi_controller_t profile_controller;
 midi_controller_t screenshot_controller;
+
+static midi_controller_t* persistent_controllers[] =
+{
+	&master_volume_controller,
+	&waveform_controller,
+	&oscilloscope_controller,
+	&envelope_attack_time_controller,
+	&envelope_attack_level_controller,
+	&envelope_decay_time_controller,
+	&envelope_decay_level_controller,
+	&envelope_sustain_time_controller,
+	&envelope_release_time_controller,
+	&lfo_state_controller,
+	&lfo_waveform_controller,
+	&lfo_level_controller,
+	&lfo_frequency_controller,
+	&filter_state_controller,
+	&filter_frequency_controller,
+	&filter_q_controller,
+};
 
 static const char* CFG_TYPE_SETTING = "type";
 static const char* CFG_CONTINUOUS_CONTROLLER = "continuous";
@@ -351,4 +375,218 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 	}
 
 	return error_count == 0;
+}
+
+int synth_controllers_save(const char* file_path)
+{
+	FILE* file = fopen(file_path, "wb");
+	if (file != NULL)
+	{
+		size_t controller_count = sizeof(persistent_controllers) / sizeof(persistent_controllers[0]);
+
+		if (fwrite(&controller_count, sizeof(size_t), 1, file) != 1)
+		{
+			push_last_error();
+			fclose(file);
+			goto error;
+		}
+
+		for (size_t i = 0; i < controller_count; i++)
+		{
+			if (fwrite(&(persistent_controllers[i]->last_output), sizeof(size_t), 1, file) != 1)
+			{
+				push_last_error();
+				fclose(file);
+				goto error;
+			}
+		}
+
+		if (fclose(file) != 0)
+		{
+			push_last_error();
+			goto error;
+		}
+	}
+	else
+	{
+		push_last_error();
+		goto error;
+	}
+
+	return RESULT_OK;
+
+error:
+	pop_error_report("synth_controllers_save failed");
+	return RESULT_ERROR;
+}
+
+int synth_controllers_load(const char* file_path)
+{
+	FILE* file = fopen(file_path, "rb");
+	if (file != NULL)
+	{
+		size_t controller_count = sizeof(persistent_controllers) / sizeof(persistent_controllers[0]);
+		size_t loaded_controller_count;
+		if (fread(&loaded_controller_count, sizeof(size_t), 1, file) != 1)
+		{
+			push_last_error();
+			fclose(file);
+			goto error;
+		}
+
+		if (loaded_controller_count == controller_count)
+		{
+			for (size_t i = 0; i < controller_count; i++)
+			{
+				if (fread(&(persistent_controllers[i]->last_output), sizeof(size_t), 1, file) != 1)
+				{
+					push_last_error();
+					fclose(file);
+					goto error;
+				}
+			}
+		}
+		else
+		{
+			push_custom_error("saved controller count mismatch");
+			goto error;
+		}
+
+		if (fclose(file) != 0)
+		{
+			push_last_error();
+			goto error;
+		}
+	}
+	else
+	{
+		push_last_error();
+		goto error;
+	}
+
+	return RESULT_OK;
+
+error:
+	pop_error_report("synth_controllers_save failed");
+	return RESULT_ERROR;
+}
+
+extern envelope_t envelope;
+extern lfo_t lfo;
+extern setting_t*	setting_master_volume;
+extern setting_t*	setting_master_waveform;
+extern filter_definition_t global_filter_def;
+extern void tune_oscilloscope_to_note(int note);
+
+void process_synth_controllers()
+{
+	int param_value;
+
+	if (midi_controller_update_setting(&master_volume_controller, setting_master_volume))
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.flags = 0;
+		gfx_event.receiver_id = MASTER_VOLUME_RENDERER_ID;
+		gfx_send_event(&gfx_event);
+	}
+
+	if (midi_controller_update_setting(&waveform_controller, setting_master_waveform))
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.flags = 0;
+		gfx_event.receiver_id = MASTER_WAVEFORM_RENDERER_ID;
+		gfx_send_event(&gfx_event);
+	}
+
+	if (midi_controller_update(&oscilloscope_controller, &param_value))
+	{
+		tune_oscilloscope_to_note(param_value);
+	}
+
+	int envelope_updated = 0;
+
+	if (midi_controller_update(&envelope_attack_level_controller, &param_value))
+	{
+		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = param_value;
+		envelope.stages[ENVELOPE_STAGE_DECAY].start_level = param_value;
+		envelope_updated = 1;
+	}
+
+	if (midi_controller_update(&envelope_attack_time_controller, &param_value))
+	{
+		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = param_value;
+		envelope_updated = 1;
+	}
+
+	if (midi_controller_update(&envelope_decay_level_controller, &param_value))
+	{
+		envelope.stages[ENVELOPE_STAGE_DECAY].end_level = param_value;
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].start_level = param_value;
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].end_level = param_value;
+		envelope_updated = 1;
+	}
+
+	if (midi_controller_update(&envelope_decay_time_controller, &param_value))
+	{
+		envelope.stages[ENVELOPE_STAGE_DECAY].duration = param_value;
+		envelope_updated = 1;
+	}
+
+	if (midi_controller_update(&envelope_sustain_time_controller, &param_value))
+	{
+		envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = param_value;
+		envelope_updated = 1;
+	}
+
+	if (midi_controller_update(&envelope_release_time_controller, &param_value))
+	{
+		envelope.stages[ENVELOPE_STAGE_RELEASE].duration = param_value;
+		envelope_updated = 1;
+	}
+
+	if (envelope_updated)
+	{
+		gfx_event_t gfx_event;
+		gfx_event.type = GFX_EVENT_REFRESH;
+		gfx_event.flags = 0;
+		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
+		gfx_send_event(&gfx_event);
+	}
+
+	if (midi_controller_update(&lfo_state_controller, &param_value))
+	{
+		lfo.state = param_value;
+	}
+
+	if (midi_controller_update(&lfo_waveform_controller, &param_value))
+	{
+		lfo.oscillator.waveform = param_value;
+	}
+
+	if (midi_controller_update(&lfo_level_controller, &param_value))
+	{
+		lfo.oscillator.level = param_value;
+	}
+
+	if (midi_controller_update(&lfo_frequency_controller, &param_value))
+	{
+		lfo.oscillator.frequency = param_value;
+	}
+
+	if (midi_controller_update(&filter_state_controller, &param_value))
+	{
+		global_filter_def.type = param_value;
+	}
+
+	if (midi_controller_update(&filter_frequency_controller, &param_value))
+	{
+		global_filter_def.frequency = param_value;
+	}
+
+	if (midi_controller_update(&filter_q_controller, &param_value))
+	{
+		global_filter_def.q = param_value;
+	}
 }

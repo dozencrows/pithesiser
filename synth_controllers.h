@@ -36,4 +36,8 @@ extern midi_controller_t profile_controller;
 extern midi_controller_t screenshot_controller;
 
 extern int synth_controllers_initialise(int controller_channel, config_setting_t *config);
+extern int synth_controllers_save(const char* file_path);
+extern int synth_controllers_load(const char* file_path);
+extern void process_synth_controllers();
+
 #endif /* SYNTH_CONTROLLERS_H_ */

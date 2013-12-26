@@ -11,6 +11,9 @@
 #include <sys/types.h>
 #include <limits.h>
 
+#define RESULT_OK					0
+#define RESULT_ERROR				-1
+
 #define SYSTEM_SAMPLE_RATE			44100
 #define SYSTEM_FRAME_RATE			60
 
@@ -28,5 +31,13 @@ typedef int64_t	fixed_wide_t;
 #define BYTES_PER_CHANNEL	(sizeof(sample_t))
 #define CHANNELS_PER_SAMPLE	2
 #define BYTES_PER_SAMPLE	(BYTES_PER_CHANNEL * CHANNELS_PER_SAMPLE)
+
+#define WAVE_RENDERER_ID			1
+#define ENVELOPE_RENDERER_ID		2
+#define IMAGE_RENDERER_ID			3
+#define FREQ_ENVELOPE_RENDERER_ID	4
+#define Q_ENVELOPE_RENDERER_ID		5
+#define MASTER_VOLUME_RENDERER_ID	6
+#define MASTER_WAVEFORM_RENDERER_ID	7
 
 #endif /* SYSTEM_CONSTANTS_H_ */

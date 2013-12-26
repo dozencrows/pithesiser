@@ -42,14 +42,6 @@
 //-----------------------------------------------------------------------------------------------------------------------
 // Commons
 //
-#define WAVE_RENDERER_ID			1
-#define ENVELOPE_RENDERER_ID		2
-#define IMAGE_RENDERER_ID			3
-#define FREQ_ENVELOPE_RENDERER_ID	4
-#define Q_ENVELOPE_RENDERER_ID		5
-#define MASTER_VOLUME_RENDERER_ID	6
-#define MASTER_WAVEFORM_RENDERER_ID	7
-
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
 
@@ -66,6 +58,8 @@ static const char* CFG_DEVICES_MIDI_INPUT = "devices.midi.input";
 static const char* CFG_TESTS = "tests";
 static const char* CFG_CODE_TIMING_TESTS = "code_timing";
 static const char* CFG_SYSEX_INIT = "sysex.init_message";
+
+static const char* SETTINGS_FILE = ".pithesiser.cfg";
 
 config_t app_config;
 
@@ -329,6 +323,8 @@ void configure_midi()
 		exit(EXIT_FAILURE);
 	}
 
+	synth_controllers_load(SETTINGS_FILE);
+
 	config_setting_t *setting_sysex_init_message = config_lookup(&app_config, CFG_SYSEX_INIT);
 	if (setting_sysex_init_message != NULL)
 	{
@@ -383,121 +379,6 @@ void process_midi_events()
 				voice_stop_note(playing_voice);
 			}
 		}
-	}
-}
-
-extern void tune_oscilloscope_to_note(int note);
-
-void process_midi_controllers()
-{
-	int param_value;
-
-	if (midi_controller_update_setting(&master_volume_controller, setting_master_volume))
-	{
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_REFRESH;
-		gfx_event.flags = 0;
-		gfx_event.receiver_id = MASTER_VOLUME_RENDERER_ID;
-		gfx_send_event(&gfx_event);
-	}
-
-	if (midi_controller_update_setting(&waveform_controller, setting_master_waveform))
-	{
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_REFRESH;
-		gfx_event.flags = 0;
-		gfx_event.receiver_id = MASTER_WAVEFORM_RENDERER_ID;
-		gfx_send_event(&gfx_event);
-	}
-
-	if (midi_controller_update(&oscilloscope_controller, &param_value))
-	{
-		tune_oscilloscope_to_note(param_value);
-	}
-
-	int envelope_updated = 0;
-
-	if (midi_controller_update(&envelope_attack_level_controller, &param_value))
-	{
-		envelope.stages[ENVELOPE_STAGE_ATTACK].end_level = param_value;
-		envelope.stages[ENVELOPE_STAGE_DECAY].start_level = param_value;
-		envelope_updated = 1;
-	}
-
-	if (midi_controller_update(&envelope_attack_time_controller, &param_value))
-	{
-		envelope.stages[ENVELOPE_STAGE_ATTACK].duration = param_value;
-		envelope_updated = 1;
-	}
-
-	if (midi_controller_update(&envelope_decay_level_controller, &param_value))
-	{
-		envelope.stages[ENVELOPE_STAGE_DECAY].end_level = param_value;
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].start_level = param_value;
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].end_level = param_value;
-		envelope_updated = 1;
-	}
-
-	if (midi_controller_update(&envelope_decay_time_controller, &param_value))
-	{
-		envelope.stages[ENVELOPE_STAGE_DECAY].duration = param_value;
-		envelope_updated = 1;
-	}
-
-	if (midi_controller_update(&envelope_sustain_time_controller, &param_value))
-	{
-		envelope.stages[ENVELOPE_STAGE_SUSTAIN].duration = param_value;
-		envelope_updated = 1;
-	}
-
-	if (midi_controller_update(&envelope_release_time_controller, &param_value))
-	{
-		envelope.stages[ENVELOPE_STAGE_RELEASE].duration = param_value;
-		envelope_updated = 1;
-	}
-
-	if (envelope_updated)
-	{
-		gfx_event_t gfx_event;
-		gfx_event.type = GFX_EVENT_REFRESH;
-		gfx_event.flags = 0;
-		gfx_event.receiver_id = ENVELOPE_RENDERER_ID;
-		gfx_send_event(&gfx_event);
-	}
-
-	if (midi_controller_update(&lfo_state_controller, &param_value))
-	{
-		lfo.state = param_value;
-	}
-
-	if (midi_controller_update(&lfo_waveform_controller, &param_value))
-	{
-		lfo.oscillator.waveform = param_value;
-	}
-
-	if (midi_controller_update(&lfo_level_controller, &param_value))
-	{
-		lfo.oscillator.level = param_value;
-	}
-
-	if (midi_controller_update(&lfo_frequency_controller, &param_value))
-	{
-		lfo.oscillator.frequency = param_value;
-	}
-
-	if (midi_controller_update(&filter_state_controller, &param_value))
-	{
-		global_filter_def.type = param_value;
-	}
-
-	if (midi_controller_update(&filter_frequency_controller, &param_value))
-	{
-		global_filter_def.frequency = param_value;
-	}
-
-	if (midi_controller_update(&filter_q_controller, &param_value))
-	{
-		global_filter_def.q = param_value;
 	}
 }
 
@@ -678,7 +559,7 @@ void destroy_ui()
 
 void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 {
-	process_midi_controllers();
+	process_synth_controllers();
 	piglow_update(voice, VOICE_COUNT);
 }
 
@@ -769,6 +650,7 @@ void synth_main()
 		ProfilerStop();
 	}
 
+	synth_controllers_save(SETTINGS_FILE);
 	piglow_deinitialise();
 	gfx_deinitialise();
 	destroy_ui();

@@ -3,11 +3,20 @@ Raspberry Pi Synth Project
 
 Underway
 ========
- * Rendering:
-   * Of settings
+ * Persisting MIDI controller outputs
+ * Data-driven settings:
+   * DONE: 
+     * master volume & waveform as settings - midi control, rendering
+   * TO DO:
+     * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
+     * loading & saving of settings (replace MIDI controller output saving)
 
 To do next
 ==========
+* Indexed MIDI controls
+* Generalising envelope support
+* Modulation matrix to control LFO & envelope outputs to start with 
+* Secondary LFO support
 * Enrich filter controls
   * Optional voice pitch tracking
   * LFO control
