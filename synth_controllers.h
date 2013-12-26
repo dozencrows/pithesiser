@@ -9,8 +9,8 @@
 #define SYNTH_CONTROLLERS_H_
 
 #include "midi_controller.h"
-#include "libconfig.h"
 
+typedef struct config_setting_t config_setting_t;
 typedef struct synth_model_t synth_model_t;
 
 extern midi_controller_t master_volume_controller;

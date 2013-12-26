@@ -3,7 +3,7 @@ Raspberry Pi Synth Project
 
 Underway
 ========
- * Migrate standalone synth globals into central "synth model" structure
+ * Indexed MIDI controls
  * Data-driven settings:
    * DONE: 
      * master volume & waveform as settings - midi control, rendering
@@ -13,10 +13,9 @@ Underway
 
 To do next
 ==========
-* Modularise synth model init and processing
-* Indexed MIDI controls
 * Generalising envelope support
 * Modulation matrix to control LFO & envelope outputs to start with 
+* Modularise synth model init and processing
 * Secondary LFO support
 * Enrich filter controls
   * Optional voice pitch tracking
@@ -35,6 +34,7 @@ To do next
 Done
 ====
  * Persisting MIDI controller outputs
+ * Migrate standalone synth globals into central "synth model" structure
 
 Blog ideas
 ==========

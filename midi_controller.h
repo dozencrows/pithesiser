@@ -21,9 +21,11 @@ typedef enum
 
 typedef struct midi_controller_t
 {
-	controller_type_t	type;
-	int					midi_channel;
-	int					midi_cc[2];
+	controller_type_t			type;
+	int							midi_channel;
+	int							midi_cc[2];
+	struct midi_controller_t*	selector_control;
+	int							selector_value;
 	union
 	{
 		struct

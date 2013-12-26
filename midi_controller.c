@@ -154,6 +154,14 @@ int midi_controller_update_and_read(midi_controller_t* controller, int* value)
 {
 	int changed = 0;
 
+	if (controller->selector_control != NULL)
+	{
+		if (midi_controller_read(controller->selector_control) != controller->selector_value)
+		{
+			return changed;
+		}
+	}
+
 	switch (controller->type)
 	{
 		case CONTINUOUS:
