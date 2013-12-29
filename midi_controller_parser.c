@@ -15,6 +15,7 @@
 
 static const char* CFG_TYPE_SETTING = "type";
 static const char* CFG_CONTINUOUS_CONTROLLER = "continuous";
+static const char* CFG_CONTINUOUS_RELATIVE_CONTROLLER = "continuous_relative";
 static const char* CFG_CONTINUOUS_WITH_HELD_CONTROLLER = "continuous_with_held";
 static const char* CFG_TOGGLE_CONTROLLER = "toggle";
 static const char* CFG_EVENT_CONTROLLER = "event";
@@ -140,6 +141,12 @@ static int parse_continuous_controller(config_setting_t *config, midi_controller
 	return parse_midi_max_min(config, controller);
 }
 
+static int parse_continuous_relative_controller(config_setting_t *config, midi_controller_t *controller)
+{
+	controller->type = CONTINUOUS_RELATIVE;
+	return parse_midi_cc(config, controller);
+}
+
 static int parse_continuous_with_end_controller(config_setting_t *config, midi_controller_t *controller)
 {
 	controller->type = CONTINUOUS_WITH_HELD;
@@ -185,6 +192,10 @@ int midi_controller_parse_config(config_setting_t *config, midi_controller_t *co
 	if (strcasecmp(type_setting, CFG_CONTINUOUS_CONTROLLER) == 0)
 	{
 		return parse_continuous_controller(config, controller);
+	}
+	else if (strcasecmp(type_setting, CFG_CONTINUOUS_RELATIVE_CONTROLLER) == 0)
+	{
+		return parse_continuous_relative_controller(config, controller);
 	}
 	else if (strcasecmp(type_setting, CFG_CONTINUOUS_WITH_HELD_CONTROLLER) == 0)
 	{

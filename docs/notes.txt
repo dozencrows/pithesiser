@@ -36,6 +36,7 @@ Done
  * Persisting MIDI controller outputs
  * Migrate standalone synth globals into central "synth model" structure
  * Indexed MIDI controls
+ * Relative continuous controller support
 
 Blog ideas
 ==========
@@ -418,6 +419,13 @@ each synthesis packet.
 * LFO application to pitch is exponential (2 raised to LFO amplitude)
 * Useful to half both full waveforms (for pitch mostly) and positive only (biased) waveforms (for volume).
 * LFO is reset when no notes are playing (or reset on first note after silence) but stays uniform for all notes when playing.
+
+MIDI Notes
+----------
+* Relative controller modes:
+  * rel 1: 3rd byte is 0x01 for increment, 0x7f for decrement (2's complement in 7 bits)
+  * rel 2: 3rd byte is 0x41 for increment, 0x3f for decrement (offset from $40)
+  * rel 3: 3rd byte is 0x01 for increment, 0x41 for decrement (bit 6 = sign, bits 0-5 = value)
 
 Development Notes
 =================

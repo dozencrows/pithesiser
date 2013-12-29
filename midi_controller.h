@@ -15,6 +15,7 @@ typedef enum
 	NONE = -1,
 	CONTINUOUS,
 	CONTINUOUS_WITH_HELD,
+	CONTINUOUS_RELATIVE,
 	TOGGLE,
 	EVENT
 } controller_type_t;
