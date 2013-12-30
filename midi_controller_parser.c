@@ -17,11 +17,13 @@ static const char* CFG_TYPE_SETTING = "type";
 static const char* CFG_CONTINUOUS_CONTROLLER = "continuous";
 static const char* CFG_CONTINUOUS_RELATIVE_CONTROLLER = "continuous_relative";
 static const char* CFG_CONTINUOUS_WITH_HELD_CONTROLLER = "continuous_with_held";
+static const char* CFG_CONTINUOUS_RELATIVE_WITH_HELD_CONTROLLER = "continuous_relative_with_held";
 static const char* CFG_TOGGLE_CONTROLLER = "toggle";
 static const char* CFG_EVENT_CONTROLLER = "event";
 static const char* CFG_MIN = "min";
 static const char* CFG_MAX = "max";
 static const char* CFG_THRESHOLD = "threshold";
+static const char* CFG_DELTA_SCALE = "delta_scale";
 
 void midi_controller_parser_report_error(config_setting_t *setting, const char* message, ...)
 {
@@ -130,6 +132,27 @@ static int parse_midi_threshold(config_setting_t *config, midi_controller_t *con
 	return RESULT_OK;
 }
 
+static int parse_delta_scale(config_setting_t *config, midi_controller_t *controller)
+{
+	config_setting_t* delta_scale_setting = config_setting_get_member(config, CFG_DELTA_SCALE);
+
+	if (delta_scale_setting != NULL)
+	{
+		int delta_scale = config_setting_get_int(delta_scale_setting);
+		if (delta_scale <= 0)
+		{
+			midi_controller_parser_report_error(config, "Missing or invalid delta scale");
+			return RESULT_ERROR;
+		}
+		else
+		{
+			controller->delta_scale = delta_scale;
+		}
+	}
+
+	return RESULT_OK;
+}
+
 static int parse_continuous_controller(config_setting_t *config, midi_controller_t *controller)
 {
 	controller->type = CONTINUOUS;
@@ -144,7 +167,12 @@ static int parse_continuous_controller(config_setting_t *config, midi_controller
 static int parse_continuous_relative_controller(config_setting_t *config, midi_controller_t *controller)
 {
 	controller->type = CONTINUOUS_RELATIVE;
-	return parse_midi_cc(config, controller);
+	if (parse_midi_cc(config, controller) != RESULT_OK)
+	{
+		return RESULT_ERROR;
+	}
+
+	return parse_delta_scale(config, controller);
 }
 
 static int parse_continuous_with_end_controller(config_setting_t *config, midi_controller_t *controller)
@@ -156,6 +184,17 @@ static int parse_continuous_with_end_controller(config_setting_t *config, midi_c
 	}
 
 	return parse_midi_max_min(config, controller);
+}
+
+static int parse_continuous_relative_with_end_controller(config_setting_t *config, midi_controller_t *controller)
+{
+	controller->type = CONTINUOUS_RELATIVE_WITH_HELD;
+	if (parse_midi_cc(config, controller) != RESULT_OK)
+	{
+		return RESULT_ERROR;
+	}
+
+	return parse_delta_scale(config, controller);
 }
 
 static int parse_toggle_controller(config_setting_t *config, midi_controller_t *controller)
@@ -200,6 +239,10 @@ int midi_controller_parse_config(config_setting_t *config, midi_controller_t *co
 	else if (strcasecmp(type_setting, CFG_CONTINUOUS_WITH_HELD_CONTROLLER) == 0)
 	{
 		return parse_continuous_with_end_controller(config, controller);
+	}
+	else if (strcasecmp(type_setting, CFG_CONTINUOUS_RELATIVE_WITH_HELD_CONTROLLER) == 0)
+	{
+		return parse_continuous_relative_with_end_controller(config, controller);
 	}
 	else if (strcasecmp(type_setting, CFG_TOGGLE_CONTROLLER) == 0)
 	{

@@ -64,6 +64,24 @@ static int process_continuous_controller(midi_controller_t* controller, int* cha
 	return controller->last_output;
 }
 
+static int relative_controller_delta(int midi_delta, midi_controller_t* controller)
+{
+	int controller_delta;
+
+	if (controller->midi_cc[1] != -1)
+	{
+		const int SIGN_EXTEND_14BITS_M = 1U << 13;
+		controller_delta = (midi_delta ^ SIGN_EXTEND_14BITS_M) - SIGN_EXTEND_14BITS_M;
+	}
+	else
+	{
+		const int SIGN_EXTEND_7BITS_M = 1U << 6;
+		controller_delta = (midi_delta ^ SIGN_EXTEND_7BITS_M) - SIGN_EXTEND_7BITS_M;
+	}
+
+	return controller_delta * controller->delta_scale;
+}
+
 static int process_continuous_relative_controller(midi_controller_t* controller, int* changed)
 {
 	int midi_delta;
@@ -71,20 +89,9 @@ static int process_continuous_relative_controller(midi_controller_t* controller,
 	if (read_midi_controller(controller, &midi_delta))
 	{
 		*changed = 1;
-		int controller_delta;
 
-		if (controller->midi_cc[1] != -1)
-		{
-			const int SIGN_EXTEND_14BITS_M = 1U << 13;
-			controller_delta = (midi_delta ^ SIGN_EXTEND_14BITS_M) - SIGN_EXTEND_14BITS_M;
-		}
-		else
-		{
-			const int SIGN_EXTEND_7BITS_M = 1U << 6;
-			controller_delta = (midi_delta ^ SIGN_EXTEND_7BITS_M) - SIGN_EXTEND_7BITS_M;
-		}
+		controller->last_output += relative_controller_delta(midi_delta, controller);
 
-		controller->last_output += controller_delta;
 		if (controller->last_output < controller->output_min)
 		{
 			controller->last_output = controller->output_min;
@@ -98,7 +105,35 @@ static int process_continuous_relative_controller(midi_controller_t* controller,
 	return controller->last_output;
 }
 
-static int process_continuous_controller_with_end(midi_controller_t* controller, int* changed)
+static int process_continuous_relative_controller_with_held(midi_controller_t* controller, int* changed)
+{
+	int midi_delta;
+
+	if (read_midi_controller(controller, &midi_delta))
+	{
+		*changed = 1;
+
+		if (controller->last_output == controller->output_held)
+		{
+			controller->last_output = controller->output_max;
+		}
+
+		controller->last_output += relative_controller_delta(midi_delta, controller);
+
+		if (controller->last_output < controller->output_min)
+		{
+			controller->last_output = controller->output_min;
+		}
+		else if (controller->last_output > controller->output_max)
+		{
+			controller->last_output = controller->output_held;
+		}
+	}
+
+	return controller->last_output;
+}
+
+static int process_continuous_controller_with_held(midi_controller_t* controller, int* changed)
 {
 	int midi_value;
 
@@ -178,6 +213,7 @@ void midi_controller_create(midi_controller_t* controller, const char* name)
 	controller->midi_cc[0] = -1;
 	controller->midi_cc[1] = -1;
 	controller->type = NONE;
+	controller->delta_scale	= 1;
 }
 
 void midi_controller_init(midi_controller_t* controller)
@@ -213,7 +249,13 @@ int midi_controller_update_and_read(midi_controller_t* controller, int* value)
 
 		case CONTINUOUS_WITH_HELD:
 		{
-			*value = process_continuous_controller_with_end(controller, &changed);
+			*value = process_continuous_controller_with_held(controller, &changed);
+			break;
+		}
+
+		case CONTINUOUS_RELATIVE_WITH_HELD:
+		{
+			*value = process_continuous_relative_controller_with_held(controller, &changed);
 			break;
 		}
 

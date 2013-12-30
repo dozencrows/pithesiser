@@ -16,6 +16,7 @@ typedef enum
 	CONTINUOUS,
 	CONTINUOUS_WITH_HELD,
 	CONTINUOUS_RELATIVE,
+	CONTINUOUS_RELATIVE_WITH_HELD,
 	TOGGLE,
 	EVENT
 } controller_type_t;
@@ -40,6 +41,7 @@ typedef struct midi_controller_t
 	int					output_min;
 	int					output_max;
 	int					output_held;
+	int					delta_scale;
 	int					last_output;
 } midi_controller_t;
 
