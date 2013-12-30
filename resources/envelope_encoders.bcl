@@ -1,0 +1,38 @@
+$rev R1
+$encoder 33
+ .easypar CC 1 81 0 127 relative-1
+ .showvalue off
+ .mode off
+ .resolution 96 768 1536 3072
+ .default 0
+$encoder 34
+ .easypar CC 1 82 0 127 relative-1
+ .showvalue off
+ .mode off
+ .resolution 96 768 1536 3072
+ .default 0
+$encoder 35
+ .easypar CC 1 83 0 127 relative-1
+ .showvalue off
+ .mode off
+ .resolution 96 768 1536 3072
+ .default 0
+$encoder 36
+ .easypar CC 1 84 0 127 relative-1
+ .showvalue off
+ .mode off
+ .resolution 96 768 1536 3072
+ .default 0
+$encoder 37
+ .easypar CC 1 85 0 127 relative-1
+ .showvalue off
+ .mode off
+ .resolution 96 768 1536 3072
+ .default 0
+$encoder 38
+ .easypar CC 1 86 0 127 relative-1
+ .showvalue off
+ .mode off
+ .resolution 96 768 1536 3072
+ .default 0
+$end
