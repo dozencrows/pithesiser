@@ -18,6 +18,8 @@ typedef struct setting_t setting_t;
 typedef struct voice_t voice_t;
 
 // Types and values
+#define SYNTH_ENVELOPE_COUNT	3
+
 typedef struct synth_model_t
 {
 	// Settings
@@ -25,7 +27,7 @@ typedef struct synth_model_t
 	setting_t*	setting_master_waveform;
 
 	// Components
-	envelope_t 			envelope[3];
+	envelope_t 			envelope[SYNTH_ENVELOPE_COUNT];
 	lfo_t 				lfo;
 	filter_definition_t	global_filter_def;
 
@@ -42,7 +44,7 @@ typedef struct synth_state_t
 {
 	unsigned char	volume;
 	unsigned char	waveform;
-	unsigned char	envelope[3];
+	unsigned char	envelope[SYNTH_ENVELOPE_COUNT];
 	unsigned char	lfo;
 	unsigned char	filter;
 } synth_state_t;

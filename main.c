@@ -537,6 +537,9 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 // Synth model
 //
 
+// Certain values in here are also set on the relative controller defaults in synth_controllers.c - this should
+// ultimately be reworked so that the default values are only specified in one place (ideally config files) and
+// propagate through to the right parts of the synth model during initialisation.
 envelope_stage_t envelope_stages[4] =
 {
 	{ 0,				LEVEL_MAX,		100, 			},
@@ -558,7 +561,7 @@ envelope_stage_t q_envelope_stages[4] =
 	{ FIXED_ONE / 100,	FIXED_ONE * .75,	1000, 			},
 	{ FIXED_ONE * .75,	FIXED_ONE * .75,	1				},
 	{ FIXED_ONE * .75,	FIXED_ONE * .75,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,	FIXED_HALF,	200				}
+	{ LEVEL_CURRENT,	FIXED_ONE / 100,	200				}
 };
 
 void synth_initialise()

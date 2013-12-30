@@ -3,17 +3,18 @@ Raspberry Pi Synth Project
 
 Underway
 ========
- * Indexed envelope editing:
-   * Add Q envelope to indexed edit
-   * Resolve how to tackle index change mismatch as physical controllers don't update (try relative controls?)  
  * Data-driven settings:
    * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
    * loading & saving of settings (replace MIDI controller output saving)
+   * default values for settings, when they're set and how the results are driven to the synth model at startup
 
 To do next
 ==========
-* Generalising envelope support
-* Modulation matrix to control LFO & envelope outputs to start with 
+* Modulation matrix to map LFO & envelope outputs onto different parameters
+  * Need "gearing" to match normalised output value onto correct range & scale for parameters 
+* Generalising envelope support - including:
+  * normalised scale for editing
+  * adjustable start and end values
 * Modularise synth model init and processing
 * Secondary LFO support
 * Enrich filter controls
@@ -36,7 +37,9 @@ Done
  * Persisting MIDI controller outputs
  * Migrate standalone synth globals into central "synth model" structure
  * Indexed MIDI controls
+   * Indexed envelope editing for 3 envelopes (volume, filter freq, filter q)
  * Relative continuous controller support
+ * Relative continuous controllers for all envelope controls  
 
 Blog ideas
 ==========

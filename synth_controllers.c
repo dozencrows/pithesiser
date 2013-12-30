@@ -45,7 +45,7 @@ midi_controller_t master_volume_controller;
 midi_controller_t waveform_controller;
 midi_controller_t oscilloscope_controller;
 
-envelope_controller_t envelope_controller[3];
+envelope_controller_t envelope_controller[SYNTH_ENVELOPE_COUNT];
 
 midi_controller_t lfo_state_controller;
 midi_controller_t lfo_waveform_controller;
@@ -77,6 +77,12 @@ static midi_controller_t* persistent_controllers[] =
 	&envelope_controller[1].decay_level_controller,
 	&envelope_controller[1].sustain_time_controller,
 	&envelope_controller[1].release_time_controller,
+	&envelope_controller[2].attack_time_controller,
+	&envelope_controller[2].attack_level_controller,
+	&envelope_controller[2].decay_time_controller,
+	&envelope_controller[2].decay_level_controller,
+	&envelope_controller[2].sustain_time_controller,
+	&envelope_controller[2].release_time_controller,
 	&lfo_state_controller,
 	&lfo_waveform_controller,
 	&lfo_level_controller,
@@ -85,6 +91,43 @@ static midi_controller_t* persistent_controllers[] =
 	&filter_frequency_controller,
 	&filter_q_controller,
 };
+
+typedef struct synth_controller_default_t {
+	midi_controller_t*	controller;
+	int					default_value;
+} synth_controller_default_t;
+
+// These mirror values defined in main.c - really this should be the source of default values.
+// Ultimately defaults should be defined in a config file.
+static synth_controller_default_t controller_defaults[] =
+{
+	&envelope_controller[0].attack_time_controller,		100,
+	&envelope_controller[0].attack_level_controller,	LEVEL_MAX,
+	&envelope_controller[0].decay_time_controller,		250,
+	&envelope_controller[0].decay_level_controller,		LEVEL_MAX / 2,
+	&envelope_controller[0].sustain_time_controller,	DURATION_HELD,
+	&envelope_controller[0].release_time_controller,	100,
+	&envelope_controller[1].attack_time_controller,		1000,
+	&envelope_controller[1].attack_level_controller,	FILTER_FIXED_ONE * 12000,
+	&envelope_controller[1].decay_time_controller,		1,
+	&envelope_controller[1].decay_level_controller,		FILTER_FIXED_ONE * 12000,
+	&envelope_controller[1].sustain_time_controller,	DURATION_HELD,
+	&envelope_controller[1].release_time_controller,	200,
+	&envelope_controller[2].attack_time_controller,		1000,
+	&envelope_controller[2].attack_level_controller,	FIXED_ONE * .75,
+	&envelope_controller[2].decay_time_controller,		1,
+	&envelope_controller[2].decay_level_controller,		FIXED_ONE * .75,
+	&envelope_controller[2].sustain_time_controller,	DURATION_HELD,
+	&envelope_controller[2].release_time_controller,	200
+};
+
+static void set_controller_defaults()
+{
+	for (int i = 0; i < sizeof(controller_defaults) / sizeof(controller_defaults[0]); i++)
+	{
+		controller_defaults[i].controller->last_output = controller_defaults[i].default_value;
+	}
+}
 
 static void master_volume_controller_set_output(midi_controller_t *controller)
 {
@@ -112,8 +155,14 @@ static void volume_envelope_level_controller_set_output(midi_controller_t *contr
 
 static void filter_freq_envelope_level_controller_set_output(midi_controller_t *controller)
 {
-	controller->output_min = 0;
-	controller->output_max = FILTER_FIXED_ONE * 18000;
+	controller->output_min = FILTER_MIN_FREQUENCY;
+	controller->output_max = FILTER_MAX_FREQUENCY;
+}
+
+static void filter_q_envelope_level_controller_set_output(midi_controller_t *controller)
+{
+	controller->output_min = FILTER_MIN_Q;
+	controller->output_max = FILTER_MAX_Q;
 }
 
 static void envelope_time_controller_set_output(midi_controller_t *controller)
@@ -195,6 +244,12 @@ controller_parser_t controller_parser[] =
 	{ "filter_freq_envelope_decay_level", &envelope_controller[1].decay_level_controller, filter_freq_envelope_level_controller_set_output },
 	{ "filter_freq_envelope_sustain_time", &envelope_controller[1].sustain_time_controller, envelope_time_held_controller_set_output },
 	{ "filter_freq_envelope_release_time", &envelope_controller[1].release_time_controller, envelope_time_controller_set_output },
+	{ "filter_q_envelope_attack_time", &envelope_controller[2].attack_time_controller, envelope_time_controller_set_output },
+	{ "filter_q_envelope_attack_level", &envelope_controller[2].attack_level_controller, filter_q_envelope_level_controller_set_output },
+	{ "filter_q_envelope_decay_time", &envelope_controller[2].decay_time_controller, envelope_time_controller_set_output },
+	{ "filter_q_envelope_decay_level", &envelope_controller[2].decay_level_controller, filter_q_envelope_level_controller_set_output },
+	{ "filter_q_envelope_sustain_time", &envelope_controller[2].sustain_time_controller, envelope_time_held_controller_set_output },
+	{ "filter_q_envelope_release_time", &envelope_controller[2].release_time_controller, envelope_time_controller_set_output },
 	{ "lfo_state", &lfo_state_controller, lfo_state_controller_set_output },
 	{ "lfo_waveform_select", &lfo_waveform_controller, lfo_waveform_controller_set_output },
 	{ "lfo_frequency", &lfo_frequency_controller, lfo_frequency_controller_set_output },
@@ -256,6 +311,8 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 		}
 	}
 
+	set_controller_defaults();
+
 	return error_count == 0;
 }
 
@@ -273,7 +330,7 @@ void update_midi_controllers(synth_state_t* synth_state)
 		synth_state->waveform = STATE_UPDATED;
 	}
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < SYNTH_ENVELOPE_COUNT; i++)
 	{
 		if (midi_controller_update(&envelope_controller[i].attack_level_controller))
 		{
@@ -383,7 +440,7 @@ void update_synth(synth_state_t* synth_state, synth_model_t* synth_model)
 		gfx_send_event(&gfx_event);
 	}
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < SYNTH_ENVELOPE_COUNT; i++)
 	{
 		if (synth_state->envelope[i] == STATE_UPDATED)
 		{
