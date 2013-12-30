@@ -88,17 +88,20 @@ static int process_continuous_relative_controller(midi_controller_t* controller,
 
 	if (read_midi_controller(controller, &midi_delta))
 	{
-		*changed = 1;
-
-		controller->last_output += relative_controller_delta(midi_delta, controller);
-
-		if (controller->last_output < controller->output_min)
+		if (midi_delta != 0)
 		{
-			controller->last_output = controller->output_min;
-		}
-		else if (controller->last_output > controller->output_max)
-		{
-			controller->last_output = controller->output_max;
+			*changed = 1;
+
+			controller->last_output += relative_controller_delta(midi_delta, controller);
+
+			if (controller->last_output < controller->output_min)
+			{
+				controller->last_output = controller->output_min;
+			}
+			else if (controller->last_output > controller->output_max)
+			{
+				controller->last_output = controller->output_max;
+			}
 		}
 	}
 
@@ -111,22 +114,25 @@ static int process_continuous_relative_controller_with_held(midi_controller_t* c
 
 	if (read_midi_controller(controller, &midi_delta))
 	{
-		*changed = 1;
-
-		if (controller->last_output == controller->output_held)
+		if (midi_delta != 0)
 		{
-			controller->last_output = controller->output_max;
-		}
+			*changed = 1;
 
-		controller->last_output += relative_controller_delta(midi_delta, controller);
+			if (controller->last_output == controller->output_held)
+			{
+				controller->last_output = controller->output_max;
+			}
 
-		if (controller->last_output < controller->output_min)
-		{
-			controller->last_output = controller->output_min;
-		}
-		else if (controller->last_output > controller->output_max)
-		{
-			controller->last_output = controller->output_held;
+			controller->last_output += relative_controller_delta(midi_delta, controller);
+
+			if (controller->last_output < controller->output_min)
+			{
+				controller->last_output = controller->output_min;
+			}
+			else if (controller->last_output > controller->output_max)
+			{
+				controller->last_output = controller->output_held;
+			}
 		}
 	}
 
