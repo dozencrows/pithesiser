@@ -10,11 +10,11 @@ Underway
 
 To do next
 ==========
-* Modulation matrix to map LFO & envelope outputs onto different parameters
-  * Need "gearing" to match normalised output value onto correct range & scale for parameters 
 * Generalising envelope support - including:
   * normalised scale for editing
   * adjustable start and end values
+* Modulation matrix to map LFO & envelope outputs onto different parameters
+* Launchpad S MIDI control over modulation matrix 
 * Modularise synth model init and processing
 * Secondary LFO support
 * Enrich filter controls
@@ -360,6 +360,15 @@ Basic operation:
     * Starting level: 0-1
     * Ending level:   0-1
     * Duration:		  0 to infinity
+
+Generalising envelopes:
+* Normalised levels in definitions - affects:
+  * Rendering: envelope peak value controls scale already.
+  * Controllers: output min/max for all envelope level controls should just be set to normalised range. 
+  * Model update: inside voice_update - apply scaling to normalised values here.
+* Replace explicit rendering IDs with generalised names
+* Replace explicit binding of envelopes to model parameters with modulation matrix
+  * current binding is on voice_init call
     
 Rendering Notes
 ---------------
@@ -429,6 +438,87 @@ MIDI Notes
   * rel 1: 3rd byte is 0x01 for increment, 0x7f for decrement (2's complement in 7 bits)
   * rel 2: 3rd byte is 0x41 for increment, 0x3f for decrement (offset from $40)
   * rel 3: 3rd byte is 0x01 for increment, 0x41 for decrement (bit 6 = sign, bits 0-5 = value)
+
+Modulation Matrix Notes
+-----------------------
+First pass:
+  * Sources: LFO, envelope generators x 3
+  * Sinks: voice amplitude, voice pitch, filter frequency, filter Q, LFO amplitude, LFO frequency 
+  * Source notes:
+    * LFO - varies sink around base value
+    * Envelope - offsets sink base value directly
+    * Definition:
+      * name
+      * generation function (generates normalised value for source at given time)
+      * application function (calculates value for a given sink)
+  * Sink notes
+    * Definition:
+      * name
+      * base level value
+      * peak level value
+      * base level function (calculates base value for sink at given time)
+      * model update function (sets value into appropriate part of synth model)
+  * Operation
+    * sources are iterated and generation functions called
+    * sinks are iterated and base level functions are called
+    * connected source-sink pairs are iterated:
+      * source application function called for sink
+      * resulting value passed to sink model update function
+  * Data structures
+    * source definitions
+    * sink definitions
+    * source-sink connections
+    * source generated value set
+    * sink base value set
+  * Persistence
+    * Save and load the set of source-sink connections
+    * Use text files & libconfig syntax - can parse on synth startup
+  * MIDI control via Launchpad S
+    * Column = source, row = sink
+      * Define source/column and sink/row mappings in config file
+    * Initialisation
+      * Parse config file to register source names with columns, sink names with rows
+      * Send command to turn off all LEDs
+      * Iterate source-sink connections, determining note number (via column & row) and
+        send note on with velocity to set colour - e.g. 
+        * 0x90 0xnn 0x0c for off
+        * 0x90 0xnn 0x3c for bright green
+        * 0x90 0xnn 0x0f for bright red
+        * 0x90 0xnn 0x2f for bright orange
+        * 0x90 0xnn 0x3e for bright yellow
+    * When button pressed (note on event with velocity 127)
+      * Convert note value to column & row: row = note / 16, column = note % 16
+      * Determine source & sink names
+      * If connection for the pair exists
+        * Delete connection
+        * Send note on to turn off LED (see above)
+      * Else
+        * Create connection
+        * Send note on to turn on LED (see above) 
+  * Challenges
+    * Playing notes as sinks means that actual true number of sinks is variable - this needs to be handled
+      in the general voice update/matrix update code.
+    * Significant change to voice processing code
+      * Currently envelope stepping, envelope application, lfo application are integral in voice_update - will
+        need to split this and voice update apart.
+      * Suggest piecewise approach - start with say just LFO as source, and note volume and pitch as sinks.
+        Then move on to envelopes and filters.
+      * Could consider matrix modulation for envelopes as assignment of envelope definitions to envelope
+        instances owned by a sink... abstracts away the variable voice count, but does make sink code
+        a bit more complex...
+          * Each sink needs envelope instance(s), code to init/step/apply those instances.
+          * "No envelope" will be handled automatically, as no source-sink pair will be called.
+          * Breaks the generic model of the matrix - have two cases, one where direct value is passed source->sink, one where a
+            definition (structure) is passed instead.
+        Alternative would be to have the concept of an "array" source/sink pairing to support voices
+          * Iterate array pair-wise to pass single value per pair directly from source to sink.
+          * Array needs to be dynamic to support voices in different states.
+          * Sink activation and deactivation needs to update state of source arrays to match.
+          * Sources need to maintain instance data for each array entry.
+    * Making matrix changes smooth as possible while notes are playing
+      * E.g.:
+        * reset & restart envelope when turning envelope on
+        * resetting envelope effects when turning envelope off (hopefully base value calculation will do this)
 
 Development Notes
 =================
