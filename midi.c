@@ -30,7 +30,8 @@
 
 #define CHANNEL_COUNT		16
 #define MIDI_NOTE_COUNT		128
-#define SYSEX_SLEEP_DELAY	200		// Sleep time in ms after sending sysex on one channel to help read thread keep up
+#define SYSEX_SLEEP_DELAY	200		// Sleep time in us after sending sysex on one channel to help read thread keep up
+#define SEND_SLEEP_DELAY	200
 
 static const char* MIDI_SYSEX_WRITE_ERROR = "MIDI sysex write error";
 static const char* MIDI_SEND_ERROR = "MIDI send error";
@@ -80,7 +81,7 @@ midi_event_t midi_event_buffer[MIDI_EVENT_BUFFER_SIZE];
 int midi_event_buffer_write_index = 0;
 int midi_event_buffer_read_index = 0;
 
-void midi_push_event(unsigned char type, size_t data_length, unsigned char *data)
+void midi_push_event(int handle, unsigned char type, size_t data_length, unsigned char *data)
 {
 	pthread_mutex_lock(&midi_buffer_lock);
 
@@ -98,6 +99,7 @@ void midi_push_event(unsigned char type, size_t data_length, unsigned char *data
 			copy_size = MIDI_EVENT_DATA_SIZE;
 		}
 
+		midi_event_buffer[midi_event_buffer_write_index].device_handle = handle;
 		midi_event_buffer[midi_event_buffer_write_index].type = type;
 		memcpy(midi_event_buffer[midi_event_buffer_write_index].data, data, copy_size);
 		midi_event_buffer_write_index = next_write_index;
@@ -174,7 +176,7 @@ static void midi_read_packet(int handle)
 		unsigned char control_data[2];
 		if (read(handle, &control_data, sizeof(control_data)) == sizeof(control_data))
 		{
-			midi_push_event(control_byte, sizeof(control_data), control_data);
+			midi_push_event(handle, control_byte, sizeof(control_data), control_data);
 		}
 	}
 }
@@ -304,7 +306,7 @@ void midi_send_sysex(const char *sysex_message, size_t message_length)
 	}
 }
 
-void midi_send(unsigned char command, unsigned char channel, unsigned char data0, unsigned char data1)
+void midi_send(int device_handle, unsigned char command, unsigned char channel, unsigned char data0, unsigned char data1)
 {
 	unsigned char buffer[3];
 
@@ -312,11 +314,27 @@ void midi_send(unsigned char command, unsigned char channel, unsigned char data0
 	buffer[1] = data0;
 	buffer[2] = data1;
 
-	for (int i = 0; i < midi_handle_count; i++)
+	if (device_handle == MIDI_ALL_DEVICES)
 	{
-		if (write(midi_handle[i], buffer, sizeof(buffer)) != sizeof(buffer))
+		for (int i = 0; i < midi_handle_count; i++)
+		{
+			if (write(midi_handle[i], buffer, sizeof(buffer)) != sizeof(buffer))
+			{
+				perror(MIDI_SEND_ERROR);
+			}
+
+			usleep(SYSEX_SLEEP_DELAY);
+		}
+	}
+	else
+	{
+		if (write(device_handle, buffer, sizeof(buffer)) != sizeof(buffer))
 		{
 			perror(MIDI_SEND_ERROR);
+		}
+		else
+		{
+			usleep(SEND_SLEEP_DELAY);
 		}
 	}
 }

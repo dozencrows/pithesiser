@@ -332,7 +332,7 @@ void process_midi_events()
 		unsigned char event_type = midi_event.type & 0xf0;
 		int channel = midi_event.type & 0x0f;
 
-		mod_matrix_controller_process_midi(channel, event_type, midi_event.data[0], midi_event.data[1]);
+		mod_matrix_controller_process_midi(midi_event.device_handle, channel, event_type, midi_event.data[0], midi_event.data[1]);
 
 		if (event_type == 0x90)
 		{

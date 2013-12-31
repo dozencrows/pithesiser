@@ -110,12 +110,12 @@ int mod_matrix_controller_initialise(config_setting_t *config)
 	}
 
 	// Turn off all Launchpad LEDs.
-	midi_send(0xb0, midi_channel, 0, 0);
+	midi_send(MIDI_ALL_DEVICES, 0xb0, midi_channel, 0, 0);
 
 	return RESULT_OK;
 }
 
-void mod_matrix_controller_process_midi(int channel, unsigned char event_type, unsigned char data0, unsigned char data1)
+void mod_matrix_controller_process_midi(int device_handle, int channel, unsigned char event_type, unsigned char data0, unsigned char data1)
 {
 	if (channel == midi_channel && event_type == 0x90 && data1 == 0x7f)
 	{
@@ -126,13 +126,11 @@ void mod_matrix_controller_process_midi(int channel, unsigned char event_type, u
 		{
 			if (mod_matrix_toggle_connection(column_names[column], row_names[row]) == MOD_MATRIX_CONNECTED)
 			{
-				syslog(LOG_INFO, "Connected %s to %s", column_names[column], row_names[row]);
-				midi_send(0x90, midi_channel, data0, 0x3c);
+				midi_send(device_handle, 0x90, midi_channel, data0, 0x3c);
 			}
 			else
 			{
-				syslog(LOG_INFO, "Disconnected %s from %s", column_names[column], row_names[row]);
-				midi_send(0x90, midi_channel, data0, 0x0c);
+				midi_send(device_handle, 0x90, midi_channel, data0, 0x0c);
 			}
 		}
 	}
@@ -141,5 +139,5 @@ void mod_matrix_controller_process_midi(int channel, unsigned char event_type, u
 void mod_matrix_controller_deinitialise()
 {
 	// Turn off all Launchpad LEDs.
-	midi_send(0xb0, midi_channel, 0, 0);
+	midi_send(MIDI_ALL_DEVICES, 0xb0, midi_channel, 0, 0);
 }

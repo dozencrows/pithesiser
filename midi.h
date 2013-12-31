@@ -14,12 +14,14 @@
 #define MIDI_MID_CONTROLLER_VALUE	63
 #define MIDI_MIDDLE_C				60
 #define MAX_MIDI_DEVICES			16
+#define MIDI_ALL_DEVICES			-1
 
 #define MIDI_EVENT_DATA_SIZE	3
 typedef struct midi_event_t
 {
-	unsigned char type;
-	unsigned char data[MIDI_EVENT_DATA_SIZE];
+	int				device_handle;
+	unsigned char 	type;
+	unsigned char 	data[MIDI_EVENT_DATA_SIZE];
 } midi_event_t;
 
 extern int midi_initialise(int device_count, const char** device_name);
@@ -31,6 +33,6 @@ extern fixed_t midi_get_note_wavelength_samples(int midi_note);
 extern int midi_get_event_count();
 extern midi_event_t *midi_pop_event(midi_event_t *event);
 extern void midi_send_sysex(const char *sysex_message, size_t message_length);
-extern void midi_send(unsigned char command, unsigned char channel, unsigned char data0, unsigned char data1);
+extern void midi_send(int device_handle, unsigned char command, unsigned char channel, unsigned char data0, unsigned char data1);
 
 #endif /* MIDI_H_ */
