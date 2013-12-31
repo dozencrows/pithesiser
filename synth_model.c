@@ -63,7 +63,14 @@ void voice_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t
 	{
 		if (voice->current_state != NOTE_NOT_PLAYING)
 		{
-			voice->oscillator.level = (voice->oscillator.level * source->value) / MOD_MATRIX_ONE;
+			if (source->value > 0)
+			{
+				voice->oscillator.level = (voice->oscillator.level * source->value) / MOD_MATRIX_ONE;
+			}
+			else
+			{
+				voice->oscillator.level = 0;
+			}
 		}
 	}
 }

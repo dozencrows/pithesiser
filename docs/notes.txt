@@ -41,7 +41,9 @@ Done
  * Indexed MIDI controls
    * Indexed envelope editing for 3 envelopes (volume, filter freq, filter q)
  * Relative continuous controller support
- * Relative continuous controllers for all envelope controls  
+ * Relative continuous controllers for all envelope controls
+ * Basic modulation matrix mechanism
+ * LFO as mod matrix source, mapping to note pitch and/or volume as sink
 
 Blog ideas
 ==========
