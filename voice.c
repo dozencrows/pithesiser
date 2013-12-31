@@ -7,91 +7,7 @@
 
 #include "voice.h"
 #include <stddef.h>
-#include <math.h>
 #include "midi.h"
-#include "lfo.h"
-#include "modulation_matrix.h"
-#include "fixed_point_math.h"
-
-typedef struct voice_array_t
-{
-	int			voice_count;
-	voice_t*	voices;
-} voice_array_t;
-
-typedef struct voice_sink_t
-{
-	mod_matrix_sink_t	sink;
-	voice_array_t		voice_array;
-} voice_sink_t;
-
-void init_voice_sink(const char* name, base_update_t base_update, model_update_t model_update, int voice_count, voice_t* voices, voice_sink_t* sink)
-{
-	mod_matrix_init_sink(name, base_update, model_update, &sink->sink);
-	mod_matrix_add_sink(&sink->sink);
-	sink->voice_array.voice_count = voice_count;
-	sink->voice_array.voices = voices;
-}
-
-voice_sink_t voice_amplitude_sink;
-voice_sink_t voice_pitch_sink;
-
-void voice_amplitude_base_update(mod_matrix_sink_t* sink)
-{
-	voice_sink_t* voice_sink = (voice_sink_t*)sink;
-
-	voice_t* voice = voice_sink->voice_array.voices;
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
-	{
-		if (voice->current_state != NOTE_NOT_PLAYING)
-		{
-			voice->oscillator.level = voice->level_envelope_instance.last_level;
-		}
-	}
-}
-
-void voice_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
-{
-	voice_sink_t* voice_sink = (voice_sink_t*)sink;
-
-	voice_t* voice = voice_sink->voice_array.voices;
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
-	{
-		if (voice->current_state != NOTE_NOT_PLAYING)
-		{
-			voice->oscillator.level = (voice->oscillator.level * source->value) / MOD_MATRIX_ONE;
-		}
-	}
-}
-
-void voice_pitch_base_update(mod_matrix_sink_t* sink)
-{
-	voice_sink_t* voice_sink = (voice_sink_t*)sink;
-
-	voice_t* voice = voice_sink->voice_array.voices;
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
-	{
-		if (voice->current_state != NOTE_NOT_PLAYING)
-		{
-			voice->oscillator.frequency = voice->frequency;
-		}
-	}
-}
-
-void voice_pitch_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
-{
-	voice_sink_t* voice_sink = (voice_sink_t*)sink;
-
-	voice_t* voice = voice_sink->voice_array.voices;
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
-	{
-		if (voice->current_state != NOTE_NOT_PLAYING)
-		{
-			// TODO: use a proper fixed point power function!
-			voice->oscillator.frequency = fixed_mul(voice->oscillator.frequency, powf(2.0f, (float)source->value / (float)MOD_MATRIX_ONE) * FIXED_ONE);
-		}
-	}
-}
 
 static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
 {
@@ -110,9 +26,6 @@ static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *f
 
 void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
 {
-	init_voice_sink("note-amplitude", voice_amplitude_base_update, voice_amplitude_model_update, voice_count, voices, &voice_amplitude_sink);
-	init_voice_sink("note-pitch", voice_pitch_base_update, voice_pitch_model_update, voice_count, voices, &voice_pitch_sink);
-
 	for (int i = 0; i < voice_count; i++)
 	{
 		init_voice(voices + i, level_envelope, filter_freq_envelope, filter_q_envelope);

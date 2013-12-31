@@ -547,65 +547,16 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 // Synth model
 //
 
-// Certain values in here are also set on the relative controller defaults in synth_controllers.c - this should
-// ultimately be reworked so that the default values are only specified in one place (ideally config files) and
-// propagate through to the right parts of the synth model during initialisation.
-envelope_stage_t envelope_stages[4] =
-{
-	{ 0,				LEVEL_MAX,		100, 			},
-	{ LEVEL_MAX,		LEVEL_MAX / 2,	250				},
-	{ LEVEL_MAX / 2,	LEVEL_MAX / 2,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,	0,				100				}
-};
-
-envelope_stage_t freq_envelope_stages[4] =
-{
-	{ FILTER_FIXED_ONE * 20,	FILTER_FIXED_ONE * 12000,	1000, 			},
-	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	1				},
-	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,			FILTER_FIXED_ONE * 20,		200				}
-};
-
-envelope_stage_t q_envelope_stages[4] =
-{
-	{ FIXED_ONE / 100,	FIXED_ONE * .75,	1000, 			},
-	{ FIXED_ONE * .75,	FIXED_ONE * .75,	1				},
-	{ FIXED_ONE * .75,	FIXED_ONE * .75,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,	FIXED_ONE / 100,	200				}
-};
-
 void synth_initialise()
 {
 	mod_matrix_initialise();
-	synth_model.voice_count 	= VOICE_COUNT;
-	synth_model.active_voices	= 0;
-	synth_model.voice 			= (voice_t*)calloc(synth_model.voice_count, sizeof(voice_t));
-	voice_init(synth_model.voice, synth_model.voice_count, &synth_model.envelope[0], &synth_model.envelope[1], &synth_model.envelope[2]);
-
-	lfo_init(&synth_model.lfo, "lfo");
-
-	synth_model.global_filter_def.type = FILTER_PASS;
-	synth_model.global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
-	synth_model.global_filter_def.q = FIXED_HALF;
-
-	synth_model.envelope[0].peak = LEVEL_MAX;
-	synth_model.envelope[0].stage_count = 4;
-	synth_model.envelope[0].stages = envelope_stages;
-
-	synth_model.envelope[1].peak = FILTER_FIXED_ONE * 18000;
-	synth_model.envelope[1].stage_count = 4;
-	synth_model.envelope[1].stages = freq_envelope_stages;
-
-	synth_model.envelope[2].peak = FIXED_ONE;
-	synth_model.envelope[2].stage_count = 4;
-	synth_model.envelope[2].stages = q_envelope_stages;
+	synth_model_initialise(&synth_model, VOICE_COUNT);
 }
 
 void synth_deinitialise()
 {
 	destroy_settings();
-	free(synth_model.voice);
-	synth_model.voice = NULL;
+	synth_model_deinitialise(&synth_model);
 }
 
 //-----------------------------------------------------------------------------------------------------------------------

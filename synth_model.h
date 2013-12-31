@@ -20,6 +20,11 @@ typedef struct voice_t voice_t;
 // Types and values
 #define SYNTH_ENVELOPE_COUNT	3
 
+extern const char*	SYNTH_MOD_SOURCE_LFO;
+
+extern const char*	SYNTH_MOD_SINK_NOTE_AMPLITUDE;
+extern const char*	SYNTH_MOD_SINK_NOTE_PITCH;
+
 typedef struct synth_model_t
 {
 	// Settings
@@ -45,8 +50,12 @@ typedef struct synth_state_t
 	unsigned char	volume;
 	unsigned char	waveform;
 	unsigned char	envelope[SYNTH_ENVELOPE_COUNT];
-	unsigned char	lfo;
+	unsigned char	lfo_mode;
+	unsigned char	lfo_params;
 	unsigned char	filter;
 } synth_state_t;
+
+extern void synth_model_initialise(synth_model_t* synth_model, int voice_count);
+extern void synth_model_deinitialise(synth_model_t* synth_model);
 
 #endif /* SYNTH_MODEL_H_ */

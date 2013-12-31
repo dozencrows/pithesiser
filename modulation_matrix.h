@@ -45,6 +45,7 @@ extern int mod_matrix_add_source(mod_matrix_source_t* source);
 extern int mod_matrix_add_sink(mod_matrix_sink_t* sink);
 extern int mod_matrix_connect(const char* source_name, const char* sink_name);
 extern int mod_matrix_disconnect(const char* source_name, const char* sink_name);
+extern void mod_matrix_disconnect_source(const char* source_name);
 extern void mod_matrix_update();
 
 #endif /* MODULATION_MATRIX_H_ */

@@ -198,6 +198,26 @@ int mod_matrix_disconnect(const char* source_name, const char* sink_name)
 	}
 }
 
+void mod_matrix_disconnect_source(const char* source_name)
+{
+	mod_matrix_source_t* source = find_source(source_name);
+	if (source == NULL)
+	{
+		syslog(LOG_ERR, "Unknown source %s for disconnection", source_name);
+	}
+	else
+	{
+		for (int i = 0; i < MAX_CONNECTIONS; i++)
+		{
+			if (connections[i].source == source)
+			{
+				connections[i].source = NULL;
+				connections[i].sink = NULL;
+			}
+		}
+	}
+}
+
 void mod_matrix_update()
 {
 	for (int i = 0; i < source_count; i++)

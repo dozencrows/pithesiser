@@ -101,24 +101,24 @@ typedef struct synth_controller_default_t {
 // Ultimately defaults should be defined in a config file.
 static synth_controller_default_t controller_defaults[] =
 {
-	&envelope_controller[0].attack_time_controller,		100,
-	&envelope_controller[0].attack_level_controller,	LEVEL_MAX,
-	&envelope_controller[0].decay_time_controller,		250,
-	&envelope_controller[0].decay_level_controller,		LEVEL_MAX / 2,
-	&envelope_controller[0].sustain_time_controller,	DURATION_HELD,
-	&envelope_controller[0].release_time_controller,	100,
-	&envelope_controller[1].attack_time_controller,		1000,
-	&envelope_controller[1].attack_level_controller,	FILTER_FIXED_ONE * 12000,
-	&envelope_controller[1].decay_time_controller,		1,
-	&envelope_controller[1].decay_level_controller,		FILTER_FIXED_ONE * 12000,
-	&envelope_controller[1].sustain_time_controller,	DURATION_HELD,
-	&envelope_controller[1].release_time_controller,	200,
-	&envelope_controller[2].attack_time_controller,		1000,
-	&envelope_controller[2].attack_level_controller,	FIXED_ONE * .75,
-	&envelope_controller[2].decay_time_controller,		1,
-	&envelope_controller[2].decay_level_controller,		FIXED_ONE * .75,
-	&envelope_controller[2].sustain_time_controller,	DURATION_HELD,
-	&envelope_controller[2].release_time_controller,	200
+	{ &envelope_controller[0].attack_time_controller,	100 },
+	{ &envelope_controller[0].attack_level_controller,	LEVEL_MAX },
+	{ &envelope_controller[0].decay_time_controller,	250 },
+	{ &envelope_controller[0].decay_level_controller,	LEVEL_MAX / 2 },
+	{ &envelope_controller[0].sustain_time_controller,	DURATION_HELD },
+	{ &envelope_controller[0].release_time_controller,	100 },
+	{ &envelope_controller[1].attack_time_controller,	1000 },
+	{ &envelope_controller[1].attack_level_controller,	FILTER_FIXED_ONE * 12000 },
+	{ &envelope_controller[1].decay_time_controller,	1 },
+	{ &envelope_controller[1].decay_level_controller,	FILTER_FIXED_ONE * 12000 },
+	{ &envelope_controller[1].sustain_time_controller,	DURATION_HELD },
+	{ &envelope_controller[1].release_time_controller,	200 },
+	{ &envelope_controller[2].attack_time_controller,	1000 },
+	{ &envelope_controller[2].attack_level_controller,	FIXED_ONE * .75 },
+	{ &envelope_controller[2].decay_time_controller,	1 },
+	{ &envelope_controller[2].decay_level_controller,	FIXED_ONE * .75 },
+	{ &envelope_controller[2].sustain_time_controller,	DURATION_HELD },
+	{ &envelope_controller[2].release_time_controller,	200 }
 };
 
 static void set_controller_defaults()
@@ -365,22 +365,22 @@ void update_midi_controllers(synth_state_t* synth_state)
 
 	if (midi_controller_update(&lfo_state_controller))
 	{
-		synth_state->lfo = STATE_UPDATED;
+		synth_state->lfo_mode = STATE_UPDATED;
 	}
 
 	if (midi_controller_update(&lfo_waveform_controller))
 	{
-		synth_state->lfo = STATE_UPDATED;
+		synth_state->lfo_params = STATE_UPDATED;
 	}
 
 	if (midi_controller_update(&lfo_level_controller))
 	{
-		synth_state->lfo = STATE_UPDATED;
+		synth_state->lfo_params = STATE_UPDATED;
 	}
 
 	if (midi_controller_update(&lfo_frequency_controller))
 	{
-		synth_state->lfo = STATE_UPDATED;
+		synth_state->lfo_params = STATE_UPDATED;
 	}
 
 	if (midi_controller_update(&filter_state_controller))
@@ -448,9 +448,34 @@ void update_synth(synth_state_t* synth_state, synth_model_t* synth_model)
 		}
 	}
 
-	if (synth_state->lfo == STATE_UPDATED)
+	if (synth_state->lfo_mode == STATE_UPDATED)
 	{
 		synth_model->lfo.state = midi_controller_read(&lfo_state_controller);
+
+		mod_matrix_disconnect_source(SYNTH_MOD_SOURCE_LFO);
+		switch (synth_model->lfo.state)
+		{
+			case LFO_STATE_VOLUME:
+			{
+				mod_matrix_connect(SYNTH_MOD_SOURCE_LFO, SYNTH_MOD_SINK_NOTE_AMPLITUDE);
+				break;
+			}
+
+			case LFO_STATE_PITCH:
+			{
+				mod_matrix_connect(SYNTH_MOD_SOURCE_LFO, SYNTH_MOD_SINK_NOTE_PITCH);
+				break;
+			}
+
+			default:
+			{
+				break;
+			}
+		}
+	}
+
+	if (synth_state->lfo_params == STATE_UPDATED)
+	{
 		synth_model->lfo.oscillator.waveform = midi_controller_read(&lfo_waveform_controller);
 		synth_model->lfo.oscillator.level = midi_controller_read(&lfo_level_controller);
 		synth_model->lfo.oscillator.frequency = midi_controller_read(&lfo_frequency_controller);
