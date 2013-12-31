@@ -9,8 +9,16 @@
 #include <math.h>
 #include "fixed_point_math.h"
 
-void lfo_init(lfo_t *lfo)
+mod_matrix_value_t lfo_generate_value(mod_matrix_source_t* source)
 {
+	lfo_t* lfo = (lfo_t*)source;
+	return (mod_matrix_value_t) lfo->value;
+}
+
+void lfo_init(lfo_t *lfo, const char* name)
+{
+	mod_matrix_init_source(name, lfo_generate_value, &lfo->mod_matrix_source);
+	mod_matrix_add_source(&lfo->mod_matrix_source);
 	osc_init(&lfo->oscillator);
 	lfo->oscillator.waveform = LFO_PROCEDURAL_SINE;
 	lfo->oscillator.frequency = 1 * FIXED_ONE;

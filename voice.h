@@ -38,7 +38,8 @@ typedef struct voice_t
 } voice_t;
 
 extern void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope);
-extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, lfo_t *lfo, filter_definition_t *filter_def);
+extern void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *filter_def);
+extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, filter_definition_t *filter_def);
 extern void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform);
 extern void voice_stop_note(voice_t *voice);
 extern voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_channel, int *voice_state);

@@ -9,19 +9,21 @@
 #define LFO_H_
 
 #include "oscillator.h"
+#include "modulation_matrix.h"
 
 #define LFO_STATE_OFF			0
 #define LFO_STATE_VOLUME		1
 #define LFO_STATE_PITCH			2
 
-typedef struct
+typedef struct lfo_t
 {
-	int	state;
-	oscillator_t oscillator;
-	sample_t value;
+	mod_matrix_source_t	mod_matrix_source;
+	int					state;
+	oscillator_t 		oscillator;
+	sample_t 			value;
 } lfo_t;
 
-extern void lfo_init(lfo_t *lfo);
+extern void lfo_init(lfo_t *lfo, const char* name);
 extern void lfo_reset(lfo_t *lfo);
 extern void lfo_update(lfo_t *lfo, int buffer_samples);
 extern void lfo_modulate_oscillator(lfo_t *lfo, oscillator_t *osc);

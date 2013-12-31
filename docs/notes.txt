@@ -3,6 +3,7 @@ Raspberry Pi Synth Project
 
 Underway
 ========
+ * Modulation matrix to map LFO outputs onto different parameters
  * Data-driven settings:
    * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
    * loading & saving of settings (replace MIDI controller output saving)
@@ -10,11 +11,12 @@ Underway
 
 To do next
 ==========
+* Launchpad S MIDI control over modulation matrix 
+* Modulation matrix to map envelope outputs onto different parameters
 * Generalising envelope support - including:
   * normalised scale for editing
   * adjustable start and end values
-* Modulation matrix to map LFO & envelope outputs onto different parameters
-* Launchpad S MIDI control over modulation matrix 
+* Logging module
 * Modularise synth model init and processing
 * Secondary LFO support
 * Enrich filter controls

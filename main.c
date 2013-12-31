@@ -14,6 +14,7 @@
 #include <libgen.h>
 #include <libconfig.h>
 #include <gperftools/profiler.h>
+#include <syslog.h>
 
 #include "system_constants.h"
 #include "master_time.h"
@@ -32,6 +33,7 @@
 #include "gfx_image.h"
 #include "synth_model.h"
 #include "synth_controllers.h"
+#include "modulation_matrix.h"
 
 #include "mixer.h"
 #include "setting.h"
@@ -172,7 +174,15 @@ void process_audio(int32_t timestep_ms)
 	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
 	size_t buffer_bytes = buffer_samples * sizeof(sample_t) * 2;
 
+	// Update components used in modulation matrix that rely on state not
+	// available in the modulation matrix (at least for now).
 	lfo_update(&synth_model.lfo, buffer_samples);
+	for (int i = 0; i < synth_model.voice_count; i++)
+	{
+		voice_preupdate(synth_model.voice + i, timestep_ms, &synth_model.global_filter_def);
+	}
+
+	mod_matrix_update();
 
 	int first_audible_voice = -1;
 	int last_active_voices = synth_model.active_voices;
@@ -183,7 +193,7 @@ void process_audio(int32_t timestep_ms)
 
 	for (int i = 0; i < synth_model.voice_count; i++)
 	{
-		switch(voice_update(synth_model.voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &synth_model.lfo, &synth_model.global_filter_def))
+		switch(voice_update(synth_model.voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &synth_model.global_filter_def))
 		{
 			case VOICE_IDLE:
 				break;
@@ -566,12 +576,13 @@ envelope_stage_t q_envelope_stages[4] =
 
 void synth_initialise()
 {
+	mod_matrix_initialise();
 	synth_model.voice_count 	= VOICE_COUNT;
 	synth_model.active_voices	= 0;
 	synth_model.voice 			= (voice_t*)calloc(synth_model.voice_count, sizeof(voice_t));
 	voice_init(synth_model.voice, synth_model.voice_count, &synth_model.envelope[0], &synth_model.envelope[1], &synth_model.envelope[2]);
 
-	lfo_init(&synth_model.lfo);
+	lfo_init(&synth_model.lfo, "lfo");
 
 	synth_model.global_filter_def.type = FILTER_PASS;
 	synth_model.global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
@@ -695,8 +706,13 @@ void synth_main()
 //-----------------------------------------------------------------------------------------------------------------------
 // Entrypoint
 //
+const char* SYSLOG_IDENT = "PITHESISER";
+
 int main(int argc, char **argv)
 {
+	openlog(SYSLOG_IDENT, LOG_NDELAY, LOG_USER);
+	atexit(closelog);
+
 	const char* config_file = RESOURCES_SYNTH_CFG;
 	if (argc > 1)
 	{
