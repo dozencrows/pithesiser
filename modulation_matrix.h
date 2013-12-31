@@ -8,11 +8,16 @@
 #ifndef MODULATION_MATRIX_H_
 #define MODULATION_MATRIX_H_
 
-#define MOD_MATRIX_MAX_NAME_LEN	63
-#define MOD_MATRIX_PRECISION	15
+#define MOD_MATRIX_MAX_NAME_LEN		63
+#define MOD_MATRIX_PRECISION		15
+#define MOD_MATRIX_MAX_SOURCES		8
+#define MOD_MATRIX_MAX_SINKS		8
 
 #define MOD_MATRIX_ONE			(1 << MOD_MATRIX_PRECISION)
 #define MOD_MATRIX_MASK			(MOD_MATRIX_ONE - 1)
+
+#define MOD_MATRIX_CONNECTED		1
+#define MOD_MATRIX_DISCONNECTED		0
 
 typedef int mod_matrix_value_t;
 
@@ -46,6 +51,7 @@ extern int mod_matrix_add_sink(mod_matrix_sink_t* sink);
 extern int mod_matrix_connect(const char* source_name, const char* sink_name);
 extern int mod_matrix_disconnect(const char* source_name, const char* sink_name);
 extern void mod_matrix_disconnect_source(const char* source_name);
+extern int mod_matrix_toggle_connection(const char* source_name, const char* sink_name);
 extern void mod_matrix_update();
 
 #endif /* MODULATION_MATRIX_H_ */

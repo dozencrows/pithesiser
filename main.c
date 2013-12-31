@@ -34,6 +34,7 @@
 #include "synth_model.h"
 #include "synth_controllers.h"
 #include "modulation_matrix.h"
+#include "modulation_matrix_controller.h"
 
 #include "mixer.h"
 #include "setting.h"
@@ -57,6 +58,7 @@ static const char* CFG_DEVICES_MIDI_NOTE_CHANNEL = "devices.midi.note_channel";
 static const char* CFG_DEVICES_MIDI_CONTROLLER_CHANNEL = "devices.midi.controller_channel";
 static const char* CFG_DEVICES_PIGLOW = "devices.piglow";
 static const char* CFG_CONTROLLERS = "controllers";
+static const char* CFG_MOD_MATRIX_CONTROLLER = "modulation_matrix";
 static const char* CFG_DEVICES_MIDI_INPUT = "devices.midi.input";
 static const char* CFG_TESTS = "tests";
 static const char* CFG_CODE_TIMING_TESTS = "code_timing";
@@ -297,6 +299,11 @@ void configure_midi()
 		exit(EXIT_FAILURE);
 	}
 
+	if (mod_matrix_controller_initialise(config_lookup(&app_config, CFG_MOD_MATRIX_CONTROLLER)) != RESULT_OK)
+	{
+		exit(EXIT_FAILURE);
+	}
+
 	synth_controllers_load(SETTINGS_FILE, &synth_model);
 
 	config_setting_t *setting_sysex_init_message = config_lookup(&app_config, CFG_SYSEX_INIT);
@@ -324,6 +331,8 @@ void process_midi_events()
 		midi_pop_event(&midi_event);
 		unsigned char event_type = midi_event.type & 0xf0;
 		int channel = midi_event.type & 0x0f;
+
+		mod_matrix_controller_process_midi(channel, event_type, midi_event.data[0], midi_event.data[1]);
 
 		if (event_type == 0x90)
 		{
@@ -646,6 +655,7 @@ void synth_main()
 	destroy_ui();
 	gfx_envelope_render_deinitialise();
 	gfx_wave_render_deinitialise();
+	mod_matrix_controller_deinitialise();
 	alsa_deinitialise();
 	midi_deinitialise();
 	synth_deinitialise();
