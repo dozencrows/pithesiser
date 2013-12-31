@@ -9,6 +9,8 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <libconfig.h>
 
 #define MAX_ERROR_MSG_LEN	1024
 #define MAX_ERROR_STACK		16
@@ -52,3 +54,13 @@ void pop_error_report(const char* user_message)
 		}
 	}
 }
+
+void setting_error_report(config_setting_t *setting, const char* message, ...)
+{
+	va_list arg_list;
+	va_start(arg_list, message);
+	vprintf(message, arg_list);
+	va_end(arg_list);
+	printf(" at line %d in %s\n", config_setting_source_line(setting), config_setting_source_file(setting));
+}
+

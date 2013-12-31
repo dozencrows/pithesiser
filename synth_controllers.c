@@ -288,7 +288,7 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 		config_setting_t *setting_controller = config_setting_get_member(config, controller_parser[i].config_setting_name);
 		if (setting_controller == NULL)
 		{
-			midi_controller_parser_report_error(config, "Controller config section %s missing", controller_parser[i].config_setting_name);
+			setting_error_report(config, "Controller config section %s missing", controller_parser[i].config_setting_name);
 			error_count++;
 		}
 		else

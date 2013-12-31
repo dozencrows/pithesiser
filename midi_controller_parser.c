@@ -12,6 +12,7 @@
 #include <string.h>
 #include "libconfig.h"
 #include "midi_controller.h"
+#include "error_handler.h"
 
 static const char* CFG_TYPE_SETTING = "type";
 static const char* CFG_CONTINUOUS_CONTROLLER = "continuous";
@@ -25,15 +26,6 @@ static const char* CFG_MAX = "max";
 static const char* CFG_THRESHOLD = "threshold";
 static const char* CFG_DELTA_SCALE = "delta_scale";
 
-void midi_controller_parser_report_error(config_setting_t *setting, const char* message, ...)
-{
-	va_list arg_list;
-	va_start(arg_list, message);
-	vprintf(message, arg_list);
-	va_end(arg_list);
-	printf(" at line %d in %s\n", config_setting_source_line(setting), config_setting_source_file(setting));
-}
-
 static int parse_indexer(config_setting_t *config, midi_controller_t *controller)
 {
 	const char* index_controller;
@@ -41,7 +33,7 @@ static int parse_indexer(config_setting_t *config, midi_controller_t *controller
 
 	if (config_setting_lookup_string(config, "controller", &index_controller) != CONFIG_TRUE)
 	{
-		midi_controller_parser_report_error(config, "Missing controller for indexer");
+		setting_error_report(config, "Missing controller for indexer");
 		return RESULT_ERROR;
 	}
 
@@ -49,19 +41,19 @@ static int parse_indexer(config_setting_t *config, midi_controller_t *controller
 
 	if (indexer == NULL)
 	{
-		midi_controller_parser_report_error(config, "Unknown controller %s for indexer", index_controller);
+		setting_error_report(config, "Unknown controller %s for indexer", index_controller);
 		return RESULT_ERROR;
 	}
 
 	if (config_setting_lookup_int(config, "value", &index_value) != CONFIG_TRUE)
 	{
-		midi_controller_parser_report_error(config, "Missing value for indexer");
+		setting_error_report(config, "Missing value for indexer");
 		return RESULT_ERROR;
 	}
 
 	if (index_value < indexer->output_min || index_value > indexer->output_max)
 	{
-		midi_controller_parser_report_error(config, "Value %d out of range for indexer (%d to %d)", index_value, indexer->output_min, indexer->output_max);
+		setting_error_report(config, "Value %d out of range for indexer (%d to %d)", index_value, indexer->output_min, indexer->output_max);
 		return RESULT_ERROR;
 	}
 
@@ -76,7 +68,7 @@ static int parse_midi_cc(config_setting_t *config, midi_controller_t *controller
 
 	if (setting_midi_cc == NULL)
 	{
-		midi_controller_parser_report_error(config, "Missing midi_cc data");
+		setting_error_report(config, "Missing midi_cc data");
 		return RESULT_ERROR;
 	}
 
@@ -84,7 +76,7 @@ static int parse_midi_cc(config_setting_t *config, midi_controller_t *controller
 
 	if (midi_cc_count < 1 || midi_cc_count > 2)
 	{
-		midi_controller_parser_report_error(config, "Only 1 or 2 midi_cc allowed - got %d", midi_cc_count);
+		setting_error_report(config, "Only 1 or 2 midi_cc allowed - got %d", midi_cc_count);
 		return RESULT_ERROR;
 	}
 
@@ -108,13 +100,13 @@ static int parse_midi_max_min(config_setting_t *config, midi_controller_t *contr
 {
 	if (config_setting_lookup_int(config, CFG_MIN, &(controller->midi_range.min)) != CONFIG_TRUE)
 	{
-		midi_controller_parser_report_error(config, "Missing or invalid min");
+		setting_error_report(config, "Missing or invalid min");
 		return RESULT_ERROR;
 	}
 
 	if (config_setting_lookup_int(config, CFG_MAX, &(controller->midi_range.max)) != CONFIG_TRUE)
 	{
-		midi_controller_parser_report_error(config, "Missing or invalid max");
+		setting_error_report(config, "Missing or invalid max");
 		return RESULT_ERROR;
 	}
 
@@ -125,7 +117,7 @@ static int parse_midi_threshold(config_setting_t *config, midi_controller_t *con
 {
 	if (config_setting_lookup_int(config, CFG_THRESHOLD, &(controller->midi_threshold)) != CONFIG_TRUE)
 	{
-		midi_controller_parser_report_error(config, "Missing or invalid threshold");
+		setting_error_report(config, "Missing or invalid threshold");
 		return RESULT_ERROR;
 	}
 
@@ -141,7 +133,7 @@ static int parse_delta_scale(config_setting_t *config, midi_controller_t *contro
 		int delta_scale = config_setting_get_int(delta_scale_setting);
 		if (delta_scale <= 0)
 		{
-			midi_controller_parser_report_error(config, "Missing or invalid delta scale");
+			setting_error_report(config, "Missing or invalid delta scale");
 			return RESULT_ERROR;
 		}
 		else
@@ -225,7 +217,7 @@ int midi_controller_parse_config(config_setting_t *config, midi_controller_t *co
 
 	if (config_setting_lookup_string(config, CFG_TYPE_SETTING, &type_setting) != CONFIG_TRUE)
 	{
-		midi_controller_parser_report_error(config, "Controller needs type");
+		setting_error_report(config, "Controller needs type");
 	}
 
 	if (strcasecmp(type_setting, CFG_CONTINUOUS_CONTROLLER) == 0)
@@ -254,7 +246,7 @@ int midi_controller_parse_config(config_setting_t *config, midi_controller_t *co
 	}
 	else
 	{
-		midi_controller_parser_report_error(config, "Unsupported controller type %s", type_setting);
+		setting_error_report(config, "Unsupported controller type %s", type_setting);
 	}
 
 	return RESULT_ERROR;
@@ -266,7 +258,7 @@ static int add_index_control(config_setting_t* index_control_setting, int channe
 	midi_controller_t* index_control = midi_controller_find_index_control(control_name);
 	if (index_control != NULL)
 	{
-		midi_controller_parser_report_error(index_control_setting, "control %s already exists", control_name);
+		setting_error_report(index_control_setting, "control %s already exists", control_name);
 		return RESULT_ERROR;
 	}
 
@@ -286,7 +278,7 @@ static int add_index_control(config_setting_t* index_control_setting, int channe
 	}
 	else
 	{
-		midi_controller_parser_report_error(index_control_setting, "index control limit");
+		setting_error_report(index_control_setting, "index control limit");
 		return RESULT_ERROR;
 	}
 }
@@ -315,7 +307,7 @@ int midi_controller_parse_index_controls(config_setting_t *config, int channel)
 		}
 		else
 		{
-			midi_controller_parser_report_error(index_controls_setting, "Could not find index control setting");
+			setting_error_report(index_controls_setting, "Could not find index control setting");
 		}
 	}
 
