@@ -10,6 +10,7 @@ Underway
 
 To do next
 ==========
+* Persist mod matrix setup and initialise controller to match on startup
 * Modulation matrix to map LFO outputs onto filter parameters
 * Modulation matrix to map envelope outputs onto different parameters
 * Generalising envelope support - including:
