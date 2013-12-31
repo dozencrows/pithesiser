@@ -26,6 +26,5 @@ typedef struct lfo_t
 extern void lfo_init(lfo_t *lfo, const char* name);
 extern void lfo_reset(lfo_t *lfo);
 extern void lfo_update(lfo_t *lfo, int buffer_samples);
-extern void lfo_modulate_oscillator(lfo_t *lfo, oscillator_t *osc);
 
 #endif /* LFO_H_ */
