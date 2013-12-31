@@ -31,5 +31,6 @@ extern fixed_t midi_get_note_wavelength_samples(int midi_note);
 extern int midi_get_event_count();
 extern midi_event_t *midi_pop_event(midi_event_t *event);
 extern void midi_send_sysex(const char *sysex_message, size_t message_length);
+extern void midi_send(unsigned char command, unsigned char channel, unsigned char data0, unsigned char data1);
 
 #endif /* MIDI_H_ */

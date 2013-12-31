@@ -33,6 +33,7 @@
 #define SYSEX_SLEEP_DELAY	200		// Sleep time in ms after sending sysex on one channel to help read thread keep up
 
 static const char* MIDI_SYSEX_WRITE_ERROR = "MIDI sysex write error";
+static const char* MIDI_SEND_ERROR = "MIDI send error";
 typedef struct
 {
 	int		channel;
@@ -300,6 +301,23 @@ void midi_send_sysex(const char *sysex_message, size_t message_length)
 		}
 
 		usleep(SYSEX_SLEEP_DELAY);
+	}
+}
+
+void midi_send(unsigned char command, unsigned char channel, unsigned char data0, unsigned char data1)
+{
+	unsigned char buffer[3];
+
+	buffer[0] = (command & 0xf0) | (channel & 0x0f);
+	buffer[1] = data0;
+	buffer[2] = data1;
+
+	for (int i = 0; i < midi_handle_count; i++)
+	{
+		if (write(midi_handle[i], buffer, sizeof(buffer)) != sizeof(buffer))
+		{
+			perror(MIDI_SEND_ERROR);
+		}
 	}
 }
 
