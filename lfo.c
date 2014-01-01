@@ -23,7 +23,6 @@ void lfo_init(lfo_t *lfo, const char* name)
 	lfo->oscillator.waveform = LFO_PROCEDURAL_SINE;
 	lfo->oscillator.frequency = 1 * FIXED_ONE;
 	lfo->oscillator.level = SHRT_MAX;
-	lfo->state = LFO_STATE_OFF;
 	lfo->value = 0;
 }
 

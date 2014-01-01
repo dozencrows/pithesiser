@@ -11,14 +11,9 @@
 #include "oscillator.h"
 #include "modulation_matrix.h"
 
-#define LFO_STATE_OFF			0
-#define LFO_STATE_VOLUME		1
-#define LFO_STATE_PITCH			2
-
 typedef struct lfo_t
 {
 	mod_matrix_source_t	mod_matrix_source;
-	int					state;
 	oscillator_t 		oscillator;
 	sample_t 			value;
 } lfo_t;

@@ -50,7 +50,6 @@ typedef struct synth_state_t
 	unsigned char	volume;
 	unsigned char	waveform;
 	unsigned char	envelope[SYNTH_ENVELOPE_COUNT];
-	unsigned char	lfo_mode;
 	unsigned char	lfo_params;
 	unsigned char	filter;
 } synth_state_t;

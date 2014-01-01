@@ -20,7 +20,6 @@
 
 #define LFO_MIN_FREQUENCY		(FIXED_ONE / 10)
 #define LFO_MAX_FREQUENCY		(20 * FIXED_ONE)
-#define LFO_STATE_LAST			LFO_STATE_PITCH
 
 #define FILTER_STATE_OFF		FILTER_PASS
 #define FILTER_STATE_LAST		FILTER_HPF
@@ -47,7 +46,6 @@ midi_controller_t oscilloscope_controller;
 
 envelope_controller_t envelope_controller[SYNTH_ENVELOPE_COUNT];
 
-midi_controller_t lfo_state_controller;
 midi_controller_t lfo_waveform_controller;
 midi_controller_t lfo_level_controller;
 midi_controller_t lfo_frequency_controller;
@@ -83,7 +81,6 @@ static midi_controller_t* persistent_controllers[] =
 	&envelope_controller[2].decay_level_controller,
 	&envelope_controller[2].sustain_time_controller,
 	&envelope_controller[2].release_time_controller,
-	&lfo_state_controller,
 	&lfo_waveform_controller,
 	&lfo_level_controller,
 	&lfo_frequency_controller,
@@ -178,12 +175,6 @@ static void envelope_time_held_controller_set_output(midi_controller_t *controll
 	controller->output_held = DURATION_HELD;
 }
 
-static void lfo_state_controller_set_output(midi_controller_t *controller)
-{
-	controller->output_min = LFO_STATE_OFF;
-	controller->output_max = LFO_STATE_LAST;
-}
-
 static void lfo_waveform_controller_set_output(midi_controller_t *controller)
 {
 	controller->output_min = WAVE_FIRST_LFO;
@@ -250,7 +241,6 @@ controller_parser_t controller_parser[] =
 	{ "filter_q_envelope_decay_level", &envelope_controller[2].decay_level_controller, filter_q_envelope_level_controller_set_output },
 	{ "filter_q_envelope_sustain_time", &envelope_controller[2].sustain_time_controller, envelope_time_held_controller_set_output },
 	{ "filter_q_envelope_release_time", &envelope_controller[2].release_time_controller, envelope_time_controller_set_output },
-	{ "lfo_state", &lfo_state_controller, lfo_state_controller_set_output },
 	{ "lfo_waveform_select", &lfo_waveform_controller, lfo_waveform_controller_set_output },
 	{ "lfo_frequency", &lfo_frequency_controller, lfo_frequency_controller_set_output },
 	{ "lfo_level", &lfo_level_controller, level_controller_set_output },
@@ -363,11 +353,6 @@ void update_midi_controllers(synth_state_t* synth_state)
 		}
 	}
 
-	if (midi_controller_update(&lfo_state_controller))
-	{
-		synth_state->lfo_mode = STATE_UPDATED;
-	}
-
 	if (midi_controller_update(&lfo_waveform_controller))
 	{
 		synth_state->lfo_params = STATE_UPDATED;
@@ -445,32 +430,6 @@ void update_synth(synth_state_t* synth_state, synth_model_t* synth_model)
 		if (synth_state->envelope[i] == STATE_UPDATED)
 		{
 			update_envelope(&synth_model->envelope[i], envelope_controller[i].renderer_id, &envelope_controller[i]);
-		}
-	}
-
-	if (synth_state->lfo_mode == STATE_UPDATED)
-	{
-		synth_model->lfo.state = midi_controller_read(&lfo_state_controller);
-
-		mod_matrix_disconnect_source(SYNTH_MOD_SOURCE_LFO);
-		switch (synth_model->lfo.state)
-		{
-			case LFO_STATE_VOLUME:
-			{
-				mod_matrix_connect(SYNTH_MOD_SOURCE_LFO, SYNTH_MOD_SINK_NOTE_AMPLITUDE);
-				break;
-			}
-
-			case LFO_STATE_PITCH:
-			{
-				mod_matrix_connect(SYNTH_MOD_SOURCE_LFO, SYNTH_MOD_SINK_NOTE_PITCH);
-				break;
-			}
-
-			default:
-			{
-				break;
-			}
 		}
 	}
 
