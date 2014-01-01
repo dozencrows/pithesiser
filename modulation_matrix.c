@@ -284,3 +284,16 @@ void mod_matrix_update()
 		}
 	}
 }
+
+void mod_matrix_iterate_connections(void* data, connection_callback_t callback)
+{
+	mod_matrix_connection_t* connection = connections;
+
+	for (int i = 0; i < MOD_MATRIX_MAX_CONNECTIONS; i++, connection++)
+	{
+		if (connection->source != NULL && connection->sink != NULL)
+		{
+			callback(data, connection->source, connection->sink);
+		}
+	}
+}

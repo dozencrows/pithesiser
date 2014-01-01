@@ -3,20 +3,22 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Data-driven settings:
-  * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
-  * loading & saving of settings (replace MIDI controller output saving)
-  * default values for settings, when they're set and how the results are driven to the synth model at startup
 
 To do next
 ==========
-* Persist mod matrix setup and initialise controller to match on startup
-* Modulation matrix to map LFO outputs onto filter parameters
 * Modulation matrix to map envelope outputs onto different parameters
 * Generalising envelope support - including:
   * normalised scale for editing
   * adjustable start and end values
-* Logging module
+* Modulation matrix to map LFO outputs onto filter parameters
+* Data-driven settings:
+  * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
+  * loading & saving of settings (replace MIDI controller output saving)
+  * default values for settings, when they're set and how the results are driven to the synth model at startup
+* Standardise logging
+  * Use syslog for all output
+  * Configure syslog to also output to stderr?
+  * Add settings warning as well as error
 * Modularise synth model init and processing
 * Secondary LFO support
 * Enrich filter controls
@@ -45,6 +47,7 @@ Done
  * Basic modulation matrix mechanism
  * LFO as mod matrix source, mapping to note pitch and/or volume as sink
  * Launchpad S MIDI control over modulation matrix 
+ * Persist mod matrix setup and initialise controller to match on startup
 
 Blog ideas
 ==========

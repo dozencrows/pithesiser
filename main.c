@@ -49,6 +49,7 @@
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
 
+static const char* SYSLOG_IDENT = "pithesiser";
 static const char* RESOURCES_PITHESISER_ALPHA_PNG = "resources/pithesiser_alpha.png";
 static const char* RESOURCES_SYNTH_CFG = "resources/synth.cfg";
 
@@ -65,8 +66,10 @@ static const char* CFG_CODE_TIMING_TESTS = "code_timing";
 static const char* CFG_SYSEX_INIT = "sysex.init_message";
 
 static const char* SETTINGS_FILE = ".pithesiser.cfg";
+static const char* PATCH_FILE = ".pithesiser.patch";
 
 config_t app_config;
+config_t patch_config;
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Synth model
@@ -299,7 +302,7 @@ void configure_midi()
 		exit(EXIT_FAILURE);
 	}
 
-	if (mod_matrix_controller_initialise(config_lookup(&app_config, CFG_MOD_MATRIX_CONTROLLER)) != RESULT_OK)
+	if (mod_matrix_controller_initialise(config_lookup(&app_config, CFG_MOD_MATRIX_CONTROLLER), config_lookup(&patch_config, CFG_MOD_MATRIX_CONTROLLER)) != RESULT_OK)
 	{
 		exit(EXIT_FAILURE);
 	}
@@ -553,6 +556,43 @@ void process_buffer_swap(gfx_event_t *event, gfx_object_t *receiver)
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
+// Patch configuration
+//
+
+void patch_initialise()
+{
+	config_init(&patch_config);
+
+	if (access(PATCH_FILE, F_OK) != -1)
+	{
+		if (config_read_file(&patch_config, PATCH_FILE) != CONFIG_TRUE)
+		{
+			syslog(LOG_ERR, "Patch load error in %s at line %d: %s\n", config_error_file(&patch_config), config_error_line(&patch_config), config_error_text(&patch_config));
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
+void patch_save()
+{
+	config_setting_t* root_setting = config_root_setting(&patch_config);
+
+	config_setting_remove(root_setting, CFG_MOD_MATRIX_CONTROLLER);
+	config_setting_t* mod_matrix_patch = config_setting_add(root_setting, CFG_MOD_MATRIX_CONTROLLER, CONFIG_TYPE_GROUP);
+	mod_matrix_controller_save(mod_matrix_patch);
+
+	if (config_write_file(&patch_config, PATCH_FILE) != CONFIG_TRUE)
+	{
+		syslog(LOG_ERR, "Patch write error to %s\n", PATCH_FILE);
+	}
+}
+
+void patch_deinitialise()
+{
+	config_destroy(&patch_config);
+}
+
+//-----------------------------------------------------------------------------------------------------------------------
 // Synth model
 //
 
@@ -589,6 +629,7 @@ void synth_main()
 	gfx_event_initialise();
 	gfx_initialise();
 
+	patch_initialise();
 	synth_initialise();
 	configure_audio();
 	configure_profiling();
@@ -650,6 +691,8 @@ void synth_main()
 	}
 
 	synth_controllers_save(SETTINGS_FILE);
+	patch_save();
+	patch_deinitialise();
 	piglow_deinitialise();
 	gfx_deinitialise();
 	destroy_ui();
@@ -667,7 +710,6 @@ void synth_main()
 //-----------------------------------------------------------------------------------------------------------------------
 // Entrypoint
 //
-const char* SYSLOG_IDENT = "PITHESISER";
 
 int main(int argc, char **argv)
 {

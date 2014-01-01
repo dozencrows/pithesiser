@@ -28,6 +28,8 @@ typedef mod_matrix_value_t (*generate_mod_matrix_value_t)(mod_matrix_source_t* s
 typedef void (*base_update_t)(mod_matrix_sink_t* sink);
 typedef void (*model_update_t)(mod_matrix_source_t* source, mod_matrix_sink_t* sink);
 
+typedef void (*connection_callback_t)(void* data, mod_matrix_source_t* source, mod_matrix_sink_t* sink);
+
 struct mod_matrix_source_t
 {
 	char 						name[MOD_MATRIX_MAX_NAME_LEN + 1];
@@ -52,6 +54,7 @@ extern int mod_matrix_connect(const char* source_name, const char* sink_name);
 extern int mod_matrix_disconnect(const char* source_name, const char* sink_name);
 extern void mod_matrix_disconnect_source(const char* source_name);
 extern int mod_matrix_toggle_connection(const char* source_name, const char* sink_name);
+extern void mod_matrix_iterate_connections(void* data, connection_callback_t callback);
 extern void mod_matrix_update();
 
 #endif /* MODULATION_MATRIX_H_ */
