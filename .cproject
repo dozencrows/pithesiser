@@ -88,6 +88,8 @@
 									<listOptionValue builtIn="false" value="profiler"/>
 									<listOptionValue builtIn="false" value="wiringPi"/>
 									<listOptionValue builtIn="false" value="wiringPiDev"/>
+									<listOptionValue builtIn="false" value="expat"/>
+									<listOptionValue builtIn="false" value="log4c"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1385601344" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -190,6 +192,8 @@
 									<listOptionValue builtIn="false" value="profiler"/>
 									<listOptionValue builtIn="false" value="wiringPi"/>
 									<listOptionValue builtIn="false" value="wiringPiDev"/>
+									<listOptionValue builtIn="false" value="expat"/>
+									<listOptionValue builtIn="false" value="log4c"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.54546842" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

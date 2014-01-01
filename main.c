@@ -15,6 +15,7 @@
 #include <libconfig.h>
 #include <gperftools/profiler.h>
 #include <syslog.h>
+#include <log4c.h>
 
 #include "system_constants.h"
 #include "master_time.h"
@@ -710,11 +711,24 @@ void synth_main()
 //-----------------------------------------------------------------------------------------------------------------------
 // Entrypoint
 //
+log4c_category_t* log_cat = NULL;
 
 int main(int argc, char **argv)
 {
 	openlog(SYSLOG_IDENT, LOG_NDELAY, LOG_USER);
 	atexit(closelog);
+
+	if (log4c_init())
+	{
+		printf("Log4c initialisation failed");
+		exit(EXIT_FAILURE);
+	}
+	else
+	{
+		atexit(log4c_fini);
+		log_cat = log4c_category_get("pithesiser.log");
+		log4c_category_log(log_cat, LOG4C_PRIORITY_ERROR, "Log4c logging on");
+	}
 
 	const char* config_file = RESOURCES_SYNTH_CFG;
 	if (argc > 1)
