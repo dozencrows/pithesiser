@@ -46,9 +46,10 @@ typedef enum voice_event_t
 
 typedef void (*voice_callback_t)(voice_event_t callback_event, voice_t* voice, void* callback_data);
 
-extern void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope);
-extern void voice_add_callback(voice_callback_t callback, void* callback_data);
-extern void voice_remove_callback(voice_callback_t callback);
+extern void voices_initialise(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope);
+extern void voices_add_callback(voice_callback_t callback, void* callback_data);
+extern void voices_remove_callback(voice_callback_t callback);
+
 extern void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *filter_def);
 extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, filter_definition_t *filter_def);
 extern void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform);

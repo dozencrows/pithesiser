@@ -3,10 +3,10 @@ Raspberry Pi Synth Project
 
 Underway
 ========
+* Refactor voices & envelopes to decouple via callbacks in synth model (see notes below on modulation matrix) 
 
 To do next
 ==========
-* Refactor voices & envelopes to decouple via callbacks in synth model (see notes below on modulation matrix) 
 * Modulation matrix to map envelope outputs onto different parameters
 * Generalising envelope support - including:
   * normalised scale for editing
@@ -16,7 +16,6 @@ To do next
   * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
   * loading & saving of settings (replace MIDI controller output saving)
   * default values for settings, when they're set and how the results are driven to the synth model at startup
-* Standardise logging on log4c
 * Modularise synth model init and processing
 * Secondary LFO support
 * Enrich filter controls
@@ -46,6 +45,7 @@ Done
  * LFO as mod matrix source, mapping to note pitch and/or volume as sink
  * Launchpad S MIDI control over modulation matrix 
  * Persist mod matrix setup and initialise controller to match on startup
+ * Standardise logging on log4c with internal macros
 
 Blog ideas
 ==========
@@ -522,6 +522,8 @@ First pass:
         * Use synth model for ownership of voice and envelope instances, and binding and implementation of callbacks.
         * Voice start callback can start envelopes in synth model - model or mod matrix can also step envelopes as part of update.
         * Provide a case also for "global" envelopes that track oldest triggered voice, and reset when all voices stop.
+        * Note - may not need envelope callbacks (originally for stopping voice when envelope completes, but now no guarantee of
+          envelope and also potential for multiple envelopes affecting other factors)
     * Assignment idea:
       * Two types of mod matrix source - direct value source & definition sources.
       * Direct value - work as now.

@@ -39,7 +39,7 @@ static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *f
 	voice->filter_def = voice->filter.definition;
 }
 
-void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
+void voices_initialise(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
 {
 	for (int i = 0; i < voice_count; i++)
 	{
@@ -53,7 +53,7 @@ void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, en
 	}
 }
 
-void voice_add_callback(voice_callback_t callback, void* callback_data)
+void voices_add_callback(voice_callback_t callback, void* callback_data)
 {
 	if (voice_callback_free != NULL)
 	{
@@ -72,7 +72,7 @@ void voice_add_callback(voice_callback_t callback, void* callback_data)
 	}
 }
 
-void voice_remove_callback(voice_callback_t callback)
+void voices_remove_callback(voice_callback_t callback)
 {
 	voice_callback_info_t* callback_info = voice_callback_head;
 	voice_callback_info_t** last_link = &voice_callback_head;
@@ -168,7 +168,7 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 			voice_state = VOICE_ACTIVE;
 		}
-		else if (voice->current_state == NOTE_ENDING || envelope_completed(&voice->level_envelope_instance))
+		else if (voice->current_state == NOTE_ENDING)
 		{
 			voice->current_state = NOTE_NOT_PLAYING;
 			voice_make_callback(VOICE_EVENT_NOTE_ENDED, voice);

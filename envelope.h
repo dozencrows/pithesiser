@@ -44,6 +44,19 @@ typedef struct envelope_instance_t
 	int32_t		ref_time_ms;
 } envelope_instance_t;
 
+typedef enum envelope_event_t
+{
+	ENVELOPE_EVENT_STARTING,
+	ENVELOPE_EVENT_STAGE_CHANGE,
+	ENVELOPE_EVENT_COMPLETED
+} envelope_event_t;
+
+typedef void (*envelope_callback_t)(envelope_event_t callback_event, envelope_instance_t* envelope, void* callback_data);
+
+extern void envelopes_initialise();
+extern void envelopes_add_callback(envelope_callback_t callback, void* callback_data);
+extern void envelopes_remove_callback(envelope_callback_t callback);
+
 extern void envelope_init(envelope_instance_t *instance, envelope_t* envelope);
 extern void envelope_start(envelope_instance_t *instance);
 extern int32_t envelope_step(envelope_instance_t *instance, int32_t timestep_ms);
