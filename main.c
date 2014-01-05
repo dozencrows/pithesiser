@@ -14,12 +14,11 @@
 #include <libgen.h>
 #include <libconfig.h>
 #include <gperftools/profiler.h>
-#include <syslog.h>
-#include <log4c.h>
 
 #include "system_constants.h"
 #include "master_time.h"
 #include "fixed_point_math.h"
+#include "logging.h"
 #include "alsa.h"
 #include "midi.h"
 #include "oscillator.h"
@@ -50,7 +49,6 @@
 #define EXIT_CONTROLLER			0x2e
 #define PROFILE_CONTROLLER		0x2c
 
-static const char* SYSLOG_IDENT = "pithesiser";
 static const char* RESOURCES_PITHESISER_ALPHA_PNG = "resources/pithesiser_alpha.png";
 static const char* RESOURCES_SYNTH_CFG = "resources/synth.cfg";
 
@@ -568,7 +566,7 @@ void patch_initialise()
 	{
 		if (config_read_file(&patch_config, PATCH_FILE) != CONFIG_TRUE)
 		{
-			syslog(LOG_ERR, "Patch load error in %s at line %d: %s\n", config_error_file(&patch_config), config_error_line(&patch_config), config_error_text(&patch_config));
+			LOG_ERROR("Patch load error in %s at line %d: %s\n", config_error_file(&patch_config), config_error_line(&patch_config), config_error_text(&patch_config));
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -584,7 +582,7 @@ void patch_save()
 
 	if (config_write_file(&patch_config, PATCH_FILE) != CONFIG_TRUE)
 	{
-		syslog(LOG_ERR, "Patch write error to %s\n", PATCH_FILE);
+		LOG_ERROR("Patch write error to %s\n", PATCH_FILE);
 	}
 }
 
@@ -711,23 +709,12 @@ void synth_main()
 //-----------------------------------------------------------------------------------------------------------------------
 // Entrypoint
 //
-log4c_category_t* log_cat = NULL;
 
 int main(int argc, char **argv)
 {
-	openlog(SYSLOG_IDENT, LOG_NDELAY, LOG_USER);
-	atexit(closelog);
-
-	if (log4c_init())
+	if (logging_initialise() != RESULT_OK)
 	{
-		printf("Log4c initialisation failed");
 		exit(EXIT_FAILURE);
-	}
-	else
-	{
-		atexit(log4c_fini);
-		log_cat = log4c_category_get("pithesiser.log");
-		log4c_category_log(log_cat, LOG4C_PRIORITY_ERROR, "Log4c logging on");
 	}
 
 	const char* config_file = RESOURCES_SYNTH_CFG;
