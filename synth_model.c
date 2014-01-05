@@ -134,7 +134,31 @@ envelope_stage_t q_envelope_stages[4] =
 
 void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* callback_data)
 {
-	LOG_INFO("Voice event %d for %08x (%08x)", callback_event, voice, callback_data);
+	//LOG_INFO("Voice event %d for %08x (%08x)", callback_event, voice, callback_data);
+	switch(callback_event)
+	{
+		case VOICE_EVENT_NOTE_STARTING:
+		{
+			envelope_start(&voice->level_envelope_instance);
+			envelope_start(&voice->filter_freq_envelope_instance);
+			envelope_start(&voice->filter_q_envelope_instance);
+			break;
+		}
+
+		case VOICE_EVENT_NOTE_ENDING:
+		{
+			envelope_go_to_stage(&voice->level_envelope_instance, ENVELOPE_STAGE_RELEASE);
+			envelope_go_to_stage(&voice->filter_freq_envelope_instance, ENVELOPE_STAGE_RELEASE);
+			envelope_go_to_stage(&voice->filter_q_envelope_instance, ENVELOPE_STAGE_RELEASE);
+			break;
+		}
+
+		case VOICE_EVENT_NOTE_ENDED:
+		default:
+		{
+			break;
+		}
+	}
 }
 
 void synth_model_initialise(synth_model_t* synth_model, int voice_count)

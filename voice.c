@@ -118,12 +118,9 @@ void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *f
 		}
 		else if (voice->current_state >= 0)
 		{
+			voice->oscillator.phase_accumulator = 0;
 			voice_make_callback(VOICE_EVENT_NOTE_STARTING, voice);
 			//voice->oscillator.frequency = voice->frequency;
-			voice->oscillator.phase_accumulator = 0;
-			envelope_start(&voice->level_envelope_instance);
-			envelope_start(&voice->filter_freq_envelope_instance);
-			envelope_start(&voice->filter_q_envelope_instance);
 			filter_silence(&voice->filter);
 			voice->filter_def = *filter_def;
 		}
@@ -196,9 +193,6 @@ void voice_stop_note(voice_t *voice)
 	{
 		voice->current_state = NOTE_ENDING;
 		voice_make_callback(VOICE_EVENT_NOTE_ENDING, voice);
-		envelope_go_to_stage(&voice->level_envelope_instance, ENVELOPE_STAGE_RELEASE);
-		envelope_go_to_stage(&voice->filter_freq_envelope_instance, ENVELOPE_STAGE_RELEASE);
-		envelope_go_to_stage(&voice->filter_q_envelope_instance, ENVELOPE_STAGE_RELEASE);
 	}
 }
 
