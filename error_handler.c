@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <libconfig.h>
+#include "logging.h"
 
 #define MAX_ERROR_MSG_LEN	1024
 #define MAX_ERROR_STACK		16
@@ -46,21 +47,24 @@ void pop_error_report(const char* user_message)
 		if (error_stack[error_stack_head] != 0)
 		{
 			strerror_r(error_stack[error_stack_head], error_msg, MAX_ERROR_MSG_LEN);
-			fprintf(stderr, "%s: %s", user_message, error_msg);
+			LOG_ERROR("%s: %s", user_message, error_msg);
 		}
 		else
 		{
-			fprintf(stderr, "%s: %s", user_message, error_msg_stack[error_stack_head]);
+			LOG_ERROR("%s: %s", user_message, error_msg_stack[error_stack_head]);
 		}
 	}
 }
 
+#define MAX_MESSAGE_BUFFER_LEN	4096
 void setting_error_report(config_setting_t *setting, const char* message, ...)
 {
+	char message_buffer[MAX_MESSAGE_BUFFER_LEN];
 	va_list arg_list;
 	va_start(arg_list, message);
-	vprintf(message, arg_list);
+	vsnprintf(message_buffer, MAX_MESSAGE_BUFFER_LEN, message, arg_list);
 	va_end(arg_list);
-	printf(" at line %d in %s\n", config_setting_source_line(setting), config_setting_source_file(setting));
+	message_buffer[MAX_MESSAGE_BUFFER_LEN - 1] = 0;
+	LOG_ERROR("%s at line %d in %s\n", message_buffer, config_setting_source_line(setting), config_setting_source_file(setting));
 }
 
