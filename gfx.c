@@ -8,9 +8,6 @@
 #define _GNU_SOURCE
 
 #include "gfx.h"
-#include "gfx_event.h"
-#include "gfx_event_types.h"
-#include "gfx_font.h"
 #include <pthread.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -20,7 +17,11 @@
 #include "VG/vgu.h"
 #include "interface/vmcs_host/vc_vchi_dispmanx.h"
 #include "bcm_host.h"
+#include "logging.h"
 #include "master_time.h"
+#include "gfx_event.h"
+#include "gfx_event_types.h"
+#include "gfx_font.h"
 
 #define PNG_DEBUG 3
 #include "libpng/png.h"
@@ -293,9 +294,9 @@ void gfx_deinitialise()
 
 	int32_t render_elapsed = render_exec_time + render_idle_time;
 
-	printf("Render time: %d ms\n", render_elapsed);
-	printf("  exec: %d ms  idle: %d ms\n", render_exec_time, render_idle_time);
-	printf("Render frame rate: %f\n", (float)(total_frames * 1000) / (float)render_elapsed);
+	LOG_INFO("Render time: %d ms\n", render_elapsed);
+	LOG_INFO("  exec: %d ms  idle: %d ms\n", render_exec_time, render_idle_time);
+	LOG_INFO("Render frame rate: %f\n", (float)(total_frames * 1000) / (float)render_elapsed);
 }
 
 void gfx_get_screen_resolution(int *width, int *height)

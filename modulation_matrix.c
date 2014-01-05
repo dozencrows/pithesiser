@@ -7,8 +7,8 @@
 
 #include "modulation_matrix.h"
 #include <memory.h>
-#include <syslog.h>
 #include "system_constants.h"
+#include "logging.h"
 
 #define MOD_MATRIX_MAX_CONNECTIONS	(MOD_MATRIX_MAX_SOURCES * MOD_MATRIX_MAX_SINKS)
 
@@ -58,7 +58,7 @@ int mod_matrix_add_source(mod_matrix_source_t* source)
 	}
 	else
 	{
-		syslog(LOG_ERR, "Mod matrix source limit of %d reached", MOD_MATRIX_MAX_SOURCES);
+		LOG_ERROR("Mod matrix source limit of %d reached", MOD_MATRIX_MAX_SOURCES);
 		return RESULT_ERROR;
 	}
 }
@@ -72,7 +72,7 @@ int mod_matrix_add_sink(mod_matrix_sink_t* sink)
 	}
 	else
 	{
-		syslog(LOG_ERR, "Mod matrix sink limit of %d reached", MOD_MATRIX_MAX_SINKS);
+		LOG_ERROR("Mod matrix sink limit of %d reached", MOD_MATRIX_MAX_SINKS);
 		return RESULT_ERROR;
 	}
 }
@@ -153,14 +153,14 @@ int mod_matrix_connect(const char* source_name, const char* sink_name)
 	mod_matrix_source_t* source = find_source(source_name);
 	if (source == NULL)
 	{
-		syslog(LOG_ERR, "Unknown source %s for connection", source_name);
+		LOG_ERROR("Unknown source %s for connection", source_name);
 		return RESULT_ERROR;
 	}
 
 	mod_matrix_sink_t* sink = find_sink(sink_name);
 	if (sink == NULL)
 	{
-		syslog(LOG_ERR, "Unknown sink %s for connection", sink_name);
+		LOG_ERROR("Unknown sink %s for connection", sink_name);
 		return RESULT_ERROR;
 	}
 
@@ -168,7 +168,7 @@ int mod_matrix_connect(const char* source_name, const char* sink_name)
 	{
 		if (connect(source, sink) == NULL)
 		{
-			syslog(LOG_ERR, "No free connections for %s-%s", source_name, sink_name);
+			LOG_ERROR("No free connections for %s-%s", source_name, sink_name);
 			return RESULT_ERROR;
 		}
 		else
@@ -178,7 +178,7 @@ int mod_matrix_connect(const char* source_name, const char* sink_name)
 	}
 	else
 	{
-		syslog(LOG_WARNING, "Connection exists for %s-%s", source_name, sink_name);
+		LOG_WARN("Connection exists for %s-%s", source_name, sink_name);
 		return RESULT_ERROR;
 	}
 }
@@ -188,14 +188,14 @@ int mod_matrix_disconnect(const char* source_name, const char* sink_name)
 	mod_matrix_source_t* source = find_source(source_name);
 	if (source == NULL)
 	{
-		syslog(LOG_ERR, "Unknown source %s for disconnection", source_name);
+		LOG_ERROR("Unknown source %s for disconnection", source_name);
 		return RESULT_ERROR;
 	}
 
 	mod_matrix_sink_t* sink = find_sink(sink_name);
 	if (sink == NULL)
 	{
-		syslog(LOG_ERR, "Unknown sink %s for disconnection", sink_name);
+		LOG_ERROR("Unknown sink %s for disconnection", sink_name);
 		return RESULT_ERROR;
 	}
 
@@ -208,7 +208,7 @@ int mod_matrix_disconnect(const char* source_name, const char* sink_name)
 	}
 	else
 	{
-		syslog(LOG_WARNING, "No connection exists for %s-%s", source_name, sink_name);
+		LOG_WARN("No connection exists for %s-%s", source_name, sink_name);
 		return RESULT_ERROR;
 	}
 }
@@ -218,7 +218,7 @@ void mod_matrix_disconnect_source(const char* source_name)
 	mod_matrix_source_t* source = find_source(source_name);
 	if (source == NULL)
 	{
-		syslog(LOG_ERR, "Unknown source %s for disconnection", source_name);
+		LOG_ERROR("Unknown source %s for disconnection", source_name);
 	}
 	else
 	{
@@ -237,14 +237,14 @@ int mod_matrix_toggle_connection(const char* source_name, const char* sink_name)
 	mod_matrix_source_t* source = find_source(source_name);
 	if (source == NULL)
 	{
-		syslog(LOG_ERR, "Unknown source %s for connection", source_name);
+		LOG_ERROR("Unknown source %s for connection", source_name);
 		return MOD_MATRIX_DISCONNECTED;
 	}
 
 	mod_matrix_sink_t* sink = find_sink(sink_name);
 	if (sink == NULL)
 	{
-		syslog(LOG_ERR, "Unknown sink %s for connection", sink_name);
+		LOG_ERROR("Unknown sink %s for connection", sink_name);
 		return MOD_MATRIX_DISCONNECTED;
 	}
 

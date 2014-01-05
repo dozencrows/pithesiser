@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include "logging.h"
 #include "VG/openvg.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
@@ -17,7 +18,7 @@
 #define PNG_DEBUG 3
 #include "libpng/png.h"
 
-#define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) printf("VG Error: %d (%s)\n", error, s); }
+#define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) LOG_ERROR("VG Error: %d (%s)\n", error, s); }
 
 void abort_(const char * s, ...)
 {

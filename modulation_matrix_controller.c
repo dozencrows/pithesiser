@@ -7,9 +7,9 @@
 
 #include "modulation_matrix_controller.h"
 #include <libconfig.h>
-#include <syslog.h>
 #include <string.h>
 #include "system_constants.h"
+#include "logging.h"
 #include "modulation_matrix.h"
 #include "error_handler.h"
 #include "midi.h"
@@ -189,13 +189,13 @@ static void mod_matrix_save_callback(void* data, mod_matrix_source_t* source, mo
 
 		if (config_setting_set_string_elem(connection, 0, source->name) == NULL || config_setting_set_string_elem(connection, 1, sink->name) == NULL)
 		{
-			syslog(LOG_ERR, "Could not set modulation matrix entry in patch for %s-%s", source->name, sink->name);
+			LOG_ERROR("Could not set modulation matrix entry in patch for %s-%s", source->name, sink->name);
 			config_setting_remove_elem(connections, config_setting_index(connection));
 		}
 	}
 	else
 	{
-		syslog(LOG_ERR, "Could not create modulation matrix entry in patch for %s-%s", source->name, sink->name);
+		LOG_ERROR("Could not create modulation matrix entry in patch for %s-%s", source->name, sink->name);
 	}
 }
 
@@ -208,7 +208,7 @@ void mod_matrix_controller_save(config_setting_t* patch)
 	}
 	else
 	{
-		syslog(LOG_ERR, "Could not create modulation matrix entry in patch");
+		LOG_ERROR("Could not create modulation matrix entry in patch");
 	}
 }
 

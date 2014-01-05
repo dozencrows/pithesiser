@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include "libconfig.h"
 #include "system_constants.h"
+#include "logging.h"
 #include "error_handler.h"
 #include "midi.h"
 #include "midi_controller.h"
@@ -258,7 +259,7 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 {
 	if (config == NULL)
 	{
-		printf("Missing controller configuration\n");
+		LOG_ERROR("Missing controller configuration\n");
 		return 0;
 	}
 

@@ -8,6 +8,7 @@
 #include "recording.h"
 #include <sndfile.h>
 #include "system_constants.h"
+#include "logging.h"
 #include "gfx_event.h"
 #include "gfx_event_types.h"
 
@@ -38,7 +39,7 @@ static void configure(config_setting_t *setting_recording, int gfx_event_id)
 
 	if (config_setting_lookup_string(setting_recording, CFG_OUTPUT_FILE, &output_file) != CONFIG_TRUE)
 	{
-		printf("Recording not started: no output file specified\n");
+		LOG_ERROR("Recording not started: no output file specified\n");
 	}
 
 	SF_INFO sndinfo;
@@ -56,7 +57,7 @@ static void configure(config_setting_t *setting_recording, int gfx_event_id)
 	}
 	else
 	{
-		printf("Recording not started: %s\n", sf_strerror(sndfile));
+		LOG_ERROR("Recording not started: %s\n", sf_strerror(sndfile));
 	}
 }
 
