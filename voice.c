@@ -8,6 +8,21 @@
 #include "voice.h"
 #include <stddef.h>
 #include "midi.h"
+#include "logging.h"
+
+#define MAX_VOICE_CALLBACKS		4
+
+typedef struct voice_callback_info_t voice_callback_info_t;
+typedef struct voice_callback_info_t
+{
+	voice_callback_t		callback;
+	void*					data;
+	voice_callback_info_t*	next_callback;
+} voice_callback_info_t;
+
+static voice_callback_info_t* voice_callback_head = NULL;
+static voice_callback_info_t* voice_callback_free = NULL;
+static voice_callback_info_t voice_callback_info[MAX_VOICE_CALLBACKS];
 
 static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
 {
@@ -30,6 +45,67 @@ void voice_init(voice_t *voices, int voice_count, envelope_t *level_envelope, en
 	{
 		init_voice(voices + i, level_envelope, filter_freq_envelope, filter_q_envelope);
 	}
+
+	for (int i = 0; i < MAX_VOICE_CALLBACKS; i++)
+	{
+		voice_callback_info[i].next_callback = voice_callback_free;
+		voice_callback_free = voice_callback_info + i;
+	}
+}
+
+void voice_add_callback(voice_callback_t callback, void* callback_data)
+{
+	if (voice_callback_free != NULL)
+	{
+		voice_callback_info_t* callback_info = voice_callback_free;
+		voice_callback_free = voice_callback_free->next_callback;
+
+		callback_info->callback 		= callback;
+		callback_info->data 			= callback_data;
+		callback_info->next_callback 	= voice_callback_head;
+
+		voice_callback_head = callback_info;
+	}
+	else
+	{
+		LOG_ERROR("No voice callbacks available");
+	}
+}
+
+void voice_remove_callback(voice_callback_t callback)
+{
+	voice_callback_info_t* callback_info = voice_callback_head;
+	voice_callback_info_t** last_link = &voice_callback_head;
+
+	while (callback_info != NULL)
+	{
+		if (callback_info->callback == callback)
+		{
+			*last_link = callback_info->next_callback;
+			callback_info->callback 		= NULL;
+			callback_info->data				= NULL;
+			callback_info->next_callback 	= voice_callback_free;
+
+			voice_callback_free = callback_info;
+			break;
+		}
+		else
+		{
+			last_link = &callback_info->next_callback;
+			callback_info = callback_info->next_callback;
+		}
+	}
+}
+
+void voice_make_callback(voice_event_t event, voice_t* voice)
+{
+	voice_callback_info_t* callback_info = voice_callback_head;
+
+	while (callback_info != NULL)
+	{
+		callback_info->callback(event, voice, callback_info->data);
+		callback_info = callback_info->next_callback;
+	}
 }
 
 void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *filter_def)
@@ -42,6 +118,7 @@ void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *f
 		}
 		else if (voice->current_state >= 0)
 		{
+			voice_make_callback(VOICE_EVENT_NOTE_STARTING, voice);
 			//voice->oscillator.frequency = voice->frequency;
 			voice->oscillator.phase_accumulator = 0;
 			envelope_start(&voice->level_envelope_instance);
@@ -97,6 +174,7 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 		else if (voice->current_state == NOTE_ENDING || envelope_completed(&voice->level_envelope_instance))
 		{
 			voice->current_state = NOTE_NOT_PLAYING;
+			voice_make_callback(VOICE_EVENT_NOTE_ENDED, voice);
 			voice_state = VOICE_GONE_IDLE;
 		}
 	}
@@ -117,6 +195,7 @@ void voice_stop_note(voice_t *voice)
 	if (PLAYING_NOTE(voice->current_state))
 	{
 		voice->current_state = NOTE_ENDING;
+		voice_make_callback(VOICE_EVENT_NOTE_ENDING, voice);
 		envelope_go_to_stage(&voice->level_envelope_instance, ENVELOPE_STAGE_RELEASE);
 		envelope_go_to_stage(&voice->filter_freq_envelope_instance, ENVELOPE_STAGE_RELEASE);
 		envelope_go_to_stage(&voice->filter_q_envelope_instance, ENVELOPE_STAGE_RELEASE);

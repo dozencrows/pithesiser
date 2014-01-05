@@ -8,6 +8,7 @@
 #include "synth_model.h"
 #include <stdlib.h>
 #include <math.h>
+#include "logging.h"
 #include "fixed_point_math.h"
 #include "modulation_matrix.h"
 #include "voice.h"
@@ -131,12 +132,18 @@ envelope_stage_t q_envelope_stages[4] =
 	{ LEVEL_CURRENT,	FIXED_ONE / 100,	200				}
 };
 
+void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* callback_data)
+{
+	LOG_INFO("Voice event %d for %08x (%08x)", callback_event, voice, callback_data);
+}
+
 void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 {
 	synth_model->voice_count 	= voice_count;
 	synth_model->active_voices	= 0;
 	synth_model->voice 			= (voice_t*)calloc(synth_model->voice_count, sizeof(voice_t));
 	voice_init(synth_model->voice, synth_model->voice_count, &synth_model->envelope[0], &synth_model->envelope[1], &synth_model->envelope[2]);
+	voice_add_callback(voice_event_callback, NULL);
 
 	init_voice_sink(SYNTH_MOD_SINK_NOTE_AMPLITUDE, voice_amplitude_base_update, voice_amplitude_model_update, voice_count, synth_model->voice, &voice_amplitude_sink);
 	init_voice_sink(SYNTH_MOD_SINK_NOTE_PITCH, voice_pitch_base_update, voice_pitch_model_update, voice_count, synth_model->voice, &voice_pitch_sink);
@@ -162,6 +169,7 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 
 void synth_model_deinitialise(synth_model_t* synth_model)
 {
+	voice_remove_callback(voice_event_callback);
 	free(synth_model->voice);
 	synth_model->voice = NULL;
 }
