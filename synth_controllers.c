@@ -436,9 +436,9 @@ void update_synth(synth_state_t* synth_state, synth_model_t* synth_model)
 
 	if (synth_state->lfo_params == STATE_UPDATED)
 	{
-		synth_model->lfo.oscillator.waveform = midi_controller_read(&lfo_waveform_controller);
-		synth_model->lfo.oscillator.level = midi_controller_read(&lfo_level_controller);
-		synth_model->lfo.oscillator.frequency = midi_controller_read(&lfo_frequency_controller);
+		synth_model->lfo_source.lfo.oscillator.waveform = midi_controller_read(&lfo_waveform_controller);
+		synth_model->lfo_source.lfo.oscillator.level = midi_controller_read(&lfo_level_controller);
+		synth_model->lfo_source.lfo.oscillator.frequency = midi_controller_read(&lfo_frequency_controller);
 	}
 
 	if (synth_state->filter == STATE_UPDATED)

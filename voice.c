@@ -24,7 +24,7 @@ static voice_callback_info_t* voice_callback_head = NULL;
 static voice_callback_info_t* voice_callback_free = NULL;
 static voice_callback_info_t voice_callback_info[MAX_VOICE_CALLBACKS];
 
-static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
+static void init_voice(voice_t *voice)
 {
 	voice->midi_channel = 0;
 	voice->last_state = NOTE_NOT_PLAYING;
@@ -32,18 +32,16 @@ static void init_voice(voice_t *voice, envelope_t *level_envelope, envelope_t *f
 	voice->play_counter = 0;
 
 	osc_init(&voice->oscillator);
-	envelope_init(&voice->level_envelope_instance, level_envelope);
-	envelope_init(&voice->filter_freq_envelope_instance, filter_freq_envelope);
-	envelope_init(&voice->filter_q_envelope_instance, filter_q_envelope);
 	filter_init(&voice->filter);
 	voice->filter_def = voice->filter.definition;
 }
 
-void voices_initialise(voice_t *voices, int voice_count, envelope_t *level_envelope, envelope_t *filter_freq_envelope, envelope_t *filter_q_envelope)
+void voices_initialise(voice_t *voices, int voice_count)
 {
 	for (int i = 0; i < voice_count; i++)
 	{
-		init_voice(voices + i, level_envelope, filter_freq_envelope, filter_q_envelope);
+		init_voice(voices + i);
+		voices[i].index = i;
 	}
 
 	for (int i = 0; i < MAX_VOICE_CALLBACKS; i++)
@@ -120,7 +118,6 @@ void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *f
 		{
 			voice->oscillator.phase_accumulator = 0;
 			voice_make_callback(VOICE_EVENT_NOTE_STARTING, voice);
-			//voice->oscillator.frequency = voice->frequency;
 			filter_silence(&voice->filter);
 			voice->filter_def = *filter_def;
 		}
@@ -133,10 +130,10 @@ void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *f
 		voice->last_state = voice->current_state;
 	}
 
-	if (voice->current_state != NOTE_NOT_PLAYING)
-	{
-		envelope_step(&voice->level_envelope_instance, timestep_ms);
-	}
+	//if (voice->current_state != NOTE_NOT_PLAYING)
+	//{
+	//	envelope_step(&voice->level_envelope_instance, timestep_ms);
+	//}
 }
 
 int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, filter_definition_t *filter_def)
@@ -153,13 +150,13 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 		}
 
-		voice->filter_def.frequency = envelope_step(&voice->filter_freq_envelope_instance, timestep_ms);
-		voice->filter_def.q = envelope_step(&voice->filter_q_envelope_instance, timestep_ms);
-		if (!filter_definitions_same(&voice->filter_def, &voice->filter.definition))
-		{
-			voice->filter.definition = voice->filter_def;
-			filter_update(&voice->filter);
-		}
+		//voice->filter_def.frequency = envelope_step(&voice->filter_freq_envelope_instance, timestep_ms);
+		//voice->filter_def.q = envelope_step(&voice->filter_q_envelope_instance, timestep_ms);
+		//if (!filter_definitions_same(&voice->filter_def, &voice->filter.definition))
+		//{
+		//	voice->filter.definition = voice->filter_def;
+		//	filter_update(&voice->filter);
+		//}
 
 		if (voice->oscillator.level > 0 || voice->oscillator.last_level != 0)
 		{

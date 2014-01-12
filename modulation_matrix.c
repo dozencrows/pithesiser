@@ -33,12 +33,12 @@ void mod_matrix_initialise()
 	memset(connections, 0, sizeof(connections));
 }
 
-void mod_matrix_init_source(const char* name, generate_mod_matrix_value_t generate_value, mod_matrix_source_t* source)
+void mod_matrix_init_source(const char* name, generate_mod_matrix_value_t generate_value, get_mod_matrix_value_t get_value, mod_matrix_source_t* source)
 {
 	strncpy(source->name, name, MOD_MATRIX_MAX_NAME_LEN);
 	source->name[MOD_MATRIX_MAX_NAME_LEN] = 0;
 	source->generate_value = generate_value;
-	source->value = 0;
+	source->get_value = get_value;
 }
 
 void mod_matrix_init_sink(const char* name, base_update_t base_update, model_update_t model_update, mod_matrix_sink_t* sink)
@@ -262,16 +262,16 @@ int mod_matrix_toggle_connection(const char* source_name, const char* sink_name)
 	}
 }
 
-void mod_matrix_update()
+void mod_matrix_update(void* data)
 {
 	for (int i = 0; i < source_count; i++)
 	{
-		sources[i]->value = sources[i]->generate_value(sources[i]);
+		sources[i]->generate_value(sources[i], data);
 	}
 
 	for (int i = 0; i < sink_count; i++)
 	{
-		sinks[i]->base_update(sinks[i]);
+		sinks[i]->base_update(sinks[i], data);
 	}
 
 	mod_matrix_connection_t* connection = connections;

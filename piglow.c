@@ -47,7 +47,7 @@ void piglow_update(voice_t* voice, int voice_count)
 			if (voice[i].current_state != NOTE_NOT_PLAYING)
 			{
 				int led = (voice[i].note % 12) / 2;
-				int bright = (voice[i].level_envelope_instance.last_level * PIGLOW_LED_MAX) / LEVEL_MAX;
+				int bright = (voice[i].oscillator.level * PIGLOW_LED_MAX) / LEVEL_MAX;
 				bright = bright * piglow_brightness / PIGLOW_LED_MAX;
 				if (bright > led_brights[led])
 				{

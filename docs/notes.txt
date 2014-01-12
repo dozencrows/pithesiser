@@ -3,14 +3,16 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Refactor voices & envelopes to decouple via callbacks in synth model (see notes below on modulation matrix) 
+* Resolve voice lifetime taking into account envelopes and other modulation params (see notes below)
 
 To do next
 ==========
-* Modulation matrix to map envelope outputs onto different parameters
-* Generalising envelope support - including:
-  * normalised scale for editing
-  * adjustable start and end values
+* Re-enabling envelopes in new synth model:
+  * Modulation matrix to map envelope outputs onto different parameters
+  * Generalising envelope support - including:
+    * normalised scale for editing
+    * adjustable start and end values
+* Sort out LFO reset (e.g. after all voices idle)
 * Modulation matrix to map LFO outputs onto filter parameters
 * Data-driven settings:
   * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
@@ -46,6 +48,7 @@ Done
  * Launchpad S MIDI control over modulation matrix 
  * Persist mod matrix setup and initialise controller to match on startup
  * Standardise logging on log4c with internal macros
+ * Refactor voices & envelopes to decouple via callbacks in synth model
 
 Blog ideas
 ==========
@@ -536,6 +539,33 @@ First pass:
         * Avoids abstracting currently coupled behaviour such as envelope release and completion, as this still happens in the voice.
         * Avoids indices and time values in mod matrix interface.
 		* Need to add envelope instances & related code to each sink as well as voices (e.g. lfo) - could be a lot of extra stuff...      
+
+Voice Lifetime
+--------------
+The main issue here is release time.
+* "Note-off" triggers release
+  * If no envelope assigned to amplitude, then note should stop dead.
+  * If envelope assigned to amplitude, envelope should switch to release stage and play out - at end, note should stop.
+  * Other amplitude modifiers should apply, but not affect the duration of release.
+    * E.g. LFO should still change amplitude, but not cause note to stop early or continue past release end.
+
+Current implementation uses note state (NOTE_ENDING) and oscillator level. This isn't enough information as in each update:
+* Sink base update sets oscillator amplitude to max
+* Sink model update applies modifiers to amplitude
+* If note is NOTE_ENDING, voice update will only stop note when oscillator amplitude is zero
+  * base update prevents this
+  * LFO modulation doesn't quite get to zero consistently, so will prevent this also.
+
+The tricky part is maintaining the flexibility of the modulation matrix model, where an initial base value is set and then modified
+while correctly determining release.
+
+I think what is needed is a more explicit control of voice lifetime control:
+* Notes still have states: NOT PLAYING, PLAYING, ENDING
+* "Note-off" changes state to ENDING
+  * voice callback explicitly checks for envelope assignment to amplitude modulation
+    * if found, switches all envelopes to release stage
+      * notes will persist in ENDING state until amplitude goes to zero
+    * else kills voice immediately
 
 Development Notes
 =================

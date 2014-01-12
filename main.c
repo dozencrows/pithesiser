@@ -178,15 +178,11 @@ void process_audio(int32_t timestep_ms)
 	alsa_get_buffer_params(write_buffer_index, &buffer_data, &buffer_samples);
 	size_t buffer_bytes = buffer_samples * sizeof(sample_t) * 2;
 
-	// Update components used in modulation matrix that rely on state not
-	// available in the modulation matrix (at least for now).
-	lfo_update(&synth_model.lfo, buffer_samples);
-	for (int i = 0; i < synth_model.voice_count; i++)
-	{
-		voice_preupdate(synth_model.voice + i, timestep_ms, &synth_model.global_filter_def);
-	}
+	synth_update_state_t update_state;
+	update_state.timestep_ms = timestep_ms;
+	update_state.sample_count = buffer_samples;
 
-	mod_matrix_update();
+	synth_model_update(&synth_model, &update_state);
 
 	int first_audible_voice = -1;
 	int last_active_voices = synth_model.active_voices;
@@ -340,11 +336,6 @@ void process_midi_events()
 		{
 			int candidate_voice_state;
 			voice_t *candidate_voice = voice_find_next_likely_free(synth_model.voice, synth_model.voice_count, channel, &candidate_voice_state);
-
-			if (synth_model.active_voices == 0)
-			{
-				lfo_reset(&synth_model.lfo);
-			}
 
 			if (candidate_voice != NULL)
 			{
