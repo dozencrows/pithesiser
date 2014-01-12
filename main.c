@@ -127,7 +127,7 @@ void configure_audio()
 
 	if (config_lookup_string(&app_config, CFG_DEVICES_AUDIO_OUTPUT, &setting_devices_audio_output) != CONFIG_TRUE)
 	{
-		LOG_ERROR("Missing audio output device in config\n");
+		LOG_ERROR("Missing audio output device in config");
 		exit(EXIT_FAILURE);
 	}
 
@@ -144,7 +144,7 @@ void configure_audio()
 
 		if (duck_setting_count != synth_model.voice_count)
 		{
-			LOG_ERROR("Invalid number of auto duck levels %d - should be %d\n", duck_setting_count, synth_model.voice_count);
+			LOG_ERROR("Invalid number of auto duck levels %d - should be %d", duck_setting_count, synth_model.voice_count);
 			exit(EXIT_FAILURE);
 		}
 
@@ -153,7 +153,7 @@ void configure_audio()
 			float duck_level_factor = config_setting_get_float_elem(setting_auto_duck, i);
 			if (duck_level_factor < 0.0f || duck_level_factor > 1.0f)
 			{
-				LOG_ERROR("Invalid auto duck level %d of %f - should be between 0 and 1\n", i + 1, duck_level_factor);
+				LOG_ERROR("Invalid auto duck level %d of %f - should be between 0 and 1", i + 1, duck_level_factor);
 				exit(EXIT_FAILURE);
 			}
 
@@ -161,7 +161,7 @@ void configure_audio()
 
 			if (duck_level > duck_level_by_voice_count[i])
 			{
-				LOG_ERROR("Invalid auto duck level %d of %f - values should be decreasing\n", i + 1, duck_level_factor);
+				LOG_ERROR("Invalid auto duck level %d of %f - values should be decreasing", i + 1, duck_level_factor);
 				exit(EXIT_FAILURE);
 			}
 
@@ -247,7 +247,7 @@ void process_audio(int32_t timestep_ms)
 	{
 		if (synth_model.active_voices < 0)
 		{
-			LOG_ERROR("Voice underflow: %d\n", synth_model.active_voices);
+			LOG_ERROR("Voice underflow: %d", synth_model.active_voices);
 		}
 	}
 }
@@ -273,7 +273,7 @@ void configure_midi()
 
 	if (setting_devices_midi_input == NULL)
 	{
-		LOG_ERROR("Missing midi input devices in config\n");
+		LOG_ERROR("Missing midi input devices in config");
 		exit(EXIT_FAILURE);
 	}
 
@@ -282,7 +282,7 @@ void configure_midi()
 
 	if (midi_device_count < 0 || midi_device_count > MAX_MIDI_DEVICES)
 	{
-		LOG_ERROR("Invalid number of midi devices %d - should be between 1 and %d\n", midi_device_count, MAX_MIDI_DEVICES);
+		LOG_ERROR("Invalid number of midi devices %d - should be between 1 and %d", midi_device_count, MAX_MIDI_DEVICES);
 		exit(EXIT_FAILURE);
 	}
 
@@ -566,7 +566,7 @@ void patch_initialise()
 	{
 		if (config_read_file(&patch_config, PATCH_FILE) != CONFIG_TRUE)
 		{
-			LOG_ERROR("Patch load error in %s at line %d: %s\n", config_error_file(&patch_config), config_error_line(&patch_config), config_error_text(&patch_config));
+			LOG_ERROR("Patch load error in %s at line %d: %s", config_error_file(&patch_config), config_error_line(&patch_config), config_error_text(&patch_config));
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -582,7 +582,7 @@ void patch_save()
 
 	if (config_write_file(&patch_config, PATCH_FILE) != CONFIG_TRUE)
 	{
-		LOG_ERROR("Patch write error to %s\n", PATCH_FILE);
+		LOG_ERROR("Patch write error to %s", PATCH_FILE);
 	}
 }
 
@@ -703,7 +703,7 @@ void synth_main()
 	synth_deinitialise();
 	config_destroy(&app_config);
 
-	LOG_INFO("Done: %d xruns\n", alsa_get_xruns_count());
+	LOG_INFO("Done: %d xruns", alsa_get_xruns_count());
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -730,7 +730,7 @@ int main(int argc, char **argv)
 	config_set_include_dir(&app_config, config_dir);
 	if (config_read_file(&app_config, config_file) != CONFIG_TRUE)
 	{
-		LOG_ERROR("Config error in %s at line %d: %s\n", config_error_file(&app_config), config_error_line(&app_config), config_error_text(&app_config));
+		LOG_ERROR("Config error in %s at line %d: %s", config_error_file(&app_config), config_error_line(&app_config), config_error_text(&app_config));
 		exit(EXIT_FAILURE);
 	}
 

@@ -18,7 +18,7 @@
 #define PNG_DEBUG 3
 #include "libpng/png.h"
 
-#define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) LOG_ERROR("VG Error: %d (%s)\n", error, s); }
+#define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) LOG_ERROR("VG Error: %d (%s)", error, s); }
 
 void abort_(const char * s, ...)
 {

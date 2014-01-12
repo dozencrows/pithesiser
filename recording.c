@@ -39,7 +39,7 @@ static void configure(config_setting_t *setting_recording, int gfx_event_id)
 
 	if (config_setting_lookup_string(setting_recording, CFG_OUTPUT_FILE, &output_file) != CONFIG_TRUE)
 	{
-		LOG_ERROR("Recording not started: no output file specified\n");
+		LOG_ERROR("Recording not started: no output file specified");
 	}
 
 	SF_INFO sndinfo;
@@ -57,7 +57,7 @@ static void configure(config_setting_t *setting_recording, int gfx_event_id)
 	}
 	else
 	{
-		LOG_ERROR("Recording not started: %s\n", sf_strerror(sndfile));
+		LOG_ERROR("Recording not started: %s", sf_strerror(sndfile));
 	}
 }
 

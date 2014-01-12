@@ -36,7 +36,7 @@ typedef struct waveform_renderer_internal_t
 	wave_renderer_state_t state;
 } wave_renderer_internal_t;
 
-#define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) LOG_ERROR("VG Error: %d (%s)\n", error, s); }
+#define VG_ERROR_CHECK(s)	{ VGErrorCode error = vgGetError(); if (error != VG_NO_ERROR) LOG_ERROR("VG Error: %d (%s)", error, s); }
 
 #define CALC_Y_COORD(renderer, sample)	(sample / renderer->definition.amplitude_scale)
 

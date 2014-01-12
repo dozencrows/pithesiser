@@ -233,7 +233,7 @@ int midi_initialise(int device_count, const char** device_name)
 		midi_handle[midi_handle_count] = open(device_name[i], O_RDWR);
 		if (midi_handle[midi_handle_count] == -1)
 		{
-			LOG_ERROR("Midi error: cannot open device %s\n", device_name[i]);
+			LOG_ERROR("Midi error: cannot open device %s", device_name[i]);
 		}
 		else
 		{

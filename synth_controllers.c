@@ -259,7 +259,7 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 {
 	if (config == NULL)
 	{
-		LOG_ERROR("Missing controller configuration\n");
+		LOG_ERROR("Missing controller configuration");
 		return 0;
 	}
 

@@ -65,6 +65,6 @@ void setting_error_report(config_setting_t *setting, const char* message, ...)
 	vsnprintf(message_buffer, MAX_MESSAGE_BUFFER_LEN, message, arg_list);
 	va_end(arg_list);
 	message_buffer[MAX_MESSAGE_BUFFER_LEN - 1] = 0;
-	LOG_ERROR("%s at line %d in %s\n", message_buffer, config_setting_source_line(setting), config_setting_source_file(setting));
+	LOG_ERROR("%s at line %d in %s", message_buffer, config_setting_source_line(setting), config_setting_source_file(setting));
 }
 

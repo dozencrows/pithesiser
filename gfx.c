@@ -294,9 +294,9 @@ void gfx_deinitialise()
 
 	int32_t render_elapsed = render_exec_time + render_idle_time;
 
-	LOG_INFO("Render time: %d ms\n", render_elapsed);
-	LOG_INFO("  exec: %d ms  idle: %d ms\n", render_exec_time, render_idle_time);
-	LOG_INFO("Render frame rate: %f\n", (float)(total_frames * 1000) / (float)render_elapsed);
+	LOG_INFO("Render time: %d ms", render_elapsed);
+	LOG_INFO("  exec: %d ms  idle: %d ms", render_exec_time, render_idle_time);
+	LOG_INFO("Render frame rate: %f", (float)(total_frames * 1000) / (float)render_elapsed);
 }
 
 void gfx_get_screen_resolution(int *width, int *height)
