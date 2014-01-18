@@ -176,6 +176,11 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 	{
 		case VOICE_EVENT_VOICE_STARTING:
 		{
+			if (synth_model->active_voices == 0)
+			{
+				lfo_reset(&synth_model->lfo_source.lfo);
+			}
+
 			synth_model->active_voices++;
 			break;
 		}

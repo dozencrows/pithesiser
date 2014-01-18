@@ -12,7 +12,6 @@ To do next
   * Generalising envelope support - including:
     * normalised scale for editing
     * adjustable start and end values
-* Sort out LFO reset (e.g. after all voices idle)
 * Modulation matrix to map LFO outputs onto filter parameters
 * Data-driven settings:
   * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
@@ -49,6 +48,8 @@ Done
  * Persist mod matrix setup and initialise controller to match on startup
  * Standardise logging on log4c with internal macros
  * Refactor voices & envelopes to decouple via callbacks in synth model
+ * Add voice killing and active voice counting to synth model via voice callbacks
+ * Sort out LFO reset - on first voice start from silence)
 
 Blog ideas
 ==========
