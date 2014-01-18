@@ -212,11 +212,6 @@ void process_audio(int32_t timestep_ms)
 				}
 				break;
 			}
-			case VOICE_GONE_IDLE:
-			{
-				synth_model.active_voices--;
-				break;
-			}
 		}
 	}
 
@@ -334,22 +329,17 @@ void process_midi_events()
 
 		if (event_type == 0x90)
 		{
-			int candidate_voice_state;
-			voice_t *candidate_voice = voice_find_next_likely_free(synth_model.voice, synth_model.voice_count, channel, &candidate_voice_state);
+			voice_t *candidate_voice = voice_find_next_likely_free(synth_model.voice, synth_model.voice_count, channel);
 
 			if (candidate_voice != NULL)
 			{
-				if (candidate_voice_state == VOICE_IDLE)
-				{
-					synth_model.active_voices++;
-				}
-
 				voice_play_note(candidate_voice, midi_event.data[0], master_waveform);
 			}
 		}
 		else if (event_type == 0x80)
 		{
 			voice_t *playing_voice = voice_find_playing_note(synth_model.voice, synth_model.voice_count, channel, midi_event.data[0]);
+
 			if (playing_voice != NULL)
 			{
 				voice_stop_note(playing_voice);

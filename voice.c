@@ -167,8 +167,7 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 		}
 		else if (voice->current_state == NOTE_ENDING)
 		{
-			voice->current_state = NOTE_NOT_PLAYING;
-			voice_make_callback(VOICE_EVENT_NOTE_ENDED, voice);
+			voice_kill(voice);
 			voice_state = VOICE_GONE_IDLE;
 		}
 	}
@@ -178,10 +177,17 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 
 void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform)
 {
+	int initial_state = voice->current_state;
+
 	voice->note = midi_note;
 	voice->current_state = midi_note;
 	voice->oscillator.waveform = waveform;
 	voice->frequency = midi_get_note_frequency(midi_note);
+
+	if (initial_state == NOTE_NOT_PLAYING)
+	{
+		voice_make_callback(VOICE_EVENT_VOICE_STARTING, voice);
+	}
 }
 
 void voice_stop_note(voice_t *voice)
@@ -193,11 +199,19 @@ void voice_stop_note(voice_t *voice)
 	}
 }
 
-voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_channel, int *voice_state)
+void voice_kill(voice_t * voice)
+{
+	if (voice->current_state != NOTE_NOT_PLAYING)
+	{
+		voice->current_state = NOTE_NOT_PLAYING;
+		voice_make_callback(VOICE_EVENT_VOICE_ENDED, voice);
+	}
+}
+
+voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_channel)
 {
 	int candidate_voice = -1;
 	int lowest_play_counter = INT_MAX;
-	*voice_state = VOICE_ACTIVE;
 
 	for (int i = 0; i < voice_count; i++)
 	{
@@ -206,7 +220,6 @@ voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_
 			if (voices[i].current_state == NOTE_NOT_PLAYING)
 			{
 				candidate_voice = i;
-				*voice_state = VOICE_IDLE;
 				break;
 			}
 			else

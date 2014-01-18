@@ -21,7 +21,6 @@
 #define VOICE_GONE_IDLE			1
 #define VOICE_ACTIVE			2
 
-#define VOICE_FLAG_
 typedef struct voice_t
 {
 	int index;
@@ -38,9 +37,10 @@ typedef struct voice_t
 
 typedef enum voice_event_t
 {
-	VOICE_EVENT_NOTE_STARTING,
-	VOICE_EVENT_NOTE_ENDING,
-	VOICE_EVENT_NOTE_ENDED
+	VOICE_EVENT_VOICE_STARTING,		// Voice is going from idle to playing
+	VOICE_EVENT_NOTE_STARTING,		// Note is starting on voice
+	VOICE_EVENT_NOTE_ENDING,		// Note is ending on voice
+	VOICE_EVENT_VOICE_ENDED			// Voice has stopped playing
 } voice_event_t;
 
 typedef void (*voice_callback_t)(voice_event_t callback_event, voice_t* voice, void* callback_data);
@@ -53,7 +53,8 @@ extern void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definiti
 extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, filter_definition_t *filter_def);
 extern void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform);
 extern void voice_stop_note(voice_t *voice);
-extern voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_channel, int *voice_state);
+extern void voice_kill(voice_t * voice);
+extern voice_t *voice_find_next_likely_free(voice_t *voices, int voice_count, int midi_channel);
 extern voice_t *voice_find_playing_note(voice_t *voices, int voice_count, int midi_channel, int midi_note);
 
 #endif /* VOICE_H_ */

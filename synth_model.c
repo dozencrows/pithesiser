@@ -174,6 +174,12 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 	//LOG_INFO("Voice event %d for %08x (%08x)", callback_event, voice, callback_data);
 	switch(callback_event)
 	{
+		case VOICE_EVENT_VOICE_STARTING:
+		{
+			synth_model->active_voices++;
+			break;
+		}
+
 		case VOICE_EVENT_NOTE_STARTING:
 		{
 			envelope_start(synth_model->envelope_instance[0] + voice->index);
@@ -188,15 +194,17 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 			// Check for envelope assignment to voice amplitude sink
 			// If none present, stop voice and envelopes dead
 			// Else switch all envelopes to release
-			envelope_go_to_stage(synth_model->envelope_instance[0] + voice->index, ENVELOPE_STAGE_RELEASE);
-			envelope_go_to_stage(synth_model->envelope_instance[1] + voice->index, ENVELOPE_STAGE_RELEASE);
-			envelope_go_to_stage(synth_model->envelope_instance[2] + voice->index, ENVELOPE_STAGE_RELEASE);
+			//envelope_go_to_stage(synth_model->envelope_instance[0] + voice->index, ENVELOPE_STAGE_RELEASE);
+			//envelope_go_to_stage(synth_model->envelope_instance[1] + voice->index, ENVELOPE_STAGE_RELEASE);
+			//envelope_go_to_stage(synth_model->envelope_instance[2] + voice->index, ENVELOPE_STAGE_RELEASE);
+			voice_kill(voice);
 			break;
 		}
 
-		case VOICE_EVENT_NOTE_ENDED:
+		case VOICE_EVENT_VOICE_ENDED:
 		default:
 		{
+			synth_model->active_voices--;
 			break;
 		}
 	}
