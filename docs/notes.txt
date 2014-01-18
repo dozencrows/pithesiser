@@ -4,14 +4,14 @@ Raspberry Pi Synth Project
 Underway
 ========
 * Resolve voice lifetime taking into account envelopes and other modulation params (see notes below)
-
-To do next
-==========
 * Re-enabling envelopes in new synth model:
   * Modulation matrix to map envelope outputs onto different parameters
   * Generalising envelope support - including:
     * normalised scale for editing
     * adjustable start and end values
+
+To do next
+==========
 * Modulation matrix to map LFO outputs onto filter parameters
 * Data-driven settings:
   * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup

@@ -33,6 +33,12 @@ typedef struct lfo_source_t
 	lfo_t				lfo;
 } lfo_source_t;
 
+typedef struct envelope_source_t
+{
+	mod_matrix_source_t		source;
+	envelope_instance_t*	envelope_instance;
+}	envelope_source_t;
+
 typedef struct synth_model_t
 {
 	// Settings
@@ -42,10 +48,11 @@ typedef struct synth_model_t
 	// Components
 	envelope_t 				envelope[SYNTH_ENVELOPE_COUNT];
 	filter_definition_t		global_filter_def;
-	envelope_instance_t*	envelope_instance[SYNTH_ENVELOPE_COUNT];
+	envelope_instance_t*	envelope_instances;
 
 	// Sources
-	lfo_source_t	lfo_source;
+	lfo_source_t		lfo_source;
+	envelope_source_t	envelope_source[SYNTH_ENVELOPE_COUNT];
 
 	// Sinks
 
@@ -69,6 +76,7 @@ typedef struct synth_state_t
 
 typedef struct synth_update_state_t
 {
+	synth_model_t* synth_model;
 	int32_t	timestep_ms;
 	size_t	sample_count;
 } synth_update_state_t;
