@@ -3,12 +3,12 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Resolve voice lifetime taking into account envelopes and other modulation params (see notes below)
 * Re-enabling envelopes in new synth model:
-  * Modulation matrix to map envelope outputs onto different parameters
-  * Generalising envelope support - including:
-    * normalised scale for editing
-    * adjustable start and end values
+  * normalised scale for editing, rescaling for output
+    * filter freq
+    * q
+  * adjustable start and end values
+  * Envelope release stage & voice lifetime
 
 To do next
 ==========
@@ -50,6 +50,7 @@ Done
  * Refactor voices & envelopes to decouple via callbacks in synth model
  * Add voice killing and active voice counting to synth model via voice callbacks
  * Sort out LFO reset - on first voice start from silence)
+ * Modulation matrix to map envelope outputs onto different parameters
 
 Blog ideas
 ==========

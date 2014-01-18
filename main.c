@@ -390,7 +390,7 @@ void create_ui()
 	waveform_renderer->line_colour[2] = 0.0f;
 	waveform_renderer->line_colour[3] = 255.0f;
 
-	envelope_renderer = gfx_envelope_renderer_create(ENVELOPE_RENDERER_ID);
+	envelope_renderer = gfx_envelope_renderer_create(ENVELOPE_1_RENDERER_ID);
 
 	envelope_renderer->x = 0;
 	envelope_renderer->y = 514;
@@ -405,13 +405,13 @@ void create_ui()
 	envelope_renderer->line_colour[1] = 255.0f;
 	envelope_renderer->line_colour[2] = 0.0f;
 	envelope_renderer->line_colour[3] = 255.0f;
-	envelope_renderer->text = "amplitude env";
+	envelope_renderer->text = "envelope-1";
 	envelope_renderer->text_colour[0] = 255.0f;
 	envelope_renderer->text_colour[1] = 255.0f;
 	envelope_renderer->text_colour[2] = 255.0f;
 	envelope_renderer->text_colour[3] = 255.0f;
 
-	freq_envelope_renderer = gfx_envelope_renderer_create(FREQ_ENVELOPE_RENDERER_ID);
+	freq_envelope_renderer = gfx_envelope_renderer_create(ENVELOPE_2_RENDERER_ID);
 
 	freq_envelope_renderer->x = 512;
 	freq_envelope_renderer->y = 514;
@@ -426,13 +426,13 @@ void create_ui()
 	freq_envelope_renderer->line_colour[1] = 255.0f;
 	freq_envelope_renderer->line_colour[2] = 0.0f;
 	freq_envelope_renderer->line_colour[3] = 255.0f;
-	freq_envelope_renderer->text = "filter freq env";
+	freq_envelope_renderer->text = "envelope-2";
 	freq_envelope_renderer->text_colour[0] = 255.0f;
 	freq_envelope_renderer->text_colour[1] = 255.0f;
 	freq_envelope_renderer->text_colour[2] = 255.0f;
 	freq_envelope_renderer->text_colour[3] = 255.0f;
 
-	q_envelope_renderer = gfx_envelope_renderer_create(Q_ENVELOPE_RENDERER_ID);
+	q_envelope_renderer = gfx_envelope_renderer_create(ENVELOPE_3_RENDERER_ID);
 
 	q_envelope_renderer->x = 512;
 	q_envelope_renderer->y = 634;
@@ -447,7 +447,7 @@ void create_ui()
 	q_envelope_renderer->line_colour[1] = 255.0f;
 	q_envelope_renderer->line_colour[2] = 0.0f;
 	q_envelope_renderer->line_colour[3] = 255.0f;
-	q_envelope_renderer->text = "filter Q env";
+	q_envelope_renderer->text = "envelope-3";
 	q_envelope_renderer->text_colour[0] = 255.0f;
 	q_envelope_renderer->text_colour[1] = 255.0f;
 	q_envelope_renderer->text_colour[2] = 255.0f;

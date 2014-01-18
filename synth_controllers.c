@@ -100,23 +100,25 @@ typedef struct synth_controller_default_t {
 static synth_controller_default_t controller_defaults[] =
 {
 	{ &envelope_controller[0].attack_time_controller,	100 },
-	{ &envelope_controller[0].attack_level_controller,	LEVEL_MAX },
+	{ &envelope_controller[0].attack_level_controller,	MOD_MATRIX_ONE },
 	{ &envelope_controller[0].decay_time_controller,	250 },
-	{ &envelope_controller[0].decay_level_controller,	LEVEL_MAX / 2 },
+	{ &envelope_controller[0].decay_level_controller,	MOD_MATRIX_ONE / 2 },
 	{ &envelope_controller[0].sustain_time_controller,	DURATION_HELD },
 	{ &envelope_controller[0].release_time_controller,	100 },
-	{ &envelope_controller[1].attack_time_controller,	1000 },
-	{ &envelope_controller[1].attack_level_controller,	FILTER_FIXED_ONE * 12000 },
-	{ &envelope_controller[1].decay_time_controller,	1 },
-	{ &envelope_controller[1].decay_level_controller,	FILTER_FIXED_ONE * 12000 },
+
+	{ &envelope_controller[1].attack_time_controller,	100 },
+	{ &envelope_controller[1].attack_level_controller,	MOD_MATRIX_ONE },
+	{ &envelope_controller[1].decay_time_controller,	250 },
+	{ &envelope_controller[1].decay_level_controller,	MOD_MATRIX_ONE / 2},
 	{ &envelope_controller[1].sustain_time_controller,	DURATION_HELD },
-	{ &envelope_controller[1].release_time_controller,	200 },
-	{ &envelope_controller[2].attack_time_controller,	1000 },
-	{ &envelope_controller[2].attack_level_controller,	FIXED_ONE * .75 },
-	{ &envelope_controller[2].decay_time_controller,	1 },
-	{ &envelope_controller[2].decay_level_controller,	FIXED_ONE * .75 },
+	{ &envelope_controller[1].release_time_controller,	100 },
+
+	{ &envelope_controller[2].attack_time_controller,	100 },
+	{ &envelope_controller[2].attack_level_controller,	MOD_MATRIX_ONE },
+	{ &envelope_controller[2].decay_time_controller,	250 },
+	{ &envelope_controller[2].decay_level_controller,	MOD_MATRIX_ONE / 2},
 	{ &envelope_controller[2].sustain_time_controller,	DURATION_HELD },
-	{ &envelope_controller[2].release_time_controller,	200 }
+	{ &envelope_controller[2].release_time_controller,	100 },
 };
 
 static void set_controller_defaults()
@@ -145,22 +147,10 @@ static void midi_resolution_controller_set_output(midi_controller_t *controller)
 	controller->output_max = MIDI_MAX_CONTROLLER_VALUE;
 }
 
-static void volume_envelope_level_controller_set_output(midi_controller_t *controller)
+static void envelope_level_controller_set_output(midi_controller_t *controller)
 {
 	controller->output_min = 0;
-	controller->output_max = LEVEL_MAX;
-}
-
-static void filter_freq_envelope_level_controller_set_output(midi_controller_t *controller)
-{
-	controller->output_min = FILTER_MIN_FREQUENCY;
-	controller->output_max = FILTER_MAX_FREQUENCY;
-}
-
-static void filter_q_envelope_level_controller_set_output(midi_controller_t *controller)
-{
-	controller->output_min = FILTER_MIN_Q;
-	controller->output_max = FILTER_MAX_Q;
+	controller->output_max = MOD_MATRIX_ONE;
 }
 
 static void envelope_time_controller_set_output(midi_controller_t *controller)
@@ -224,24 +214,24 @@ controller_parser_t controller_parser[] =
 	{ "master_volume", &master_volume_controller, master_volume_controller_set_output },
 	{ "waveform_select", &waveform_controller, waveform_controller_set_output },
 	{ "oscilloscope_frequency", &oscilloscope_controller, midi_resolution_controller_set_output },
-	{ "volume_envelope_attack_time", &envelope_controller[0].attack_time_controller, envelope_time_controller_set_output },
-	{ "volume_envelope_attack_level", &envelope_controller[0].attack_level_controller, volume_envelope_level_controller_set_output },
-	{ "volume_envelope_decay_time", &envelope_controller[0].decay_time_controller, envelope_time_controller_set_output },
-	{ "volume_envelope_decay_level", &envelope_controller[0].decay_level_controller, volume_envelope_level_controller_set_output },
-	{ "volume_envelope_sustain_time", &envelope_controller[0].sustain_time_controller, envelope_time_held_controller_set_output },
-	{ "volume_envelope_release_time", &envelope_controller[0].release_time_controller, envelope_time_controller_set_output },
-	{ "filter_freq_envelope_attack_time", &envelope_controller[1].attack_time_controller, envelope_time_controller_set_output },
-	{ "filter_freq_envelope_attack_level", &envelope_controller[1].attack_level_controller, filter_freq_envelope_level_controller_set_output },
-	{ "filter_freq_envelope_decay_time", &envelope_controller[1].decay_time_controller, envelope_time_controller_set_output },
-	{ "filter_freq_envelope_decay_level", &envelope_controller[1].decay_level_controller, filter_freq_envelope_level_controller_set_output },
-	{ "filter_freq_envelope_sustain_time", &envelope_controller[1].sustain_time_controller, envelope_time_held_controller_set_output },
-	{ "filter_freq_envelope_release_time", &envelope_controller[1].release_time_controller, envelope_time_controller_set_output },
-	{ "filter_q_envelope_attack_time", &envelope_controller[2].attack_time_controller, envelope_time_controller_set_output },
-	{ "filter_q_envelope_attack_level", &envelope_controller[2].attack_level_controller, filter_q_envelope_level_controller_set_output },
-	{ "filter_q_envelope_decay_time", &envelope_controller[2].decay_time_controller, envelope_time_controller_set_output },
-	{ "filter_q_envelope_decay_level", &envelope_controller[2].decay_level_controller, filter_q_envelope_level_controller_set_output },
-	{ "filter_q_envelope_sustain_time", &envelope_controller[2].sustain_time_controller, envelope_time_held_controller_set_output },
-	{ "filter_q_envelope_release_time", &envelope_controller[2].release_time_controller, envelope_time_controller_set_output },
+	{ "envelope_1_attack_time", &envelope_controller[0].attack_time_controller, envelope_time_controller_set_output },
+	{ "envelope_1_attack_level", &envelope_controller[0].attack_level_controller, envelope_level_controller_set_output },
+	{ "envelope_1_decay_time", &envelope_controller[0].decay_time_controller, envelope_time_controller_set_output },
+	{ "envelope_1_decay_level", &envelope_controller[0].decay_level_controller, envelope_level_controller_set_output },
+	{ "envelope_1_sustain_time", &envelope_controller[0].sustain_time_controller, envelope_time_held_controller_set_output },
+	{ "envelope_1_release_time", &envelope_controller[0].release_time_controller, envelope_time_controller_set_output },
+	{ "envelope_2_attack_time", &envelope_controller[1].attack_time_controller, envelope_time_controller_set_output },
+	{ "envelope_2_attack_level", &envelope_controller[1].attack_level_controller, envelope_level_controller_set_output },
+	{ "envelope_2_decay_time", &envelope_controller[1].decay_time_controller, envelope_time_controller_set_output },
+	{ "envelope_2_decay_level", &envelope_controller[1].decay_level_controller, envelope_level_controller_set_output },
+	{ "envelope_2_sustain_time", &envelope_controller[1].sustain_time_controller, envelope_time_held_controller_set_output },
+	{ "envelope_2_release_time", &envelope_controller[1].release_time_controller, envelope_time_controller_set_output },
+	{ "envelope_3_attack_time", &envelope_controller[2].attack_time_controller, envelope_time_controller_set_output },
+	{ "envelope_3_attack_level", &envelope_controller[2].attack_level_controller, envelope_level_controller_set_output },
+	{ "envelope_3_decay_time", &envelope_controller[2].decay_time_controller, envelope_time_controller_set_output },
+	{ "envelope_3_decay_level", &envelope_controller[2].decay_level_controller, envelope_level_controller_set_output },
+	{ "envelope_3_sustain_time", &envelope_controller[2].sustain_time_controller, envelope_time_held_controller_set_output },
+	{ "envelope_3_release_time", &envelope_controller[2].release_time_controller, envelope_time_controller_set_output },
 	{ "lfo_waveform_select", &lfo_waveform_controller, lfo_waveform_controller_set_output },
 	{ "lfo_frequency", &lfo_frequency_controller, lfo_frequency_controller_set_output },
 	{ "lfo_level", &lfo_level_controller, level_controller_set_output },
@@ -270,9 +260,9 @@ int synth_controllers_initialise(int controller_channel, config_setting_t *confi
 		error_count++;
 	}
 
-	envelope_controller[0].renderer_id = ENVELOPE_RENDERER_ID;
-	envelope_controller[1].renderer_id = FREQ_ENVELOPE_RENDERER_ID;
-	envelope_controller[2].renderer_id = Q_ENVELOPE_RENDERER_ID;
+	envelope_controller[0].renderer_id = ENVELOPE_1_RENDERER_ID;
+	envelope_controller[1].renderer_id = ENVELOPE_2_RENDERER_ID;
+	envelope_controller[2].renderer_id = ENVELOPE_3_RENDERER_ID;
 
 	for (int i = 0; i < CONTROLLER_PARSER_COUNT; i++)
 	{

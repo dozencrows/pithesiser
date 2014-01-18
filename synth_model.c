@@ -189,29 +189,45 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 // Certain values in here are also set on the relative controller defaults in synth_controllers.c - this should
 // ultimately be reworked so that the default values are only specified in one place (ideally config files) and
 // propagate through to the right parts of the synth model during initialisation.
-envelope_stage_t envelope_stages[4] =
+envelope_stage_t envelope_stages[SYNTH_ENVELOPE_COUNT][4] =
 {
-	{ 0,					MOD_MATRIX_ONE,		100, 			},
-	{ MOD_MATRIX_ONE,		MOD_MATRIX_ONE / 2,	250				},
-	{ MOD_MATRIX_ONE / 2,	MOD_MATRIX_ONE / 2,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,		0,				100				}
+	{
+		{ 0,					MOD_MATRIX_ONE,		100, 			},
+		{ MOD_MATRIX_ONE,		MOD_MATRIX_ONE / 2,	250				},
+		{ MOD_MATRIX_ONE / 2,	MOD_MATRIX_ONE / 2,	DURATION_HELD 	},
+		{ LEVEL_CURRENT,		0,				100				}
+	},
+
+	{
+		{ 0,					MOD_MATRIX_ONE,		100, 			},
+		{ MOD_MATRIX_ONE,		MOD_MATRIX_ONE / 2,	250				},
+		{ MOD_MATRIX_ONE / 2,	MOD_MATRIX_ONE / 2,	DURATION_HELD 	},
+		{ LEVEL_CURRENT,		0,				100				}
+	},
+
+	{
+		{ 0,					MOD_MATRIX_ONE,		100, 			},
+		{ MOD_MATRIX_ONE,		MOD_MATRIX_ONE / 2,	250				},
+		{ MOD_MATRIX_ONE / 2,	MOD_MATRIX_ONE / 2,	DURATION_HELD 	},
+		{ LEVEL_CURRENT,		0,				100				}
+	},
 };
 
-envelope_stage_t freq_envelope_stages[4] =
-{
-	{ FILTER_FIXED_ONE * 20,	FILTER_FIXED_ONE * 12000,	1000, 			},
-	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	1				},
-	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,			FILTER_FIXED_ONE * 20,		200				}
-};
-
-envelope_stage_t q_envelope_stages[4] =
-{
-	{ FIXED_ONE / 100,	FIXED_ONE * .75,	1000, 			},
-	{ FIXED_ONE * .75,	FIXED_ONE * .75,	1				},
-	{ FIXED_ONE * .75,	FIXED_ONE * .75,	DURATION_HELD 	},
-	{ LEVEL_CURRENT,	FIXED_ONE / 100,	200				}
-};
+//envelope_stage_t freq_envelope_stages[4] = // peak FILTER_FIXED_ONE * 18000;
+//{
+//	{ FILTER_FIXED_ONE * 20,	FILTER_FIXED_ONE * 12000,	1000, 			},
+//	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	1				},
+//	{ FILTER_FIXED_ONE * 12000,	FILTER_FIXED_ONE * 12000,	DURATION_HELD 	},
+//	{ LEVEL_CURRENT,			FILTER_FIXED_ONE * 20,		200				}
+//};
+//
+//envelope_stage_t q_envelope_stages[4] =	// peak FIXED_ONE
+//{
+//	{ FIXED_ONE / 100,	FIXED_ONE * .75,	1000, 			},
+//	{ FIXED_ONE * .75,	FIXED_ONE * .75,	1				},
+//	{ FIXED_ONE * .75,	FIXED_ONE * .75,	DURATION_HELD 	},
+//	{ LEVEL_CURRENT,	FIXED_ONE / 100,	200				}
+//};
 
 void envelope_event_callback(envelope_event_t callback_event, envelope_instance_t* envelope, void* callback_data)
 {
@@ -257,15 +273,15 @@ void synth_model_init_envelopes(synth_model_t* synth_model, int voice_count)
 
 	synth_model->envelope[0].peak = MOD_MATRIX_ONE;
 	synth_model->envelope[0].stage_count = 4;
-	synth_model->envelope[0].stages = envelope_stages;
+	synth_model->envelope[0].stages = envelope_stages[0];
 
-	synth_model->envelope[1].peak = FILTER_FIXED_ONE * 18000;
+	synth_model->envelope[1].peak = MOD_MATRIX_ONE;
 	synth_model->envelope[1].stage_count = 4;
-	synth_model->envelope[1].stages = freq_envelope_stages;
+	synth_model->envelope[1].stages = envelope_stages[1];
 
-	synth_model->envelope[2].peak = FIXED_ONE;
+	synth_model->envelope[2].peak = MOD_MATRIX_ONE;
 	synth_model->envelope[2].stage_count = 4;
-	synth_model->envelope[2].stages = q_envelope_stages;
+	synth_model->envelope[2].stages = envelope_stages[2];
 
 	synth_model->envelope_instances = calloc(voice_count * SYNTH_ENVELOPE_COUNT, sizeof(envelope_instance_t));
 
@@ -282,7 +298,12 @@ void synth_model_init_envelopes(synth_model_t* synth_model, int voice_count)
 	}
 
 	mod_matrix_init_source(SYNTH_MOD_SOURCE_ENVELOPE_1, envelope_generate_value, envelope_get_value, &synth_model->envelope_source[0].source);
+	mod_matrix_init_source(SYNTH_MOD_SOURCE_ENVELOPE_2, envelope_generate_value, envelope_get_value, &synth_model->envelope_source[1].source);
+	mod_matrix_init_source(SYNTH_MOD_SOURCE_ENVELOPE_3, envelope_generate_value, envelope_get_value, &synth_model->envelope_source[2].source);
+
 	mod_matrix_add_source(&synth_model->envelope_source[0].source);
+	mod_matrix_add_source(&synth_model->envelope_source[1].source);
+	mod_matrix_add_source(&synth_model->envelope_source[2].source);
 }
 
 void synth_model_deinit_envelopes(synth_model_t* synth_model)
