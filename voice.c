@@ -119,7 +119,6 @@ void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *f
 			voice->oscillator.phase_accumulator = 0;
 			voice_make_callback(VOICE_EVENT_NOTE_STARTING, voice);
 			filter_silence(&voice->filter);
-			voice->filter_def = *filter_def;
 		}
 
 		if (voice->last_state == NOTE_NOT_PLAYING)
@@ -130,10 +129,7 @@ void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *f
 		voice->last_state = voice->current_state;
 	}
 
-	//if (voice->current_state != NOTE_NOT_PLAYING)
-	//{
-	//	envelope_step(&voice->level_envelope_instance, timestep_ms);
-	//}
+	voice->filter_def = *filter_def;
 }
 
 int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, filter_definition_t *filter_def)
@@ -150,13 +146,11 @@ int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, i
 			voice->oscillator.last_level = voice->oscillator.level;
 		}
 
-		//voice->filter_def.frequency = envelope_step(&voice->filter_freq_envelope_instance, timestep_ms);
-		//voice->filter_def.q = envelope_step(&voice->filter_q_envelope_instance, timestep_ms);
-		//if (!filter_definitions_same(&voice->filter_def, &voice->filter.definition))
-		//{
-		//	voice->filter.definition = voice->filter_def;
-		//	filter_update(&voice->filter);
-		//}
+		if (!filter_definitions_same(&voice->filter_def, &voice->filter.definition))
+		{
+			voice->filter.definition = voice->filter_def;
+			filter_update(&voice->filter);
+		}
 
 		if (voice->oscillator.level > 0 || voice->oscillator.last_level != 0)
 		{
