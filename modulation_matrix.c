@@ -11,6 +11,7 @@
 #include "logging.h"
 
 #define MOD_MATRIX_MAX_CONNECTIONS	(MOD_MATRIX_MAX_SOURCES * MOD_MATRIX_MAX_SINKS)
+#define MAX_MOD_MATRIX_CALLBACKS	4
 
 static int source_count	= 0;
 static int sink_count = 0;
@@ -26,11 +27,29 @@ typedef struct mod_matrix_connection_t
 
 mod_matrix_connection_t	connections[MOD_MATRIX_MAX_CONNECTIONS];
 
+typedef struct mod_matrix_callback_info_t mod_matrix_callback_info_t;
+typedef struct mod_matrix_callback_info_t
+{
+	mod_matrix_callback_t		callback;
+	void*					data;
+	mod_matrix_callback_info_t*	next_callback;
+} mod_matrix_callback_info_t;
+
+static mod_matrix_callback_info_t* mod_matrix_callback_head = NULL;
+static mod_matrix_callback_info_t* mod_matrix_callback_free = NULL;
+static mod_matrix_callback_info_t mod_matrix_callback_info[MAX_MOD_MATRIX_CALLBACKS];
+
 void mod_matrix_initialise()
 {
 	source_count	= 0;
 	sink_count		= 0;
 	memset(connections, 0, sizeof(connections));
+
+	for (int i = 0; i < MAX_MOD_MATRIX_CALLBACKS; i++)
+	{
+		mod_matrix_callback_info[i].next_callback = mod_matrix_callback_free;
+		mod_matrix_callback_free = mod_matrix_callback_info + i;
+	}
 }
 
 void mod_matrix_init_source(const char* name, generate_mod_matrix_value_t generate_value, get_mod_matrix_value_t get_value, mod_matrix_source_t* source)
@@ -74,6 +93,61 @@ int mod_matrix_add_sink(mod_matrix_sink_t* sink)
 	{
 		LOG_ERROR("Mod matrix sink limit of %d reached", MOD_MATRIX_MAX_SINKS);
 		return RESULT_ERROR;
+	}
+}
+
+void mod_matrix_add_callback(mod_matrix_callback_t callback, void* callback_data)
+{
+	if (mod_matrix_callback_free != NULL)
+	{
+		mod_matrix_callback_info_t* callback_info = mod_matrix_callback_free;
+		mod_matrix_callback_free = mod_matrix_callback_free->next_callback;
+
+		callback_info->callback 		= callback;
+		callback_info->data 			= callback_data;
+		callback_info->next_callback 	= mod_matrix_callback_head;
+
+		mod_matrix_callback_head = callback_info;
+	}
+	else
+	{
+		LOG_ERROR("No voice callbacks available");
+	}
+}
+
+void mod_matrix_remove_callback(mod_matrix_callback_t callback)
+{
+	mod_matrix_callback_info_t* callback_info = mod_matrix_callback_head;
+	mod_matrix_callback_info_t** last_link = &mod_matrix_callback_head;
+
+	while (callback_info != NULL)
+	{
+		if (callback_info->callback == callback)
+		{
+			*last_link = callback_info->next_callback;
+			callback_info->callback 		= NULL;
+			callback_info->data				= NULL;
+			callback_info->next_callback 	= mod_matrix_callback_free;
+
+			mod_matrix_callback_free = callback_info;
+			break;
+		}
+		else
+		{
+			last_link = &callback_info->next_callback;
+			callback_info = callback_info->next_callback;
+		}
+	}
+}
+
+void mod_matrix_make_callback(mod_matrix_event_t event, mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+{
+	mod_matrix_callback_info_t* callback_info = mod_matrix_callback_head;
+
+	while (callback_info != NULL)
+	{
+		callback_info->callback(event, source, sink, callback_info->data);
+		callback_info = callback_info->next_callback;
 	}
 }
 
@@ -137,6 +211,7 @@ mod_matrix_connection_t* connect(mod_matrix_source_t* source, mod_matrix_sink_t*
 	{
 		connection->source 	= source;
 		connection->sink	= sink;
+		mod_matrix_make_callback(MOD_MATRIX_EVENT_CONNECTION, source, sink);
 	}
 
 	return connection;
@@ -144,6 +219,7 @@ mod_matrix_connection_t* connect(mod_matrix_source_t* source, mod_matrix_sink_t*
 
 void disconnect(mod_matrix_connection_t* connection)
 {
+	mod_matrix_make_callback(MOD_MATRIX_EVENT_DISCONNECTION, connection->source, connection->sink);
 	connection->source 	= NULL;
 	connection->sink	= NULL;
 }

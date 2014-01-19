@@ -45,9 +45,19 @@ struct mod_matrix_sink_t
 	model_update_t	model_update;
 };
 
+typedef enum mod_matrix_event_t
+{
+	MOD_MATRIX_EVENT_CONNECTION,
+	MOD_MATRIX_EVENT_DISCONNECTION
+} mod_matrix_event_t;
+
+typedef void (*mod_matrix_callback_t)(mod_matrix_event_t callback_event, mod_matrix_source_t* source, mod_matrix_sink_t* sink, void* callback_data);
+
 extern void mod_matrix_initialise();
 extern void mod_matrix_init_source(const char* name, generate_mod_matrix_value_t generate_value, get_mod_matrix_value_t get_value, mod_matrix_source_t* source);
 extern void mod_matrix_init_sink(const char* name, base_update_t base_update, model_update_t model_update, mod_matrix_sink_t* sink);
+extern void mod_matrix_add_callback(mod_matrix_callback_t callback, void* callback_data);
+extern void mod_matrix_remove_callback(mod_matrix_callback_t callback);
 
 extern int mod_matrix_add_source(mod_matrix_source_t* source);
 extern int mod_matrix_add_sink(mod_matrix_sink_t* sink);
