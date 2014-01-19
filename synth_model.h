@@ -29,6 +29,8 @@ extern const char*	SYNTH_MOD_SOURCE_LFO;
 extern const char*	SYNTH_MOD_SINK_NOTE_AMPLITUDE;
 extern const char*	SYNTH_MOD_SINK_NOTE_PITCH;
 
+typedef struct synth_model_t synth_model_t;
+
 typedef struct lfo_source_t
 {
 	mod_matrix_source_t	source;
@@ -41,14 +43,13 @@ typedef struct envelope_source_t
 	envelope_instance_t*	envelope_instance;
 } envelope_source_t;
 
-typedef struct voice_sink_t
+typedef struct synth_model_param_sink_t
 {
 	mod_matrix_sink_t	sink;
-	int					voice_count;
-	voice_t*			voices;
-} voice_sink_t;
+	synth_model_t*		synth_model;
+} synth_model_param_sink_t;
 
-typedef struct synth_model_t
+struct synth_model_t
 {
 	// Settings
 	setting_t*	setting_master_volume;
@@ -64,16 +65,16 @@ typedef struct synth_model_t
 	envelope_source_t	envelope_source[SYNTH_ENVELOPE_COUNT];
 
 	// Sinks
-	voice_sink_t voice_amplitude_sink;
-	voice_sink_t voice_pitch_sink;
-	voice_sink_t voice_filter_q_sink;
+	synth_model_param_sink_t voice_amplitude_sink;
+	synth_model_param_sink_t voice_pitch_sink;
+	synth_model_param_sink_t voice_filter_q_sink;
 
 	// Voices
 	int			voice_count;
 	int			active_voices;
 	int			voice_amplitude_envelope_count;
 	voice_t* 	voice;
-} synth_model_t;
+};
 
 #define STATE_UNCHANGED	0
 #define STATE_UPDATED	1
