@@ -19,7 +19,10 @@ typedef struct setting_t setting_t;
 typedef struct voice_t voice_t;
 
 // Types and values
-#define SYNTH_ENVELOPE_COUNT			3
+#define SYNTH_ENVELOPE_COUNT					3
+#define SYNTH_GLOBAL_ENVELOPE_INSTANCE			0
+#define SYNTH_GLOBAL_ENVELOPE_INSTANCE_COUNT	1
+#define SYNTH_VOICE_ENVELOPE_INSTANCE_BASE		(SYNTH_GLOBAL_ENVELOPE_INSTANCE_COUNT)
 
 extern const char*	SYNTH_MOD_SOURCE_LFO;
 
@@ -36,7 +39,14 @@ typedef struct envelope_source_t
 {
 	mod_matrix_source_t		source;
 	envelope_instance_t*	envelope_instance;
-}	envelope_source_t;
+} envelope_source_t;
+
+typedef struct voice_sink_t
+{
+	mod_matrix_sink_t	sink;
+	int					voice_count;
+	voice_t*			voices;
+} voice_sink_t;
 
 typedef struct synth_model_t
 {
@@ -54,6 +64,9 @@ typedef struct synth_model_t
 	envelope_source_t	envelope_source[SYNTH_ENVELOPE_COUNT];
 
 	// Sinks
+	voice_sink_t voice_amplitude_sink;
+	voice_sink_t voice_pitch_sink;
+	voice_sink_t voice_filter_q_sink;
 
 	// Voices
 	int			voice_count;

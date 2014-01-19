@@ -17,6 +17,9 @@
 #define FILTER_FIXED_PRECISION	14
 #define FILTER_FIXED_ONE		(1 << FILTER_FIXED_PRECISION)
 
+#define FILTER_MIN_Q			(FIXED_ONE / 100)
+#define FILTER_MAX_Q			(FIXED_ONE)
+
 typedef struct filter_definition_t
 {
 	int		type;

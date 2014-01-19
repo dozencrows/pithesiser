@@ -3,17 +3,17 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* Re-enabling envelopes in new synth model:
+* Updating envelopes in new synth model:
   * normalised scale for editing, rescaling for output
     * filter freq
-    * q
   * adjustable start and end values
   * Envelope inverting
   * Envelope negating
 
 To do next
 ==========
-* Modulation matrix to map LFO outputs onto filter parameters
+* LFO parameters as mod matrix sinks
+  * global envelope use and release triggering
 * Data-driven settings:
   * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
   * loading & saving of settings (replace MIDI controller output saving)
@@ -53,6 +53,7 @@ Done
  * Sort out LFO reset - on first voice start from silence)
  * Modulation matrix to map envelope outputs onto different parameters
  * Envelope release stage & voice lifetime
+ * Voice filter q under mod matrix control
 
 Blog ideas
 ==========

@@ -132,7 +132,7 @@ void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *f
 	voice->filter_def = *filter_def;
 }
 
-int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, filter_definition_t *filter_def)
+int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms)
 {
 	int voice_state = VOICE_IDLE;
 

@@ -193,7 +193,7 @@ void process_audio(int32_t timestep_ms)
 
 	for (int i = 0; i < synth_model.voice_count; i++)
 	{
-		switch(voice_update(synth_model.voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms, &synth_model.global_filter_def))
+		switch(voice_update(synth_model.voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms))
 		{
 			case VOICE_IDLE:
 				break;

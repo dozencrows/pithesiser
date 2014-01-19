@@ -342,12 +342,18 @@ void mod_matrix_update(void* data)
 {
 	for (int i = 0; i < source_count; i++)
 	{
-		sources[i]->generate_value(sources[i], data);
+		if (sources[i]->generate_value != NULL)
+		{
+			sources[i]->generate_value(sources[i], data);
+		}
 	}
 
 	for (int i = 0; i < sink_count; i++)
 	{
-		sinks[i]->base_update(sinks[i], data);
+		if (sinks[i]->base_update != NULL)
+		{
+			sinks[i]->base_update(sinks[i], data);
+		}
 	}
 
 	mod_matrix_connection_t* connection = connections;

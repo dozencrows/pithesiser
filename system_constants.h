@@ -18,7 +18,7 @@
 #define SYSTEM_FRAME_RATE			60
 
 #define FIXED_PRECISION				18
-#define FIXED_FRACTION_MASK			0x0002ffff
+#define FIXED_FRACTION_MASK			0x0003ffff
 #define FIXED_ONE					0x00040000
 #define FIXED_HALF					0x00020000
 

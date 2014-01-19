@@ -30,8 +30,8 @@ typedef struct voice_t
 	int current_state;
 	int play_counter;
 	fixed_t frequency;
-	filter_definition_t filter_def;
 	oscillator_t oscillator;
+	filter_definition_t filter_def;
 	filter_t filter;
 } voice_t;
 
@@ -50,7 +50,7 @@ extern void voices_add_callback(voice_callback_t callback, void* callback_data);
 extern void voices_remove_callback(voice_callback_t callback);
 
 extern void voice_preupdate(voice_t *voice, int32_t timestep_ms, filter_definition_t *filter_def);
-extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms, filter_definition_t *filter_def);
+extern int voice_update(voice_t *voice, int32_t master_level, sample_t *voice_buffer, int buffer_samples, int32_t timestep_ms);
 extern void voice_play_note(voice_t *voice, int midi_note, waveform_type_t waveform);
 extern void voice_stop_note(voice_t *voice);
 extern void voice_kill(voice_t * voice);

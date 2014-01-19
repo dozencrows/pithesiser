@@ -19,6 +19,7 @@ const char*	SYNTH_MOD_SOURCE_ENVELOPE_2		= "envelope-2";
 const char*	SYNTH_MOD_SOURCE_ENVELOPE_3		= "envelope-3";
 const char*	SYNTH_MOD_SINK_NOTE_AMPLITUDE	= "note-amplitude";
 const char*	SYNTH_MOD_SINK_NOTE_PITCH		= "note-pitch";
+const char*	SYNTH_MOD_SINK_FILTER_Q			= "filter-q";
 
 //-------------------------------------------------------------------------------------------------------------------------
 // LFO modelling
@@ -40,35 +41,20 @@ mod_matrix_value_t lfo_get_value(mod_matrix_source_t* source, int subsource_id)
 //-------------------------------------------------------------------------------------------------------------------------
 // Synth voices
 //
-typedef struct voice_array_t
-{
-	int				voice_count;
-	voice_t*		voices;
-} voice_array_t;
-
-typedef struct voice_sink_t
-{
-	mod_matrix_sink_t	sink;
-	voice_array_t		voice_array;
-} voice_sink_t;
-
 void init_voice_sink(const char* name, base_update_t base_update, model_update_t model_update, int voice_count, voice_t* voices, voice_sink_t* sink)
 {
 	mod_matrix_init_sink(name, base_update, model_update, &sink->sink);
 	mod_matrix_add_sink(&sink->sink);
-	sink->voice_array.voice_count = voice_count;
-	sink->voice_array.voices = voices;
+	sink->voice_count = voice_count;
+	sink->voices = voices;
 }
-
-voice_sink_t voice_amplitude_sink;
-voice_sink_t voice_pitch_sink;
 
 void voice_amplitude_base_update(mod_matrix_sink_t* sink, void* data)
 {
 	voice_sink_t* voice_sink = (voice_sink_t*)sink;
-	voice_t* voice = voice_sink->voice_array.voices;
+	voice_t* voice = voice_sink->voices;
 
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
+	for (int i = 0; i < voice_sink->voice_count; i++, voice++)
 	{
 		if (voice->current_state != NOTE_NOT_PLAYING)
 		{
@@ -84,9 +70,9 @@ void voice_amplitude_base_update(mod_matrix_sink_t* sink, void* data)
 void voice_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 {
 	voice_sink_t* voice_sink = (voice_sink_t*)sink;
-	voice_t* voice = voice_sink->voice_array.voices;
+	voice_t* voice = voice_sink->voices;
 
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
+	for (int i = 0; i < voice_sink->voice_count; i++, voice++)
 	{
 		if (voice->current_state != NOTE_NOT_PLAYING)
 		{
@@ -108,8 +94,8 @@ void voice_pitch_base_update(mod_matrix_sink_t* sink, void* data)
 {
 	voice_sink_t* voice_sink = (voice_sink_t*)sink;
 
-	voice_t* voice = voice_sink->voice_array.voices;
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
+	voice_t* voice = voice_sink->voices;
+	for (int i = 0; i < voice_sink->voice_count; i++, voice++)
 	{
 		if (voice->current_state != NOTE_NOT_PLAYING)
 		{
@@ -122,14 +108,39 @@ void voice_pitch_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* si
 {
 	voice_sink_t* voice_sink = (voice_sink_t*)sink;
 
-	voice_t* voice = voice_sink->voice_array.voices;
-	for (int i = 0; i < voice_sink->voice_array.voice_count; i++, voice++)
+	voice_t* voice = voice_sink->voices;
+	for (int i = 0; i < voice_sink->voice_count; i++, voice++)
 	{
 		if (voice->current_state != NOTE_NOT_PLAYING)
 		{
 			mod_matrix_value_t source_value = source->get_value(source, i);
 			// TODO: use a proper fixed point power function!
 			voice->oscillator.frequency = fixed_mul(voice->oscillator.frequency, powf(2.0f, (float)source_value / (float)MOD_MATRIX_ONE) * FIXED_ONE);
+		}
+	}
+}
+
+void voice_filter_q_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+{
+	static const fixed_t filter_q_base 	= FILTER_MIN_Q;
+	static const fixed_t filter_q_range	= FILTER_MAX_Q - FILTER_MIN_Q;
+
+	voice_sink_t* voice_sink = (voice_sink_t*)sink;
+
+	voice_t* voice = voice_sink->voices;
+	for (int i = 0; i < voice_sink->voice_count; i++, voice++)
+	{
+		if (voice->current_state != NOTE_NOT_PLAYING)
+		{
+			mod_matrix_value_t source_value = source->get_value(source, i);
+			if (source_value > 0)
+			{
+				voice->filter_def.q = filter_q_base + (fixed_mul_at(filter_q_range, source_value, MOD_MATRIX_PRECISION));
+			}
+			else
+			{
+				voice->filter_def.q = filter_q_base;
+			}
 		}
 	}
 }
@@ -146,6 +157,9 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 			if (synth_model->active_voices == 0)
 			{
 				lfo_reset(&synth_model->lfo_source.lfo);
+				//envelope_start(synth_model->envelope_source[0].envelope_instance + SYNTH_GLOBAL_ENVELOPE_INSTANCE);
+				//envelope_start(synth_model->envelope_source[1].envelope_instance + SYNTH_GLOBAL_ENVELOPE_INSTANCE);
+				//envelope_start(synth_model->envelope_source[2].envelope_instance + SYNTH_GLOBAL_ENVELOPE_INSTANCE);
 			}
 
 			synth_model->active_voices++;
@@ -154,9 +168,9 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 
 		case VOICE_EVENT_NOTE_STARTING:
 		{
-			envelope_start(synth_model->envelope_source[0].envelope_instance + voice->index);
-			envelope_start(synth_model->envelope_source[1].envelope_instance + voice->index);
-			envelope_start(synth_model->envelope_source[2].envelope_instance + voice->index);
+			envelope_start(synth_model->envelope_source[0].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index);
+			envelope_start(synth_model->envelope_source[1].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index);
+			envelope_start(synth_model->envelope_source[2].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index);
 			break;
 		}
 
@@ -164,9 +178,9 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 		{
 			if (synth_model->voice_amplitude_envelope_count > 0)
 			{
-				envelope_go_to_stage(synth_model->envelope_source[0].envelope_instance + voice->index, ENVELOPE_STAGE_RELEASE);
-				envelope_go_to_stage(synth_model->envelope_source[1].envelope_instance + voice->index, ENVELOPE_STAGE_RELEASE);
-				envelope_go_to_stage(synth_model->envelope_source[2].envelope_instance + voice->index, ENVELOPE_STAGE_RELEASE);
+				envelope_go_to_stage(synth_model->envelope_source[0].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index, ENVELOPE_STAGE_RELEASE);
+				envelope_go_to_stage(synth_model->envelope_source[1].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index, ENVELOPE_STAGE_RELEASE);
+				envelope_go_to_stage(synth_model->envelope_source[2].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index, ENVELOPE_STAGE_RELEASE);
 			}
 			else
 			{
@@ -255,7 +269,7 @@ void envelope_generate_value(mod_matrix_source_t* source, void* data)
 	envelope_source_t* envelope_source = (envelope_source_t*)source;
 	synth_update_state_t* state = (synth_update_state_t*)data;
 
-	for (int i = 0; i < state->synth_model->voice_count; i++)
+	for (int i = 0; i < SYNTH_GLOBAL_ENVELOPE_INSTANCE_COUNT + state->synth_model->voice_count; i++)
 	{
 		envelope_step(envelope_source->envelope_instance + i, state->timestep_ms);
 	}
@@ -264,7 +278,7 @@ void envelope_generate_value(mod_matrix_source_t* source, void* data)
 mod_matrix_value_t envelope_get_value(mod_matrix_source_t* source, int subsource_id)
 {
 	envelope_source_t* envelope_source = (envelope_source_t*)source;
-	return (mod_matrix_value_t) envelope_source->envelope_instance[subsource_id].last_level;
+	return (mod_matrix_value_t) envelope_source->envelope_instance[subsource_id + 1].last_level;
 }
 
 void synth_model_init_envelopes(synth_model_t* synth_model, int voice_count)
@@ -285,14 +299,15 @@ void synth_model_init_envelopes(synth_model_t* synth_model, int voice_count)
 	synth_model->envelope[2].stage_count = 4;
 	synth_model->envelope[2].stages = envelope_stages[2];
 
-	synth_model->envelope_instances = calloc(voice_count * SYNTH_ENVELOPE_COUNT, sizeof(envelope_instance_t));
+	// One global instance plus one instance per voice for each envelope
+	synth_model->envelope_instances = calloc((voice_count + SYNTH_GLOBAL_ENVELOPE_INSTANCE_COUNT) * SYNTH_ENVELOPE_COUNT, sizeof(envelope_instance_t));
 
 	for (int i = 0; i < SYNTH_ENVELOPE_COUNT; i++)
 	{
-		synth_model->envelope_source[i].envelope_instance = synth_model->envelope_instances + (voice_count * i);
+		synth_model->envelope_source[i].envelope_instance = synth_model->envelope_instances + ((voice_count + SYNTH_GLOBAL_ENVELOPE_INSTANCE_COUNT) * i);
 	}
 
-	for (int i = 0; i < voice_count; i++)
+	for (int i = 0; i < voice_count + SYNTH_GLOBAL_ENVELOPE_INSTANCE_COUNT; i++)
 	{
 		envelope_init(synth_model->envelope_source[0].envelope_instance + i, &synth_model->envelope[0]);
 		envelope_init(synth_model->envelope_source[1].envelope_instance + i, &synth_model->envelope[1]);
@@ -319,7 +334,7 @@ void synth_model_mod_matrix_callback(mod_matrix_event_t callback_event, mod_matr
 {
 	synth_model_t* synth_model = (synth_model_t*)callback_data;
 
-	if (sink == &voice_amplitude_sink.sink)
+	if (sink == &synth_model->voice_amplitude_sink.sink)
 	{
 		for (int i = 0; i < SYNTH_ENVELOPE_COUNT; i++)
 		{
@@ -350,8 +365,9 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 	synth_model->voice = (voice_t*)calloc(synth_model->voice_count, sizeof(voice_t));
 	voices_initialise(synth_model->voice, synth_model->voice_count);
 
-	init_voice_sink(SYNTH_MOD_SINK_NOTE_AMPLITUDE, voice_amplitude_base_update, voice_amplitude_model_update, voice_count, synth_model->voice, &voice_amplitude_sink);
-	init_voice_sink(SYNTH_MOD_SINK_NOTE_PITCH, voice_pitch_base_update, voice_pitch_model_update, voice_count, synth_model->voice, &voice_pitch_sink);
+	init_voice_sink(SYNTH_MOD_SINK_NOTE_AMPLITUDE, voice_amplitude_base_update, voice_amplitude_model_update, voice_count, synth_model->voice, &synth_model->voice_amplitude_sink);
+	init_voice_sink(SYNTH_MOD_SINK_NOTE_PITCH, voice_pitch_base_update, voice_pitch_model_update, voice_count, synth_model->voice, &synth_model->voice_pitch_sink);
+	init_voice_sink(SYNTH_MOD_SINK_FILTER_Q, NULL, voice_filter_q_model_update, voice_count, synth_model->voice, &synth_model->voice_filter_q_sink);
 
 	synth_model_init_envelopes(synth_model, voice_count);
 

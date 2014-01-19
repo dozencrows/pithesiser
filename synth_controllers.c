@@ -26,8 +26,6 @@
 #define FILTER_STATE_LAST		FILTER_HPF
 #define FILTER_MIN_FREQUENCY	(FILTER_FIXED_ONE * 20)
 #define FILTER_MAX_FREQUENCY	(18000 * FILTER_FIXED_ONE)
-#define FILTER_MIN_Q			(FIXED_ONE / 100)
-#define FILTER_MAX_Q			(FIXED_ONE)
 #define ENVELOPE_TIME_SCALE		10
 
 typedef struct envelope_controller_t
