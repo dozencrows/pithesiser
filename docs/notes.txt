@@ -8,7 +8,8 @@ Underway
     * filter freq
     * q
   * adjustable start and end values
-  * Envelope release stage & voice lifetime
+  * Envelope inverting
+  * Envelope negating
 
 To do next
 ==========
@@ -51,6 +52,7 @@ Done
  * Add voice killing and active voice counting to synth model via voice callbacks
  * Sort out LFO reset - on first voice start from silence)
  * Modulation matrix to map envelope outputs onto different parameters
+ * Envelope release stage & voice lifetime
 
 Blog ideas
 ==========

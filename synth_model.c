@@ -154,7 +154,7 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 
 		case VOICE_EVENT_NOTE_STARTING:
 		{
-			envelope_start(synth_model->envelope_source[0].envelope_instance+ voice->index);
+			envelope_start(synth_model->envelope_source[0].envelope_instance + voice->index);
 			envelope_start(synth_model->envelope_source[1].envelope_instance + voice->index);
 			envelope_start(synth_model->envelope_source[2].envelope_instance + voice->index);
 			break;
@@ -162,14 +162,16 @@ void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* ca
 
 		case VOICE_EVENT_NOTE_ENDING:
 		{
-			// TODO:
-			// Check for envelope assignment to voice amplitude sink
-			// If none present, stop voice and envelopes dead
-			// Else switch all envelopes to release
-			//envelope_go_to_stage(synth_model->envelope_instance[0] + voice->index, ENVELOPE_STAGE_RELEASE);
-			//envelope_go_to_stage(synth_model->envelope_instance[1] + voice->index, ENVELOPE_STAGE_RELEASE);
-			//envelope_go_to_stage(synth_model->envelope_instance[2] + voice->index, ENVELOPE_STAGE_RELEASE);
-			voice_kill(voice);
+			if (synth_model->voice_amplitude_envelope_count > 0)
+			{
+				envelope_go_to_stage(synth_model->envelope_source[0].envelope_instance + voice->index, ENVELOPE_STAGE_RELEASE);
+				envelope_go_to_stage(synth_model->envelope_source[1].envelope_instance + voice->index, ENVELOPE_STAGE_RELEASE);
+				envelope_go_to_stage(synth_model->envelope_source[2].envelope_instance + voice->index, ENVELOPE_STAGE_RELEASE);
+			}
+			else
+			{
+				voice_kill(voice);
+			}
 			break;
 		}
 
@@ -313,14 +315,39 @@ void synth_model_deinit_envelopes(synth_model_t* synth_model)
 	free(synth_model->envelope_instances);
 }
 
+void synth_model_mod_matrix_callback(mod_matrix_event_t callback_event, mod_matrix_source_t* source, mod_matrix_sink_t* sink, void* callback_data)
+{
+	synth_model_t* synth_model = (synth_model_t*)callback_data;
+
+	if (sink == &voice_amplitude_sink.sink)
+	{
+		for (int i = 0; i < SYNTH_ENVELOPE_COUNT; i++)
+		{
+			if (source == &synth_model->envelope_source[i].source)
+			{
+				if (callback_event == MOD_MATRIX_EVENT_CONNECTION)
+				{
+					synth_model->voice_amplitude_envelope_count++;
+				}
+				else if (callback_event == MOD_MATRIX_EVENT_DISCONNECTION)
+				{
+					synth_model->voice_amplitude_envelope_count--;
+				}
+			}
+		}
+	}
+}
+
 //-------------------------------------------------------------------------------------------------------------------------
 // Synth model
 //
 void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 {
-	synth_model->voice_count 	= voice_count;
-	synth_model->active_voices	= 0;
-	synth_model->voice 			= (voice_t*)calloc(synth_model->voice_count, sizeof(voice_t));
+	synth_model->voice_count 					= voice_count;
+	synth_model->active_voices					= 0;
+	synth_model->voice_amplitude_envelope_count	= 0;
+
+	synth_model->voice = (voice_t*)calloc(synth_model->voice_count, sizeof(voice_t));
 	voices_initialise(synth_model->voice, synth_model->voice_count);
 
 	init_voice_sink(SYNTH_MOD_SINK_NOTE_AMPLITUDE, voice_amplitude_base_update, voice_amplitude_model_update, voice_count, synth_model->voice, &voice_amplitude_sink);
@@ -332,6 +359,8 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 	mod_matrix_init_source(SYNTH_MOD_SOURCE_LFO, lfo_generate_value, lfo_get_value, &synth_model->lfo_source.source);
 	mod_matrix_add_source(&synth_model->lfo_source.source);
 
+	mod_matrix_add_callback(synth_model_mod_matrix_callback, synth_model);
+
 	synth_model->global_filter_def.type = FILTER_PASS;
 	synth_model->global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
 	synth_model->global_filter_def.q = FIXED_HALF;
@@ -339,6 +368,7 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 
 void synth_model_deinitialise(synth_model_t* synth_model)
 {
+	mod_matrix_remove_callback(synth_model_mod_matrix_callback);
 	synth_model_deinit_envelopes(synth_model);
 	free(synth_model->voice);
 	synth_model->voice = NULL;

@@ -20,7 +20,6 @@ typedef struct voice_t voice_t;
 
 // Types and values
 #define SYNTH_ENVELOPE_COUNT			3
-#define SYNTH_ENVELOPE_INSTANCE_COUNT
 
 extern const char*	SYNTH_MOD_SOURCE_LFO;
 
@@ -59,6 +58,7 @@ typedef struct synth_model_t
 	// Voices
 	int			voice_count;
 	int			active_voices;
+	int			voice_amplitude_envelope_count;
 	voice_t* 	voice;
 } synth_model_t;
 
