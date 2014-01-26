@@ -60,6 +60,7 @@ struct synth_model_t
 	filter_definition_t		global_filter_def;
 	envelope_instance_t*	envelope_instances;
 	lfo_t					lfo_def;
+	int32_t* 				ducking_levels;
 
 	// Sources
 	lfo_source_t		lfo_source;
@@ -99,12 +100,15 @@ typedef struct synth_update_state_t
 	synth_model_t* synth_model;
 	int32_t	timestep_ms;
 	size_t	sample_count;
+	void* buffer_data;
 } synth_update_state_t;
 
 extern void synth_model_initialise(synth_model_t* synth_model, int voice_count);
-extern void synth_model_deinitialise(synth_model_t* synth_model);
+extern void synth_model_set_midi_channel(synth_model_t* synth_model, int midi_channel);
+extern void synth_model_set_ducking_levels(synth_model_t* synth_model, int32_t* ducking_levels);
 extern void synth_model_update(synth_model_t* synth_model, synth_update_state_t* update_state);
 extern void synth_model_play_note(synth_model_t* synth_model, int channel, unsigned char midi_note);
 extern void synth_model_stop_note(synth_model_t* synth_model, int channel, unsigned char midi_note);
+extern void synth_model_deinitialise(synth_model_t* synth_model);
 
 #endif /* SYNTH_MODEL_H_ */

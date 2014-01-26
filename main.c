@@ -17,12 +17,9 @@
 
 #include "system_constants.h"
 #include "master_time.h"
-#include "fixed_point_math.h"
 #include "logging.h"
 #include "alsa.h"
 #include "midi.h"
-#include "oscillator.h"
-#include "voice.h"
 
 #include "gfx.h"
 #include "gfx_event.h"
@@ -33,10 +30,8 @@
 #include "gfx_image.h"
 #include "synth_model.h"
 #include "synth_controllers.h"
-#include "modulation_matrix.h"
 #include "modulation_matrix_controller.h"
 
-#include "mixer.h"
 #include "setting.h"
 #include "recording.h"
 #include "code_timing_tests.h"
@@ -168,6 +163,8 @@ void configure_audio()
 			duck_level_by_voice_count[i + 1] = duck_level;
 		}
 	}
+
+	synth_model_set_ducking_levels(&synth_model, duck_level_by_voice_count);
 }
 
 void process_audio(int32_t timestep_ms)
@@ -181,44 +178,8 @@ void process_audio(int32_t timestep_ms)
 	synth_update_state_t update_state;
 	update_state.timestep_ms = timestep_ms;
 	update_state.sample_count = buffer_samples;
-
+	update_state.buffer_data = buffer_data;
 	synth_model_update(&synth_model, &update_state);
-
-	int first_audible_voice = -1;
-	int last_active_voices = synth_model.active_voices;
-	int32_t auto_duck_level = duck_level_by_voice_count[synth_model.active_voices];
-	sample_t *voice_buffer = (sample_t*)alloca(buffer_samples * sizeof(sample_t));
-	int master_volume = setting_get_value_int(synth_model.setting_master_volume);
-	int32_t voice_level = (master_volume * auto_duck_level) / LEVEL_MAX;
-
-	for (int i = 0; i < synth_model.voice_count; i++)
-	{
-		switch(voice_update(synth_model.voice + i, voice_level, voice_buffer, buffer_samples, timestep_ms))
-		{
-			case VOICE_IDLE:
-				break;
-			case VOICE_ACTIVE:
-			{
-				if (first_audible_voice < 0)
-				{
-					first_audible_voice = i;
-					//copy_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
-					copy_mono_to_stereo_asm(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
-				}
-				else
-				{
-					//mixdown_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
-					mixdown_mono_to_stereo_asm(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
-				}
-				break;
-			}
-		}
-	}
-
-	if (first_audible_voice < 0)
-	{
-		memset(buffer_data, 0, buffer_bytes);
-	}
 
 	gfx_event_t gfx_event;
 	gfx_event.type = GFX_EVENT_WAVE;
@@ -233,14 +194,6 @@ void process_audio(int32_t timestep_ms)
 	}
 
 	alsa_unlock_buffer(write_buffer_index);
-
-	if (last_active_voices != synth_model.active_voices)
-	{
-		if (synth_model.active_voices < 0)
-		{
-			LOG_ERROR("Voice underflow: %d", synth_model.active_voices);
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -255,10 +208,7 @@ void configure_midi()
 	config_lookup_int(&app_config, CFG_DEVICES_MIDI_CONTROLLER_CHANNEL, &controller_channel);
 	config_lookup_int(&app_config, CFG_DEVICES_MIDI_NOTE_CHANNEL, &note_channel);
 
-	for (int i = 0 ; i < synth_model.voice_count; i++)
-	{
-		synth_model.voice[i].midi_channel = note_channel;
-	}
+	synth_model_set_midi_channel(&synth_model, note_channel);
 
 	config_setting_t *setting_devices_midi_input = config_lookup(&app_config, CFG_DEVICES_MIDI_INPUT);
 

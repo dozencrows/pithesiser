@@ -31,6 +31,7 @@ typedef int64_t	fixed_wide_t;
 
 #define LEVEL_MAX			SHRT_MAX
 #define SAMPLE_MAX			SHRT_MAX
+#define PAN_MAX				32768
 #define BYTES_PER_CHANNEL	(sizeof(sample_t))
 #define CHANNELS_PER_SAMPLE	2
 #define BYTES_PER_SAMPLE	(BYTES_PER_CHANNEL * CHANNELS_PER_SAMPLE)

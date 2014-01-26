@@ -8,11 +8,13 @@
 #include "synth_model.h"
 #include <stdlib.h>
 #include <math.h>
+#include <memory.h>
 #include "logging.h"
 #include "fixed_point_math.h"
 #include "voice.h"
 #include "lfo.h"
 #include "setting.h"
+#include "mixer.h"
 
 const char*	SYNTH_MOD_SOURCE_LFO			= "lfo";
 const char*	SYNTH_MOD_SOURCE_ENVELOPE_1		= "envelope-1";
@@ -458,6 +460,7 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 	synth_model->ending_voices					= 0;
 	synth_model->global_envelopes_released		= FALSE;
 	synth_model->voice_amplitude_envelope_count	= 0;
+	synth_model->ducking_levels					= NULL;
 
 	synth_model->voice = (voice_t*)calloc(synth_model->voice_count, sizeof(voice_t));
 	voices_initialise(synth_model->voice, synth_model->voice_count);
@@ -505,6 +508,56 @@ void synth_model_update(synth_model_t* synth_model, synth_update_state_t* update
 	}
 
 	mod_matrix_update(update_state);
+
+	int first_audible_voice = -1;
+	int last_active_voices = synth_model->active_voices;
+	int32_t auto_duck_level = LEVEL_MAX;
+	if (synth_model->ducking_levels != NULL)
+	{
+		auto_duck_level = synth_model->ducking_levels[synth_model->active_voices];
+	}
+
+	sample_t *voice_buffer = (sample_t*)alloca(update_state->sample_count * sizeof(sample_t));
+	int master_volume = setting_get_value_int(synth_model->setting_master_volume);
+	int32_t voice_level = (master_volume * auto_duck_level) / LEVEL_MAX;
+	size_t buffer_bytes = update_state->sample_count * sizeof(sample_t) * 2;
+
+	for (int i = 0; i < synth_model->voice_count; i++)
+	{
+		switch(voice_update(synth_model->voice + i, voice_level, voice_buffer, update_state->sample_count, update_state->timestep_ms))
+		{
+			case VOICE_IDLE:
+				break;
+			case VOICE_ACTIVE:
+			{
+				if (first_audible_voice < 0)
+				{
+					first_audible_voice = i;
+					//copy_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
+					copy_mono_to_stereo_asm(voice_buffer, PAN_MAX, PAN_MAX, update_state->sample_count, update_state->buffer_data);
+				}
+				else
+				{
+					//mixdown_mono_to_stereo(voice_buffer, PAN_MAX, PAN_MAX, buffer_samples, buffer_data);
+					mixdown_mono_to_stereo_asm(voice_buffer, PAN_MAX, PAN_MAX, update_state->sample_count, update_state->buffer_data);
+				}
+				break;
+			}
+		}
+	}
+
+	if (first_audible_voice < 0)
+	{
+		memset(update_state->buffer_data, 0, buffer_bytes);
+	}
+
+	if (last_active_voices != synth_model->active_voices)
+	{
+		if (synth_model->active_voices < 0)
+		{
+			LOG_ERROR("Voice underflow: %d", synth_model->active_voices);
+		}
+	}
 }
 
 void synth_model_play_note(synth_model_t* synth_model, int channel, unsigned char midi_note)
@@ -526,4 +579,17 @@ void synth_model_stop_note(synth_model_t* synth_model, int channel, unsigned cha
 	{
 		voice_stop_note(playing_voice);
 	}
+}
+
+void synth_model_set_midi_channel(synth_model_t* synth_model, int midi_channel)
+{
+	for (int i = 0 ; i < synth_model->voice_count; i++)
+	{
+		synth_model->voice[i].midi_channel = midi_channel;
+	}
+}
+
+void synth_model_set_ducking_levels(synth_model_t* synth_model, int32_t* ducking_levels)
+{
+	synth_model->ducking_levels = ducking_levels;
 }

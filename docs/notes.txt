@@ -6,8 +6,6 @@ Underway
 
 To do next
 ==========
-* Sort out strange waveform behaviour at high pitches (e.g. wavetable aliasing, procedural saw weird pitches)
-* Improve volume ducking for when long-release notes end (currently causes sudden jumps up in volume)
 * LFO parameters as mod matrix sinks
   * Absolute and modifying modes
 * Envelope system improvements
@@ -18,12 +16,13 @@ To do next
   * migrate remaining synth controls to settings - midi control, rendering in UI, UI setup
   * loading & saving of settings (replace MIDI controller output saving)
   * default values for settings, when they're set and how the results are driven to the synth model at startup
-* Modularise synth model init and processing
-  * main.c: process_audio: encapsulate voice update loop inside synth model (and ducking data/setup)
 * Secondary LFO support
 * Enrich filter controls
   * Optional voice pitch tracking
   * LFO control
+* Fix audio glitches
+  * Sort out strange waveform behaviour at high pitches (e.g. wavetable aliasing, procedural saw weird pitches)
+  * Improve volume ducking for when long-release notes end (currently causes sudden jumps up in volume)
 * Improve filtering quality
   * Resolve filtering & going to silence (eliminate bias & clicks)
   * Investigate use of interpolation
@@ -59,6 +58,7 @@ Done
  * LFO parameters as mod matrix sinks
  * Global envelope use and release triggering
  * Encapsulate noted play and stop inside synth model
+ * Encapsulate voice update loop inside synth model (and ducking data/setup)
 
 Blog ideas
 ==========
