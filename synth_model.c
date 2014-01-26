@@ -20,6 +20,7 @@ const char*	SYNTH_MOD_SOURCE_ENVELOPE_3		= "envelope-3";
 const char*	SYNTH_MOD_SINK_NOTE_AMPLITUDE	= "note-amplitude";
 const char*	SYNTH_MOD_SINK_NOTE_PITCH		= "note-pitch";
 const char*	SYNTH_MOD_SINK_FILTER_Q			= "filter-q";
+const char*	SYNTH_MOD_SINK_FILTER_FREQ		= "filter-freq";
 
 //-------------------------------------------------------------------------------------------------------------------------
 // LFO modelling
@@ -139,6 +140,31 @@ void voice_filter_q_model_update(mod_matrix_source_t* source, mod_matrix_sink_t*
 			else
 			{
 				voice->filter_def.q = filter_q_base;
+			}
+		}
+	}
+}
+
+void voice_filter_freq_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+{
+	static const fixed_t filter_freq_base 	= FILTER_MIN_FREQUENCY;
+	static const fixed_t filter_freq_range	= FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY;
+
+	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
+
+	voice_t* voice = param_sink->synth_model->voice;
+	for (int i = 0; i < param_sink->synth_model->voice_count; i++, voice++)
+	{
+		if (voice->current_state != NOTE_NOT_PLAYING)
+		{
+			mod_matrix_value_t source_value = source->get_value(source, i);
+			if (source_value > 0)
+			{
+				voice->filter_def.frequency = filter_freq_base + (fixed_mul_at(filter_freq_range, source_value, MOD_MATRIX_PRECISION));
+			}
+			else
+			{
+				voice->filter_def.frequency = filter_freq_base;
 			}
 		}
 	}
@@ -336,6 +362,8 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 	init_synth_model_param_sink(SYNTH_MOD_SINK_NOTE_AMPLITUDE, voice_amplitude_base_update, voice_amplitude_model_update, synth_model, &synth_model->voice_amplitude_sink);
 	init_synth_model_param_sink(SYNTH_MOD_SINK_NOTE_PITCH, voice_pitch_base_update, voice_pitch_model_update, synth_model, &synth_model->voice_pitch_sink);
 	init_synth_model_param_sink(SYNTH_MOD_SINK_FILTER_Q, NULL, voice_filter_q_model_update, synth_model, &synth_model->voice_filter_q_sink);
+	init_synth_model_param_sink(SYNTH_MOD_SINK_FILTER_FREQ, NULL, voice_filter_freq_model_update, synth_model, &synth_model->voice_filter_freq_sink);
+
 
 	synth_model_init_envelopes(synth_model, voice_count);
 

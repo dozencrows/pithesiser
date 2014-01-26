@@ -68,6 +68,7 @@ struct synth_model_t
 	synth_model_param_sink_t voice_amplitude_sink;
 	synth_model_param_sink_t voice_pitch_sink;
 	synth_model_param_sink_t voice_filter_q_sink;
+	synth_model_param_sink_t voice_filter_freq_sink;
 
 	// Voices
 	int			voice_count;
