@@ -25,32 +25,37 @@ const char*	SYNTH_MOD_SINK_FILTER_FREQ		= "filter-freq";
 const char*	SYNTH_MOD_SINK_LFO_AMPLITUDE	= "lfo-amplitude";
 const char*	SYNTH_MOD_SINK_LFO_FREQ			= "lfo-freq";
 
-//-------------------------------------------------------------------------------------------------------------------------
+//=========================================================================================================================
 // Internal synth model function forward declarations
 //
 
-extern void synth_start_global_envelopes(synth_model_t* synth_model);
-extern void synth_release_global_envelopes(synth_model_t* synth_model);
+extern void synth_model_start_global_envelopes(synth_model_t* synth_model);
+extern void synth_model_start_voice_envelopes(synth_model_t* synth_model, int voice_index);
+extern void synth_model_release_global_envelopes(synth_model_t* synth_model);
+extern void synth_model_release_voice_envelopes(synth_model_t* synth_model, int voice_index);
 extern void synth_model_init_envelopes(synth_model_t* synth_model, int voice_count);
 
-//-------------------------------------------------------------------------------------------------------------------------
+//=========================================================================================================================
 // Model parameter management
 //
-
-void synth_init_model_param_sink(const char* name, base_update_t base_update, model_update_t model_update, synth_model_t* synth_model, synth_model_param_sink_t* sink)
+static void synth_model_init_param_sink(const char* name, base_update_t base_update, model_update_t model_update, synth_model_t* synth_model, synth_model_param_sink_t* sink)
 {
 	mod_matrix_init_sink(name, base_update, model_update, &sink->sink);
 	mod_matrix_add_sink(&sink->sink);
 	sink->synth_model = synth_model;
 }
 
+//=========================================================================================================================
+// Modulation modelling
+//
+
 //-------------------------------------------------------------------------------------------------------------------------
-// LFO modelling
+// LFO modulation
 //
 // Note that as the LFO is both a source and two sinks, modulation changes applied to its parameters will lag
 // one audio chunk before being used in the LFO update.
 //
-void lfo_generate_value(mod_matrix_source_t* source, void* data)
+static void lfo_generate_value(mod_matrix_source_t* source, void* data)
 {
 	lfo_source_t* lfo_source = (lfo_source_t*)source;
 	synth_update_state_t* state = (synth_update_state_t*)data;
@@ -58,19 +63,19 @@ void lfo_generate_value(mod_matrix_source_t* source, void* data)
 	lfo_update(&lfo_source->lfo, state->sample_count);
 }
 
-mod_matrix_value_t lfo_get_value(mod_matrix_source_t* source, int subsource_id)
+static mod_matrix_value_t lfo_get_value(mod_matrix_source_t* source, int subsource_id)
 {
 	lfo_source_t* lfo_source = (lfo_source_t*)source;
 	return (mod_matrix_value_t) lfo_source->lfo.value;
 }
 
-void lfo_amplitude_base_update(mod_matrix_sink_t* sink, void* data)
+static void lfo_amplitude_base_update(mod_matrix_sink_t* sink, void* data)
 {
 	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
 	param_sink->synth_model->lfo_source.lfo.oscillator.level = param_sink->synth_model->lfo_def.oscillator.level;
 }
 
-void lfo_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+static void lfo_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 {
 	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
 
@@ -86,13 +91,13 @@ void lfo_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* 
 	}
 }
 
-void lfo_freq_base_update(mod_matrix_sink_t* sink, void* data)
+static void lfo_freq_base_update(mod_matrix_sink_t* sink, void* data)
 {
 	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
 	param_sink->synth_model->lfo_source.lfo.oscillator.frequency = param_sink->synth_model->lfo_def.oscillator.frequency;
 }
 
-void lfo_freq_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+static void lfo_freq_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 {
 	static const fixed_t freq_base 	= LFO_MIN_FREQUENCY;
 	static const fixed_t freq_range	= LFO_MAX_FREQUENCY - LFO_MIN_FREQUENCY;
@@ -112,9 +117,9 @@ void lfo_freq_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
-// Synth voices
+// Voice modulation
 //
-void voice_amplitude_base_update(mod_matrix_sink_t* sink, void* data)
+static void voice_amplitude_base_update(mod_matrix_sink_t* sink, void* data)
 {
 	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
 	voice_t* voice = param_sink->synth_model->voice;
@@ -132,7 +137,7 @@ void voice_amplitude_base_update(mod_matrix_sink_t* sink, void* data)
 	}
 }
 
-void voice_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+static void voice_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 {
 	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
 	voice_t* voice = param_sink->synth_model->voice;
@@ -155,7 +160,7 @@ void voice_amplitude_model_update(mod_matrix_source_t* source, mod_matrix_sink_t
 	}
 }
 
-void voice_pitch_base_update(mod_matrix_sink_t* sink, void* data)
+static void voice_pitch_base_update(mod_matrix_sink_t* sink, void* data)
 {
 	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
 
@@ -169,7 +174,7 @@ void voice_pitch_base_update(mod_matrix_sink_t* sink, void* data)
 	}
 }
 
-void voice_pitch_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+static void voice_pitch_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 {
 	synth_model_param_sink_t* param_sink = (synth_model_param_sink_t*)sink;
 
@@ -185,7 +190,7 @@ void voice_pitch_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* si
 	}
 }
 
-void voice_filter_q_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+static void voice_filter_q_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 {
 	static const fixed_t filter_q_base 	= FILTER_MIN_Q;
 	static const fixed_t filter_q_range	= FILTER_MAX_Q - FILTER_MIN_Q;
@@ -210,7 +215,7 @@ void voice_filter_q_model_update(mod_matrix_source_t* source, mod_matrix_sink_t*
 	}
 }
 
-void voice_filter_freq_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
+static void voice_filter_freq_model_update(mod_matrix_source_t* source, mod_matrix_sink_t* sink)
 {
 	static const fixed_t filter_freq_base 	= FILTER_MIN_FREQUENCY;
 	static const fixed_t filter_freq_range	= FILTER_MAX_FREQUENCY - FILTER_MIN_FREQUENCY;
@@ -235,70 +240,8 @@ void voice_filter_freq_model_update(mod_matrix_source_t* source, mod_matrix_sink
 	}
 }
 
-void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* callback_data)
-{
-	synth_model_t* synth_model = (synth_model_t*)callback_data;
-
-	switch(callback_event)
-	{
-		case VOICE_EVENT_VOICE_STARTING:
-		{
-			if (synth_model->active_voices == 0)
-			{
-				lfo_reset(&synth_model->lfo_source.lfo);
-				synth_start_global_envelopes(synth_model);
-			}
-			else if (synth_model->global_envelopes_released)
-			{
-				synth_start_global_envelopes(synth_model);
-			}
-
-			synth_model->active_voices++;
-			break;
-		}
-
-		case VOICE_EVENT_NOTE_STARTING:
-		{
-			envelope_start(synth_model->envelope_source[0].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index);
-			envelope_start(synth_model->envelope_source[1].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index);
-			envelope_start(synth_model->envelope_source[2].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index);
-			break;
-		}
-
-		case VOICE_EVENT_NOTE_ENDING:
-		{
-			synth_model->ending_voices++;
-
-			if (synth_model->voice_amplitude_envelope_count > 0)
-			{
-				envelope_go_to_stage(synth_model->envelope_source[0].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index, ENVELOPE_STAGE_RELEASE);
-				envelope_go_to_stage(synth_model->envelope_source[1].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index, ENVELOPE_STAGE_RELEASE);
-				envelope_go_to_stage(synth_model->envelope_source[2].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice->index, ENVELOPE_STAGE_RELEASE);
-
-				if (synth_model->ending_voices == synth_model->active_voices)
-				{
-					synth_release_global_envelopes(synth_model);
-				}
-			}
-			else
-			{
-				voice_kill(voice);
-			}
-			break;
-		}
-
-		case VOICE_EVENT_VOICE_ENDED:
-		default:
-		{
-			synth_model->ending_voices--;
-			synth_model->active_voices--;
-			break;
-		}
-	}
-}
-
 //-------------------------------------------------------------------------------------------------------------------------
-// Synth envelopes
+// Envelope modulation
 //
 
 // Certain values in here are also set on the relative controller defaults in synth_controllers.c - this should
@@ -328,7 +271,7 @@ envelope_stage_t envelope_stages[SYNTH_ENVELOPE_COUNT][4] =
 	},
 };
 
-void envelope_generate_value(mod_matrix_source_t* source, void* data)
+static void envelope_generate_value(mod_matrix_source_t* source, void* data)
 {
 	envelope_source_t* envelope_source = (envelope_source_t*)source;
 	synth_update_state_t* state = (synth_update_state_t*)data;
@@ -339,13 +282,13 @@ void envelope_generate_value(mod_matrix_source_t* source, void* data)
 	}
 }
 
-mod_matrix_value_t envelope_get_value(mod_matrix_source_t* source, int subsource_id)
+static mod_matrix_value_t envelope_get_value(mod_matrix_source_t* source, int subsource_id)
 {
 	envelope_source_t* envelope_source = (envelope_source_t*)source;
 	return (mod_matrix_value_t) envelope_source->envelope_instance[subsource_id + 1].last_level;
 }
 
-void synth_start_global_envelopes(synth_model_t* synth_model)
+void synth_model_start_global_envelopes(synth_model_t* synth_model)
 {
 	synth_model->global_envelopes_released = FALSE;
 	envelope_start(synth_model->envelope_source[0].envelope_instance + SYNTH_GLOBAL_ENVELOPE_INSTANCE);
@@ -353,7 +296,14 @@ void synth_start_global_envelopes(synth_model_t* synth_model)
 	envelope_start(synth_model->envelope_source[2].envelope_instance + SYNTH_GLOBAL_ENVELOPE_INSTANCE);
 }
 
-void synth_release_global_envelopes(synth_model_t* synth_model)
+void synth_model_start_voice_envelopes(synth_model_t* synth_model, int voice_index)
+{
+	envelope_start(synth_model->envelope_source[0].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice_index);
+	envelope_start(synth_model->envelope_source[1].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice_index);
+	envelope_start(synth_model->envelope_source[2].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice_index);
+}
+
+void synth_model_release_global_envelopes(synth_model_t* synth_model)
 {
 	synth_model->global_envelopes_released = TRUE;
 	envelope_go_to_stage(synth_model->envelope_source[0].envelope_instance + SYNTH_GLOBAL_ENVELOPE_INSTANCE, ENVELOPE_STAGE_RELEASE);
@@ -361,10 +311,16 @@ void synth_release_global_envelopes(synth_model_t* synth_model)
 	envelope_go_to_stage(synth_model->envelope_source[2].envelope_instance + SYNTH_GLOBAL_ENVELOPE_INSTANCE, ENVELOPE_STAGE_RELEASE);
 }
 
+void synth_model_release_voice_envelopes(synth_model_t* synth_model, int voice_index)
+{
+	envelope_go_to_stage(synth_model->envelope_source[0].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice_index, ENVELOPE_STAGE_RELEASE);
+	envelope_go_to_stage(synth_model->envelope_source[1].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice_index, ENVELOPE_STAGE_RELEASE);
+	envelope_go_to_stage(synth_model->envelope_source[2].envelope_instance + SYNTH_VOICE_ENVELOPE_INSTANCE_BASE + voice_index, ENVELOPE_STAGE_RELEASE);
+}
+
 void synth_model_init_envelopes(synth_model_t* synth_model, int voice_count)
 {
 	envelopes_initialise();
-	voices_add_callback(voice_event_callback, synth_model);
 
 	synth_model->envelope[0].peak = MOD_MATRIX_ONE;
 	synth_model->envelope[0].stage_count = 4;
@@ -403,11 +359,72 @@ void synth_model_init_envelopes(synth_model_t* synth_model, int voice_count)
 
 void synth_model_deinit_envelopes(synth_model_t* synth_model)
 {
-	voices_remove_callback(voice_event_callback);
 	free(synth_model->envelope_instances);
+	synth_model->envelope_instances = NULL;
 }
 
-void synth_model_mod_matrix_callback(mod_matrix_event_t callback_event, mod_matrix_source_t* source, mod_matrix_sink_t* sink, void* callback_data)
+//=========================================================================================================================
+// External callbacks
+//
+static void voice_event_callback(voice_event_t callback_event, voice_t* voice, void* callback_data)
+{
+	synth_model_t* synth_model = (synth_model_t*)callback_data;
+
+	switch(callback_event)
+	{
+		case VOICE_EVENT_VOICE_STARTING:
+		{
+			if (synth_model->active_voices == 0)
+			{
+				lfo_reset(&synth_model->lfo_source.lfo);
+				synth_model_start_global_envelopes(synth_model);
+			}
+			else if (synth_model->global_envelopes_released)
+			{
+				synth_model_start_global_envelopes(synth_model);
+			}
+
+			synth_model->active_voices++;
+			break;
+		}
+
+		case VOICE_EVENT_NOTE_STARTING:
+		{
+			synth_model_start_voice_envelopes(synth_model, voice->index);
+			break;
+		}
+
+		case VOICE_EVENT_NOTE_ENDING:
+		{
+			synth_model->ending_voices++;
+
+			if (synth_model->voice_amplitude_envelope_count > 0)
+			{
+				synth_model_release_voice_envelopes(synth_model, voice->index);
+
+				if (synth_model->ending_voices == synth_model->active_voices)
+				{
+					synth_model_release_global_envelopes(synth_model);
+				}
+			}
+			else
+			{
+				voice_kill(voice);
+			}
+			break;
+		}
+
+		case VOICE_EVENT_VOICE_ENDED:
+		default:
+		{
+			synth_model->ending_voices--;
+			synth_model->active_voices--;
+			break;
+		}
+	}
+}
+
+static void mod_matrix_callback(mod_matrix_event_t callback_event, mod_matrix_source_t* source, mod_matrix_sink_t* sink, void* callback_data)
 {
 	synth_model_t* synth_model = (synth_model_t*)callback_data;
 
@@ -430,7 +447,7 @@ void synth_model_mod_matrix_callback(mod_matrix_event_t callback_event, mod_matr
 	}
 }
 
-//-------------------------------------------------------------------------------------------------------------------------
+//=========================================================================================================================
 // Synth model entrypoints
 //
 void synth_model_initialise(synth_model_t* synth_model, int voice_count)
@@ -444,12 +461,12 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 	synth_model->voice = (voice_t*)calloc(synth_model->voice_count, sizeof(voice_t));
 	voices_initialise(synth_model->voice, synth_model->voice_count);
 
-	synth_init_model_param_sink(SYNTH_MOD_SINK_NOTE_AMPLITUDE, voice_amplitude_base_update, voice_amplitude_model_update, synth_model, &synth_model->voice_amplitude_sink);
-	synth_init_model_param_sink(SYNTH_MOD_SINK_NOTE_PITCH, voice_pitch_base_update, voice_pitch_model_update, synth_model, &synth_model->voice_pitch_sink);
-	synth_init_model_param_sink(SYNTH_MOD_SINK_FILTER_Q, NULL, voice_filter_q_model_update, synth_model, &synth_model->voice_filter_q_sink);
-	synth_init_model_param_sink(SYNTH_MOD_SINK_FILTER_FREQ, NULL, voice_filter_freq_model_update, synth_model, &synth_model->voice_filter_freq_sink);
-	synth_init_model_param_sink(SYNTH_MOD_SINK_LFO_AMPLITUDE, lfo_amplitude_base_update, lfo_amplitude_model_update, synth_model, &synth_model->lfo_amplitude_sink);
-	synth_init_model_param_sink(SYNTH_MOD_SINK_LFO_FREQ, lfo_freq_base_update, lfo_freq_model_update, synth_model, &synth_model->lfo_freq_sink);
+	synth_model_init_param_sink(SYNTH_MOD_SINK_NOTE_AMPLITUDE, voice_amplitude_base_update, voice_amplitude_model_update, synth_model, &synth_model->voice_amplitude_sink);
+	synth_model_init_param_sink(SYNTH_MOD_SINK_NOTE_PITCH, voice_pitch_base_update, voice_pitch_model_update, synth_model, &synth_model->voice_pitch_sink);
+	synth_model_init_param_sink(SYNTH_MOD_SINK_FILTER_Q, NULL, voice_filter_q_model_update, synth_model, &synth_model->voice_filter_q_sink);
+	synth_model_init_param_sink(SYNTH_MOD_SINK_FILTER_FREQ, NULL, voice_filter_freq_model_update, synth_model, &synth_model->voice_filter_freq_sink);
+	synth_model_init_param_sink(SYNTH_MOD_SINK_LFO_AMPLITUDE, lfo_amplitude_base_update, lfo_amplitude_model_update, synth_model, &synth_model->lfo_amplitude_sink);
+	synth_model_init_param_sink(SYNTH_MOD_SINK_LFO_FREQ, lfo_freq_base_update, lfo_freq_model_update, synth_model, &synth_model->lfo_freq_sink);
 
 	synth_model_init_envelopes(synth_model, voice_count);
 
@@ -458,7 +475,8 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 	mod_matrix_init_source(SYNTH_MOD_SOURCE_LFO, lfo_generate_value, lfo_get_value, &synth_model->lfo_source.source);
 	mod_matrix_add_source(&synth_model->lfo_source.source);
 
-	mod_matrix_add_callback(synth_model_mod_matrix_callback, synth_model);
+	voices_add_callback(voice_event_callback, synth_model);
+	mod_matrix_add_callback(mod_matrix_callback, synth_model);
 
 	synth_model->global_filter_def.type = FILTER_PASS;
 	synth_model->global_filter_def.frequency = 9000 * FILTER_FIXED_ONE;
@@ -467,7 +485,8 @@ void synth_model_initialise(synth_model_t* synth_model, int voice_count)
 
 void synth_model_deinitialise(synth_model_t* synth_model)
 {
-	mod_matrix_remove_callback(synth_model_mod_matrix_callback);
+	voices_remove_callback(voice_event_callback);
+	mod_matrix_remove_callback(mod_matrix_callback);
 	synth_model_deinit_envelopes(synth_model);
 	free(synth_model->voice);
 	synth_model->voice = NULL;

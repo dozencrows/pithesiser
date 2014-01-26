@@ -3,11 +3,11 @@ Raspberry Pi Synth Project
 
 Underway
 ========
-* LFO parameters as mod matrix sinks
-  * global envelope use and release triggering
 
 To do next
 ==========
+* LFO parameters as mod matrix sinks
+  * Absolute and modifying modes
 * Envelope system improvements
   * adjustable start and end values
   * Envelope inverting
@@ -53,6 +53,8 @@ Done
  * Envelope release stage & voice lifetime
  * Voice filter q under mod matrix control
  * Voice filter freq under mod matrix control
+ * LFO parameters as mod matrix sinks
+ * Global envelope use and release triggering
 
 Blog ideas
 ==========
