@@ -20,6 +20,11 @@
 #define FILTER_MIN_Q			(FIXED_ONE / 100)
 #define FILTER_MAX_Q			(FIXED_ONE)
 
+#define FILTER_STATE_OFF		FILTER_PASS
+#define FILTER_STATE_LAST		FILTER_HPF
+#define FILTER_MIN_FREQUENCY	(FILTER_FIXED_ONE * 20)
+#define FILTER_MAX_FREQUENCY	(18000 * FILTER_FIXED_ONE)
+
 typedef struct filter_definition_t
 {
 	int		type;

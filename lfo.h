@@ -10,6 +10,9 @@
 
 #include "oscillator.h"
 
+#define LFO_MIN_FREQUENCY		(FIXED_ONE / 10)
+#define LFO_MAX_FREQUENCY		(20 * FIXED_ONE)
+
 typedef struct lfo_t
 {
 	oscillator_t 		oscillator;

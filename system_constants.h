@@ -11,6 +11,9 @@
 #include <sys/types.h>
 #include <limits.h>
 
+#define TRUE						1
+#define FALSE						0
+
 #define RESULT_OK					0
 #define RESULT_ERROR				-1
 

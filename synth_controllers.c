@@ -19,9 +19,6 @@
 #include "synth_model.h"
 #include "midi_controller_parser.h"
 
-#define LFO_MIN_FREQUENCY		(FIXED_ONE / 10)
-#define LFO_MAX_FREQUENCY		(20 * FIXED_ONE)
-
 #define ENVELOPE_TIME_SCALE		10
 
 typedef struct envelope_controller_t
@@ -420,9 +417,9 @@ void update_synth(synth_state_t* synth_state, synth_model_t* synth_model)
 
 	if (synth_state->lfo_params == STATE_UPDATED)
 	{
-		synth_model->lfo_source.lfo.oscillator.waveform = midi_controller_read(&lfo_waveform_controller);
-		synth_model->lfo_source.lfo.oscillator.level = midi_controller_read(&lfo_level_controller);
-		synth_model->lfo_source.lfo.oscillator.frequency = midi_controller_read(&lfo_frequency_controller);
+		synth_model->lfo_def.oscillator.waveform = midi_controller_read(&lfo_waveform_controller);
+		synth_model->lfo_def.oscillator.level = midi_controller_read(&lfo_level_controller);
+		synth_model->lfo_def.oscillator.frequency = midi_controller_read(&lfo_frequency_controller);
 	}
 
 	if (synth_state->filter == STATE_UPDATED)

@@ -59,6 +59,7 @@ struct synth_model_t
 	envelope_t 				envelope[SYNTH_ENVELOPE_COUNT];
 	filter_definition_t		global_filter_def;
 	envelope_instance_t*	envelope_instances;
+	lfo_t					lfo_def;
 
 	// Sources
 	lfo_source_t		lfo_source;
@@ -69,10 +70,14 @@ struct synth_model_t
 	synth_model_param_sink_t voice_pitch_sink;
 	synth_model_param_sink_t voice_filter_q_sink;
 	synth_model_param_sink_t voice_filter_freq_sink;
+	synth_model_param_sink_t lfo_amplitude_sink;
+	synth_model_param_sink_t lfo_freq_sink;
 
 	// Voices
 	int			voice_count;
 	int			active_voices;
+	int			ending_voices;
+	int			global_envelopes_released;
 	int			voice_amplitude_envelope_count;
 	voice_t* 	voice;
 };
