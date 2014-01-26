@@ -12,6 +12,7 @@
 #include "fixed_point_math.h"
 #include "voice.h"
 #include "lfo.h"
+#include "setting.h"
 
 const char*	SYNTH_MOD_SOURCE_LFO			= "lfo";
 const char*	SYNTH_MOD_SOURCE_ENVELOPE_1		= "envelope-1";
@@ -504,4 +505,25 @@ void synth_model_update(synth_model_t* synth_model, synth_update_state_t* update
 	}
 
 	mod_matrix_update(update_state);
+}
+
+void synth_model_play_note(synth_model_t* synth_model, int channel, unsigned char midi_note)
+{
+	voice_t *candidate_voice = voice_find_next_likely_free(synth_model->voice, synth_model->voice_count, channel);
+
+	if (candidate_voice != NULL)
+	{
+		int master_waveform = setting_get_value_enum_as_int(synth_model->setting_master_waveform);
+		voice_play_note(candidate_voice, midi_note, master_waveform);
+	}
+}
+
+void synth_model_stop_note(synth_model_t* synth_model, int channel, unsigned char midi_note)
+{
+	voice_t *playing_voice = voice_find_playing_note(synth_model->voice, synth_model->voice_count, channel, midi_note);
+
+	if (playing_voice != NULL)
+	{
+		voice_stop_note(playing_voice);
+	}
 }

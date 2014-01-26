@@ -316,7 +316,6 @@ void configure_midi()
 void process_midi_events()
 {
 	int midi_events = midi_get_event_count();
-	int master_waveform = setting_get_value_enum_as_int(synth_model.setting_master_waveform);
 
 	while (midi_events-- > 0)
 	{
@@ -329,21 +328,11 @@ void process_midi_events()
 
 		if (event_type == 0x90)
 		{
-			voice_t *candidate_voice = voice_find_next_likely_free(synth_model.voice, synth_model.voice_count, channel);
-
-			if (candidate_voice != NULL)
-			{
-				voice_play_note(candidate_voice, midi_event.data[0], master_waveform);
-			}
+			synth_model_play_note(&synth_model, channel, midi_event.data[0]);
 		}
 		else if (event_type == 0x80)
 		{
-			voice_t *playing_voice = voice_find_playing_note(synth_model.voice, synth_model.voice_count, channel, midi_event.data[0]);
-
-			if (playing_voice != NULL)
-			{
-				voice_stop_note(playing_voice);
-			}
+			synth_model_stop_note(&synth_model, channel, midi_event.data[0]);
 		}
 	}
 }

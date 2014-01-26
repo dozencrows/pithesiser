@@ -104,5 +104,7 @@ typedef struct synth_update_state_t
 extern void synth_model_initialise(synth_model_t* synth_model, int voice_count);
 extern void synth_model_deinitialise(synth_model_t* synth_model);
 extern void synth_model_update(synth_model_t* synth_model, synth_update_state_t* update_state);
+extern void synth_model_play_note(synth_model_t* synth_model, int channel, unsigned char midi_note);
+extern void synth_model_stop_note(synth_model_t* synth_model, int channel, unsigned char midi_note);
 
 #endif /* SYNTH_MODEL_H_ */
