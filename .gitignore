@@ -2,6 +2,7 @@
 # /
 /Release
 /Debug
+/cmake-build
 
 # /docs/
 /docs/.~lock.synthesis.ods#
