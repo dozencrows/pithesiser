@@ -53,6 +53,8 @@ if(NOT MACHINE MATCHES "arm*")
 					${TOOLPATH}/arm-linux-gnueabihf/lib
 					${TOOLPATH}/arm-linux-gnueabihf/libc/lib
 					${TOOLPATH}/arm-linux-gnueabihf/libc/lib/arm-linux-gnueabihf
+					${TOOLPATH}/arm-linux-gnueabihf/libc/usr/lib
+					${TOOLPATH}/arm-linux-gnueabihf/libc/usr/lib/arm-linux-gnueabihf
 					${TOOLPATH}/lib/gcc/arm-linux-gnueabihf/4.7.2
 					${TOOLPATH}/libexec/gcc/arm-linux-gnueabihf/4.7.2
 					${ROOTFSPATH}/lib/arm-linux-gnueabihf
@@ -118,7 +120,6 @@ add_executable(pithesiser
 				midi.c
 				midi_controller.c
 				midi_controller_parser.c
-				midi_util.c
 				mixer_arm.s
 				mixer.c
 				modulation_matrix.c
@@ -133,10 +134,17 @@ add_executable(pithesiser
 				waveform.c
 				waveform_procedural.c
 				waveform_wavetable.c
+				tests/filter_timing_test.c
+				tests/mixer_timing_test.c
+				tests/output_conversion_timing_test.c
+				tests/waveform_timing_test.c
 				)
 
-target_link_libraries(pithesiser	
+target_link_libraries(pithesiser
 						asound 
+						pthread
+						m
+						stdc++
 						z 
 						png 
 						GLESv2 
@@ -146,7 +154,6 @@ target_link_libraries(pithesiser
 						OpenVG 
 						vcos 
 						rt 
-						pthread 
 						config 
 						FLAC 
 						ogg 
@@ -158,5 +165,6 @@ target_link_libraries(pithesiser
 						wiringPiDev 
 						expat 
 						log4c
+						-Xlinker -rpath-link=${ROOTFSPATH}/usr/lib/arm-linux-gnueabihf -Xlinker -rpath-link=${ROOTFSPATH}/lib/arm-linux-gnueabihf
 						)
 
