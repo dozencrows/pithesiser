@@ -99,7 +99,7 @@ add_executable(pithesiser
 				code_timing_tests.c
 				envelope.c
 				error_handler.c
-				filter_arm.asm
+				filter_arm.s
 				filter.c
 				fixed_point_math.c
 				float_filter.c
@@ -119,7 +119,7 @@ add_executable(pithesiser
 				midi_controller.c
 				midi_controller_parser.c
 				midi_util.c
-				mixer_arm.asm
+				mixer_arm.s
 				mixer.c
 				modulation_matrix.c
 				modulation_matrix_controller.c
