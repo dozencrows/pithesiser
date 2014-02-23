@@ -14,11 +14,6 @@
 project(pithesiser)
 cmake_minimum_required(VERSION 2.8)
 
-#set(TOOLPATH ~/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian)
-#set(ROOTFSPATH ~/RPi/rootfs-2013-05)
-#set(USERLANDPATH ~/RPi/userland)
-#set(TOOLPREFIX arm-linux-gnueabihf-)
-
 set(ROOTFSPATH $ENV{ROOTFSPATH})
 set(USERLANDPATH $ENV{USERLANDPATH})
 
@@ -32,12 +27,6 @@ if(NOT MACHINE MATCHES "arm*")
 	set(CMAKE_SYSTEM_NAME Linux)
 
 	include_directories(
-						${TOOLPATH}/arm-linux-gnueabihf/include 
-						${TOOLPATH}/arm-linux-gnueabihf/libc/usr/include/arm-linux-gnueabihf 
-						${TOOLPATH}/arm-linux-gnueabihf/libc/usr/include
-						${TOOLPATH}/lib/gcc/arm-linux-gnueabihf/4.7.2/include-fixed
-						${TOOLPATH}/lib/gcc/arm-linux-gnueabihf/4.7.2/include
-						${TOOLPATH}/lib/gcc/arm-linux-gnueabihf/4.7.2/finclude
 						${ROOTFSPATH}/usr/include/arm-linux-gnueabihf
 						${ROOTFSPATH}/usr/include
 						${ROOTFSPATH}/usr/local/include
@@ -50,13 +39,8 @@ if(NOT MACHINE MATCHES "arm*")
 					)
 					
 	link_directories(
-					${TOOLPATH}/arm-linux-gnueabihf/lib
-					${TOOLPATH}/arm-linux-gnueabihf/libc/lib
 					${TOOLPATH}/arm-linux-gnueabihf/libc/lib/arm-linux-gnueabihf
-					${TOOLPATH}/arm-linux-gnueabihf/libc/usr/lib
 					${TOOLPATH}/arm-linux-gnueabihf/libc/usr/lib/arm-linux-gnueabihf
-					${TOOLPATH}/lib/gcc/arm-linux-gnueabihf/4.7.2
-					${TOOLPATH}/libexec/gcc/arm-linux-gnueabihf/4.7.2
 					${ROOTFSPATH}/lib/arm-linux-gnueabihf
 					${ROOTFSPATH}/lib
 					${ROOTFSPATH}/usr/lib/arm-linux-gnueabihf
@@ -70,8 +54,8 @@ enable_language(ASM)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
 					${PROJECT_SOURCE_DIR}/dependencies/include
-					${ROOTFSPATH}/opt/vc/include
 					${USERLANDPATH}
+					${USERLANDPATH}/interface/khronos/include
 					${USERLANDPATH}/interface/vcos
 					${USERLANDPATH}/interface/vcos/pthreads
 					${USERLANDPATH}/interface/vmcs_host/linux
@@ -82,7 +66,7 @@ include_directories(
 add_definitions(	-DLOGGING_ENABLED
 					-Wall 
 					-fmessage-length=0 
-					-std=gnu99 
+					-std=gnu99
 					)
 					
 if ($ENV{DEBUG})
@@ -165,6 +149,5 @@ target_link_libraries(pithesiser
 						wiringPiDev 
 						expat 
 						log4c
-						-Xlinker -rpath-link=${ROOTFSPATH}/usr/lib/arm-linux-gnueabihf -Xlinker -rpath-link=${ROOTFSPATH}/lib/arm-linux-gnueabihf
 						)
 
