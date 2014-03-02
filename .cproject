@@ -210,8 +210,18 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="cdt.managedbuild.config.gnu.exe.release.1375151613.1108794773" name="/" resourcePath="cmake-build">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.release.1159620550" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.release" unusedChildren="">
+							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1085985510" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base.249419107"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1202274540" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.608657093"/>
+							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.475230802" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release.1094802421"/>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.release.1534016895" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release.320543978"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.192343399" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.1909437458"/>
+							<tool id="cdt.managedbuild.tool.gnu.assembler.exe.release.1819765912" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.release.1395016571"/>
+						</toolChain>
+					</folderInfo>
 					<sourceEntries>
-						<entry excluding="midi_util.c|alsatest.c|alsacap.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="cmake-build|midi_util.c|alsatest.c|alsacap.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
