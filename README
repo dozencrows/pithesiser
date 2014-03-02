@@ -12,6 +12,16 @@ For more information, see my blog on this project at http://pithesiser.wordpress
 
 WARNING: this is very much a prototype, so documentation is thin on the ground.
 
+Hardware
+--------
+In addition to a Pi, you'll need some sort of MIDI controller that can generate note and continuous controller events. I have an Akai LPK-25 mini keyboard, Behringer BCR-2000 controller and a Novation Launchpad all plugged into my Pi.
+
+It is also recommended that you use a USB audio device rather than the Pi's built-in audio - as the latter isn't great quality, and there have been driver issues.
+
+USB audio devices known to work are the Behringer U-Control UCA222 and this kind of cheap one: http://www.amazon.co.uk/dp/B0069L9PZA/ref=pe_217191_31005151_dp_1.
+
+A powered USB hub is probably a very good idea also, e.g. the Pi hub - http://shop.pimoroni.com/products/pihub.
+
 Configuration
 -------------
 The Pithesiser uses ALSA for audio output; it is recommended that you install the 'alsa-utils' package to help you configure it.
