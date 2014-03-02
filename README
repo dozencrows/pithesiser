@@ -27,10 +27,10 @@ Configuration
 The Pithesiser uses ALSA for audio output; it is recommended that you install the 'alsa-utils' package to help you configure it.
 
 Configuration files are in the resources folder. Relevant files are:
-* devices.cfg: 		configuration of audio output and MIDI input.
-* matrix.cfg:  		configuration of the modulation matrix control.
-* bcr2000.cfg: 		configuration file for using Behringer BCR 2000 MIDI controller.
-* synth.cfg:   		configuraiton file for using Korg NanoControl (out of date).
+* devices.cfg: 		config of audio output and MIDI input.
+* matrix.cfg:  		config of the modulation matrix control.
+* bcr2000.cfg: 		config file for Behringer BCR 2000 MIDI controller.
+* synth.cfg:   		config file for Korg NanoControl (out of date).
 * code_timing.cfg:	config file used to drive timing tests.
 
 The Pithesiser also uses two files to save on exit and restore state on startup:
