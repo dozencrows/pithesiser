@@ -31,6 +31,8 @@ Running the Pithesiser
 ----------------------
 The Pithesiser is run by typing "pithesiser X.cfg" where X.cfg is the configuration file to load. 
 
+Note, if you have the PiGlow feature enabled, make sure you have set up gpio via "gpio load i2c 400" first.
+
 Typically this is a file for a specific MIDI controller or controllers to use, which includes devices.cfg and matrix.cfg then goes on to define the mapping of MIDI control codes to the synth's controllers (see bcr2000.cfg).
 
 On launch, the Pithesiser will display a basic UI on your Pi, showing the envelopes, a few basic settings (volume and waveform) and an oscilloscope display of the current waveform output.
