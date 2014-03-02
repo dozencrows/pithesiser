@@ -1,0 +1,9 @@
+The Pithesiser is a prototype software synthesiser written for the Raspberry Pi. It provides basic emulation of analogue synthesis.
+
+It is Pi-specific in that it uses some of the Pi libraries for rendering a simple UI via OpenVG, and that it provides support for the PiGlow. Other than that, the majority of the code is written in C, with some inner loop ARM assembly targeted at ARMv6.
+
+For instructions on how to build, see BUILD-HOWTO.
+
+For information on how to configure the Pithesiser, see comments in the config files inside the resources folder. For details on planned work, inner workings, problems encountered and solutions tried, see docs/notes.txt.
+
+WARNING: this is very much a prototype, so documentation is thin on the ground. 
