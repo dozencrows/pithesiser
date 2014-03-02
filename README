@@ -8,6 +8,8 @@ For instructions on how to build, see BUILD-HOWTO.
 
 For information on how to configure the Pithesiser, see comments in the config files inside the resources folder. For details on planned work, inner workings, problems encountered and solutions tried, see docs/notes.txt.
 
+For more information, see my blog on this project at http://pithesiser.wordpress.com/
+
 WARNING: this is very much a prototype, so documentation is thin on the ground.
 
 Configuration
