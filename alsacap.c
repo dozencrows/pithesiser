@@ -1,12 +1,4 @@
 /*
- * alsacap.c
- *
- *  Created on: 29 Oct 2012
- *      Author: ntuckett
- */
-
-
-/*
  * ALSA parameter test program
  *
  * compile with: gcc -o alsacap alsacap.c -lasound
